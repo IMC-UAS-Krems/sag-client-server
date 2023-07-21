@@ -1,8 +1,8 @@
 /* @refresh reload */
 /// <reference lib="dom" />
 /// <reference lib="dom.iterable" />
-import { render } from "solid-js/web";
 
+import { render } from "solid-js/web";
 import "./index.css";
 import App from "./App";
 
