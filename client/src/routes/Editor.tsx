@@ -12,12 +12,16 @@ import {
 } from "solid-codemirror";
 import { createSignal, onMount } from "solid-js";
 import { type Transaction } from "@codemirror/state";
-import { type EditorView } from "@codemirror/view";
+import { EditorView, lineNumbers } from "@codemirror/view";
 
 export const Editor: Component = () => {
   const [code, setCode] = createSignal("Start typing here...");
 
-  const { editorView, ref: editorRef } = createCodeMirror({
+  const {
+    editorView,
+    ref: editorRef,
+    createExtension,
+  } = createCodeMirror({
     /**
      * The initial value of the editor
      */
@@ -42,7 +46,16 @@ export const Editor: Component = () => {
       console.log("Transaction", tr),
   });
 
+  const theme = EditorView.theme({
+    "&": {
+      background: "red",
+    },
+  });
+
+  createExtension(theme);
+
   createEditorControlledValue(editorView, code);
+  createExtension(() => lineNumbers());
 
   return <div ref={editorRef} />;
 };

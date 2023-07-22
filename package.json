@@ -9,6 +9,19 @@
     "serve": "bun run --watch server/index.ts"
   },
   "dependencies": {
+    "@codemirror/autocomplete": "^6.9.0",
+    "@codemirror/closebrackets": "^0.19.2",
+    "@codemirror/commands": "^6.2.4",
+    "@codemirror/comment": "^0.19.1",
+    "@codemirror/fold": "^0.19.4",
+    "@codemirror/gutter": "^0.19.9",
+    "@codemirror/highlight": "^0.19.8",
+    "@codemirror/history": "^0.19.2",
+    "@codemirror/language": "^6.8.0",
+    "@codemirror/lint": "^6.4.0",
+    "@codemirror/matchbrackets": "^0.19.4",
+    "@codemirror/rectangular-selection": "^0.19.2",
+    "@codemirror/search": "^6.5.0",
     "@codemirror/state": "^6.2.1",
     "@codemirror/view": "^6.15.3",
     "@elysiajs/cookie": "^0.5.2",
@@ -19,13 +32,13 @@
     "@kobalte/core": "^0.9.8",
     "@prisma/client": "5.0.0",
     "@solid-primitives/i18n": "^1.4.0",
+    "@solidjs/router": "^0.8.2",
     "elysia": "latest",
     "prisma": "^5.0.0",
     "solid-codemirror": "^2.3.0",
     "solid-icons": "^1.0.11",
     "solid-js": "^1.7.6",
-    "solid-meta": "^0.28.1",
-    "@solidjs/router": "^0.8.2"
+    "solid-meta": "^0.28.1"
   },
   "devDependencies": {
     "bun-types": "latest",
