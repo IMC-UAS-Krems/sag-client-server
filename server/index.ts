@@ -3,7 +3,7 @@ import { swagger } from '@elysiajs/swagger'
 import { cookie } from '@elysiajs/cookie'
 import { jwt } from '@elysiajs/jwt'
 import { cors } from '@elysiajs/cors'
-import { prisma } from "@server/∆";
+import { prisma } from "@∆";
 
 const app = new Elysia()
   .use(cors())
@@ -62,3 +62,8 @@ export type Router = typeof app;
 console.log(
   `🦊 Elysia is running at ${app.server?.hostname}:${app.server?.port}`
 );
+
+
+const T = async () => {
+  const users = await prisma.user.findMany();
+}

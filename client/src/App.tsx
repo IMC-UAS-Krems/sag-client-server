@@ -3,7 +3,8 @@ import type { Component } from "solid-js";
 import logo from "./logo.svg";
 import styles from "./App.module.css";
 
-import { Routes, Route } from "@solidjs/router";
+import { Routes, Route, A } from "@solidjs/router";
+import { Button, Link } from "@kobalte/core";
 import { Suspense } from "solid-js";
 import { createResource } from "solid-js";
 
@@ -27,30 +28,21 @@ const App: Component = () => {
   const [message] = createResource(getMessage);
 
   return (
-    <Routes>
-      <Route path="/" component={Home} />
-      <Route path="/editor" component={Editor} />
-      <Route path="/about" component={About} />
-      <div class={styles.App}>
-        <header class={styles.header}>
-          <img src={logo} class={styles.logo} alt="logo" />
-          <p>
-            <Suspense fallback={<p>Loading...</p>}>
-              Edit <code>src/App.tsx</code> and save to reload.
-              {message() ?? "Not found"}
-            </Suspense>
-          </p>
-          <a
-            class={styles.link}
-            href="https://github.com/solidjs/solid"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Learn Solid
-          </a>
-        </header>
-      </div>
-    </Routes>
+    <>
+      <nav>
+        <A href="/">Home</A>
+        <A href="/editor">Editor</A>
+        <A href="/about">About</A>
+      </nav>
+      <Routes>
+        <Route path="/" component={Home} />
+        <Route path="/editor" component={Editor} />
+        <Route path="/about" component={About} />
+      </Routes>
+      <Suspense fallback={<div>Loading...</div>}>
+        <div>{message() ?? "Less"}</div>
+      </Suspense>
+    </>
   );
 };
 
