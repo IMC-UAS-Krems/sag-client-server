@@ -3,6 +3,8 @@ import type { Component } from "solid-js";
 import logo from "./logo.svg";
 import styles from "./App.module.css";
 
+import buttonStyles from "./buttons.module.css";
+
 import { Routes, Route, A } from "@solidjs/router";
 import { Button, Link } from "@kobalte/core";
 import { Suspense } from "solid-js";
@@ -30,9 +32,15 @@ const App: Component = () => {
   return (
     <>
       <nav>
-        <A href="/">Home</A>
-        <A href="/editor">Editor</A>
-        <A href="/about">About</A>
+        <A href="/">
+          <button class={styles.viewsName}>Home</button>
+        </A>
+        <A href="/editor">
+          <button class={styles.viewsName}>Editor</button>
+        </A>
+        <A href="/about">
+          <button class={styles.viewsName}>About</button>
+        </A>
       </nav>
       <Routes>
         <Route path="/" component={Home} />

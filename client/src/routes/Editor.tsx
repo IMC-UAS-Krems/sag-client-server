@@ -1,18 +1,31 @@
-import { Component } from "solid-js";
-
-// const Editor: Component = () => {
-//   return <div>WORK IN PROGRESS: EDITOR</div>;
-// };
-//
-// export default Editor;
-
-import {
-  createCodeMirror,
-  createEditorControlledValue,
-} from "solid-codemirror";
-import { createSignal, onMount } from "solid-js";
+import { Component, createSignal } from "solid-js";
+import { createCodeMirror, createEditorControlledValue } from "solid-codemirror";
 import { type Transaction } from "@codemirror/state";
 import { EditorView, lineNumbers } from "@codemirror/view";
+import { HighlightStyle } from "@codemirror/highlight";
+import { tags } from "@lezer/highlight";
+import { eden } from "@client/rpc";
+import "../Editor.css";
+
+const myHighlightStyle =
+  HighlightStyle.define([
+    { tag: tags.keyword, color: "#fc6", fontWeight: "bold" }, // Customize the style for keywords (e.g., "import", "const", "function")
+    { tag: tags.comment, color: "#f5d", fontStyle: "italic" }, // Customize the style for comments
+    { tag: "test1", color: "blue" }, // Custom style for "test1"
+    { tag: "test2", color: "green" }, // Custom style for "test2"
+  ]);
+
+const compileCode = async () => {
+  // Perform the compilation logic here
+  try {
+    const compileResult = await eden.compile.post({ file: "hello" });
+    console.log("Compilation result: ", compileResult);
+    // Handle the compilation result as needed
+  } catch (error) {
+    console.error("Error during compilation: ", error);
+    // Handle the error during compilation
+  }
+};
 
 export const Editor: Component = () => {
   const [code, setCode] = createSignal("Start typing here...");
@@ -22,42 +35,32 @@ export const Editor: Component = () => {
     ref: editorRef,
     createExtension,
   } = createCodeMirror({
-    /**
-     * The initial value of the editor
-     */
     value: code(),
-    /**
-     * Fired whenever the editor code value changes.
-     */
     onValueChange: (value) => {
       console.log("value changed", value);
       setCode(value);
     },
-    /**
-     * Fired whenever a change occurs to the document, every time the view updates.
-     */
-    onModelViewUpdate: (modelView) =>
-      console.log("modelView updated", modelView),
-    /**
-     * Fired whenever a transaction has been dispatched to the view.
-     * Used to add external behavior to the transaction [dispatch function](https://codemirror.net/6/docs/ref/#view.EditorView.dispatch) for this editor view, which is the way updates get routed to the view
-     */
-    onTransactionDispatched: (tr: Transaction, view: EditorView) =>
-      console.log("Transaction", tr),
+    onModelViewUpdate: (modelView) => console.log("modelView updated", modelView),
+    onTransactionDispatched: (tr: Transaction, view: EditorView) => console.log("Transaction", tr),
   });
-
-  const theme = EditorView.theme({
-    "&": {
-      background: "red",
-    },
-  });
-
-  createExtension(theme);
 
   createEditorControlledValue(editorView, code);
-  createExtension(() => lineNumbers());
 
-  return <div ref={editorRef} />;
+  createExtension(() => lineNumbers());
+  createExtension(myHighlightStyle);
+
+  return (
+    <>
+      <button class="compile" onClick={compileCode}>Compile</button>
+      <div class="editor-container">
+        <div class="left-column">Left</div>
+        <div class="middle-column">
+          <div class="editor-box" ref={editorRef}></div>
+        </div>
+        <div class="right-column">Right</div>
+      </div>
+    </>
+  );
 };
 
 export default Editor;

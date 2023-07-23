@@ -1,0 +1,53 @@
+.editor-container {
+  display: flex;
+  height: 100vh; /* Set the editor container to occupy full viewport height */
+}
+
+.left-column, .right-column {
+  flex: 1; /* Allow all columns to take up equal space */
+  padding: 10px;
+  border: 1px solid #ccc;
+  /*overflow: hidden; /* Hide any content that overflows */
+}
+
+.middle-column {
+  flex: 2; /* Let the middle column take up twice the space of other columns */
+  overflow-y: scroll; /* Add vertical scroll bar */
+}
+
+.editor-box {
+}
+
+/* Optional: Add some styles to make the columns visually distinct */
+.left-column {
+  background-color: #f9f9f9;
+}
+
+.middle-column {
+  background-color: #fff;
+}
+
+.right-column {
+  background-color: #f9f9f9;
+}
+
+.compile {
+  display: inline-block;
+  border-color: #020205;
+  background-color: #fafafa;
+  color: #020205;
+  font-weight: 700;
+  padding: 1rem 2rem;
+  border-radius: 0.4rem;
+  cursor: pointer;
+  text-transform: uppercase;
+  text-decoration: none;
+  align-items: center;
+  transition: 0.2s;
+  width: 150px;
+}
+
+.compile:hover {
+  background-color: #020205;
+  color: #fafafa;
+}
