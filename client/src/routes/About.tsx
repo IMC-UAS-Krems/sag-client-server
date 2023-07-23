@@ -1,7 +1,8 @@
 import { Component } from "solid-js";
+import { translate } from '../i18nConfig'
 
 const About: Component = () => {
-  return <div>WORK IN PROGRESS: ABOUT</div>;
+  return <div>{translate('About') + ' ' + translate('page')}</div>;
 };
 
 export default About;

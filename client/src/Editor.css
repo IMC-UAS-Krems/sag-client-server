@@ -1,6 +1,6 @@
 .editor-container {
   display: flex;
-  height: 100vh; /* Set the editor container to occupy full viewport height */
+  height: 86vh; /* Set the editor container to occupy full viewport height */
 }
 
 .left-column, .right-column {
@@ -13,9 +13,6 @@
 .middle-column {
   flex: 2; /* Let the middle column take up twice the space of other columns */
   overflow-y: scroll; /* Add vertical scroll bar */
-}
-
-.editor-box {
 }
 
 /* Optional: Add some styles to make the columns visually distinct */

@@ -52,3 +52,39 @@
   background-color: #020205;
   color: #fafafa;
 }
+
+.translate {
+  border-color: #020205;
+  background-color: #fafafa;
+  color: #020205;
+  font-weight: 700;
+  padding: 1rem 1.5rem;
+  border-radius: 0.4rem;
+  cursor: pointer;
+  text-transform: uppercase;
+  transition: 0.2s;
+  width: min-content; 
+  height: min-content;
+}
+
+.translate:hover {
+  background-color: #020205;
+  color: #fafafa;
+  border: solid 2px transparent;
+}
+
+.noselect {
+  -webkit-touch-callout: none;
+  /* iOS Safari */
+  -webkit-user-select: none;
+  /* Safari */
+  -khtml-user-select: none;
+  /* Konqueror HTML */
+  -moz-user-select: none;
+  /* Old versions of Firefox */
+  -ms-user-select: none;
+  /* Internet Explorer/Edge */
+  user-select: none;
+  /* Non-prefixed version, currently supported by Chrome, Edge, Opera and Firefox */
+  cursor: default;
+}

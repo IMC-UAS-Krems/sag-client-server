@@ -1,7 +1,8 @@
 import { Component } from "solid-js";
+import { translate } from '../i18nConfig'
 
 const Home: Component = () => {
-  return <div>WORK IN PROGRESS: HOME</div>;
+  return <div>{translate('Home') + ' ' + translate('page')}</div>;
 };
 
 export default Home;
