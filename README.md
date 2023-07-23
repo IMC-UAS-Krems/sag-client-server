@@ -11,7 +11,7 @@ bun install
 Then, export the prisma types
 
 ```bash
-npx prisma generate
+bun x prisma generate
 ```
 
 ## Development
