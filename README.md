@@ -14,7 +14,23 @@ Then, export the prisma types
 bun x prisma generate
 ```
 
+# Formatting
+
+Run the formatter on the client:
+
+```bash
+bun x rome format client/ --write
+```
+
+Run the formatter on the server:
+
+```bash
+bun x rome format server/ --write
+```
+
 ## Development
+
+_\[!] IMPORTANT: Run before committing, or the entire commit history will be poisoned_
 
 To start the development server run:
 

@@ -1,50 +1,52 @@
 import { Component, createSignal } from "solid-js";
 import {
-  createCodeMirror,
-  createEditorControlledValue,
+	createCodeMirror,
+	createEditorControlledValue,
 } from "solid-codemirror";
 import { type Transaction } from "@codemirror/state";
 import { EditorView, lineNumbers } from "@codemirror/view";
 import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
 import { tags } from "@lezer/highlight";
-import { eden } from "@client/rpc";
-import "../Editor.css";
-import { translate } from '../i18nConfig'
+import { eden } from "@client/api";
+import "../styles/Editor.css";
+import { useI18n } from "@solid-primitives/i18n";
+import { Button } from "@kobalte/core";
 
 const compileCode = async () => {
-  // Perform the compilation logic here
-  try {
-    const compileResult = await eden.compile.post({ file: "hello" });
-    console.log("Compilation result: ", compileResult);
-    // Handle the compilation result as needed
-  } catch (error) {
-    console.error("Error during compilation: ", error);
-    // Handle the error during compilation
-  }
+	// Perform the compilation logic here
+	try {
+		const compileResult = await eden.compile.post({ file: "hello" });
+		console.log("Compilation result: ", compileResult);
+		// Handle the compilation result as needed
+	} catch (error) {
+		console.error("Error during compilation: ", error);
+		// Handle the error during compilation
+	}
 };
 
 export const Editor: Component = () => {
-  const [code, setCode] = createSignal("");
+	const [code, setCode] = createSignal("");
+	const [t, { add, locale, dict }] = useI18n();
 
-  const {
-    editorView,
-    ref: editorRef,
-    createExtension,
-  } = createCodeMirror({
-    value: code(),
-    onValueChange: (value) => {
-      console.log("value changed", value);
-      setCode(value);
-    },
-    onModelViewUpdate: (modelView) =>
-      console.log("modelView updated", modelView),
-    onTransactionDispatched: (tr: Transaction, view: EditorView) =>
-      console.log("Transaction", tr),
-  });
+	const {
+		editorView,
+		ref: editorRef,
+		createExtension,
+	} = createCodeMirror({
+		value: code(),
+		onValueChange: (value) => {
+			console.log("value changed", value);
+			setCode(value);
+		},
+		onModelViewUpdate: (modelView) =>
+			console.log("modelView updated", modelView),
+		onTransactionDispatched: (tr: Transaction, view: EditorView) =>
+			console.log("Transaction", tr),
+	});
 
-  createEditorControlledValue(editorView, code);
+	createEditorControlledValue(editorView, code);
 
-  /*const styles = HighlightStyle.define([
+	/*const styles = HighlightStyle.define([
     { tag: tags.keyword, color: "#fc6", fontWeight: "bold" }, // Customize the style for keywords (e.g., "import", "const", "function")
     { tag: tags.comment, color: "#f5d", fontStyle: "italic" }, // Customize the style for comments
     // { tag: "test1", color: "blue" }, // Custom style for "test1"
@@ -54,22 +56,22 @@ export const Editor: Component = () => {
   // make myHighlightStyle into extension
   createExtension(syntaxHighlighting(styles));*/
 
-  createExtension(lineNumbers);
+	createExtension(lineNumbers);
 
-  return (
-    <>
-      <button class="compile" onClick={compileCode}>
-        Compile
-      </button>
-      <div class="editor-container">
-        <div class="left-column">{translate('Left')}</div>
-        <div class="middle-column">
-          <div ref={editorRef}></div>
-        </div>
-        <div class="right-column">{translate('Right')}</div>
-      </div>
-    </>
-  );
+	return (
+		<>
+			<Button.Root class="compile" onClick={compileCode}>
+				Compile
+			</Button.Root>
+			<div class="editor-container">
+				<div class="left-column">{t("Left")}</div>
+				<div class="middle-column">
+					<div ref={editorRef} />
+				</div>
+				<div class="right-column">{t("Right")}</div>
+			</div>
+		</>
+	);
 };
 
 export default Editor;

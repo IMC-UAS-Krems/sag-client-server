@@ -32,23 +32,25 @@
   }
 }
 
-.viewsName {
+.link {
   display: inline-block;
   border-color: #020205;
   background-color: #fafafa;
   color: #020205;
   font-weight: 700;
-  padding: 1rem 2rem;
-  border-radius: 0.4rem;
+  padding: 1rem 0rem;
+  margin-right: 0.5rem;
+  border-radius: 0.4rem 0.4rem 0.4rem 0.4rem;
   cursor: pointer;
   text-transform: uppercase;
+  text-align: center;
   text-decoration: none;
   align-items: center;
   transition: 0.2s;
   width: 150px;
 }
 
-.viewsName:hover {
+.link:hover {
   background-color: #020205;
   color: #fafafa;
 }

@@ -1,8 +1,10 @@
 import { Component } from "solid-js";
-import { translate } from '../i18nConfig'
+import { useI18n } from "@solid-primitives/i18n";
 
 const About: Component = () => {
-  return <div>{translate('About') + ' ' + translate('page')}</div>;
+	const [t, { add, locale, dict }] = useI18n();
+
+	return <div>{`${t("About")} ${t("page")}`}</div>;
 };
 
 export default About;
