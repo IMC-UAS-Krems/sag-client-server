@@ -5,8 +5,9 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "vite client",
     "dev": "vite client --port 4000",
-    "build": "vite build client --outDir dist/client",
-    "serve": "bun run --watch server/index.ts"
+    "build": "vite build client --outDir ./dist/client",
+    "serve": "bun run --watch server/index.ts",
+    "format": "bunx rome format client/ --write && bunx rome format server/ --write"
   },
   "dependencies": {
     "@codemirror/state": "^6.2.1",

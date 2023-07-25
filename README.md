@@ -16,16 +16,10 @@ bun x prisma generate
 
 # Formatting
 
-Run the formatter on the client:
+Run the formatter on the project:
 
 ```bash
-bun x rome format client/ --write
-```
-
-Run the formatter on the server:
-
-```bash
-bun x rome format server/ --write
+bun run format
 ```
 
 ## Development

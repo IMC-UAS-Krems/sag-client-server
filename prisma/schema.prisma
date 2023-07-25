@@ -26,7 +26,7 @@ enum ProducerLevel {
 // Models
 
 model User {
-  id String @id @unique
+  id String @id @unique @default(cuid())
 
   // Personal Data
   name     String
