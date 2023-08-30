@@ -41,13 +41,13 @@ model User {
   // Work specific
 
   // Worker municipality
-  municipality   Municipality @relation(fields: [municipalityId], references: [id])
-  municipalityId String
+  municipality   Municipality? @relation(fields: [municipalityId], references: [id])
+  municipalityId String?
   // Worker organisation
-  organisation   Organization @relation(fields: [orgId], references: [id])
-  orgId          String
+  organisation   Organization? @relation(fields: [orgId], references: [id])
+  orgId          String?
   // Worker projects
-  project        Project?     @relation(fields: [projectId], references: [id])
+  project        Project?      @relation(fields: [projectId], references: [id])
   projectId      String?
   // Documents created by user
   documents      Document[]

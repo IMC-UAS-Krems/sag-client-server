@@ -33,6 +33,7 @@ const app = new Elysia()
         async ({ jwt, cookie, setCookie }): Promise<ValidationResult<User>> => {
           setCookie("access_token", "");
 
+
           return { message: "Logged out", data: null };
         },
       )
@@ -53,16 +54,16 @@ const app = new Elysia()
                 password: body.password,
                 email: body.email,
                 name: body.name,
-                municipality: {
+                municipality: body.municipality ? {
                   connect: {
                     name: body.municipality,
                   },
-                },
-                organisation: {
+                } : undefined,
+                organisation: body.organisation ? {
                   connect: {
                     name: body.organisation,
                   },
-                },
+                } : undefined,
               },
             });
 
@@ -83,13 +84,16 @@ const app = new Elysia()
             };
           } catch (e) {
             if (
-              e instanceof Prisma.PrismaClientKnownRequestError &&
-              e.code === "P2002"
+              e instanceof Prisma.PrismaClientKnownRequestError
+              //&&
+              // e.code === "P2002"
             ) {
               return { message: e.message, data: null };
             }
 
-            return { message: "Unknown error", data: null };
+            console.log(e)
+
+            return { message: "Unknown Error", data: null };
           }
         },
         {
@@ -106,12 +110,16 @@ const app = new Elysia()
             email: t.String({
               format: "email",
             }),
-            municipality: t.String({
-              minLength: 2,
-            }),
-            organisation: t.String({
-              minLength: 2,
-            }),
+            municipality: t.Optional(
+              t.String({
+                minLength: 2,
+              }),
+            ),
+            organisation: t.Optional(
+              t.String({
+                minLength: 2,
+              }),
+            ),
           }),
         },
       )
@@ -198,6 +206,7 @@ const app = new Elysia()
             id: userId,
           },
         });
+
         if (!user) {
           set.status = 401;
           return {
@@ -205,28 +214,37 @@ const app = new Elysia()
             data: null,
           };
         }
+
         return {
           message: "Authorized",
           data: user,
         };
       })
-      .get("/hello", ({ cookie, setCookie, jwt, message, data, set }) => {
-        if (data) {
-          return `Hello ${data.username}!`;
-        } else {
+      .get("/hello", async ({ cookie, setCookie, jwt, message, data, set }): Promise<string | null> => {
+        if (data === null) {
           set.status = 401;
-          return message;
+          return null;
         }
+
+        return `Hello ${data.username}!`;
       })
       .post(
         "/compile",
-        ({ cookie, setCookie, jwt, message, data, set, body }): string | null => {
-          if (data) {
-            return `Hello ${data.username}. I compiled ${body.code} for you!`;
-          } else {
+        async ({
+          cookie,
+          setCookie,
+          jwt,
+          message,
+          data,
+          set,
+          body,
+        }): Promise<string | null> => {
+          if (data === null) {
             set.status = 401;
             return null;
           }
+
+          return `Hello ${data.username}. I compiled ${body.code} for you!`;
         },
         {
           body: t.Object({

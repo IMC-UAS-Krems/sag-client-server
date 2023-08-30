@@ -12,11 +12,17 @@ import "../styles/Editor.css";
 import { useI18n } from "@solid-primitives/i18n";
 import { Button } from "@kobalte/core";
 
-const compileCode = async () => {
+const compile = async (code: string) => {
 	// Perform the compilation logic here
 	try {
-		const compileResult = await eden.compile.post({ file: "hello" });
-		console.log("Compilation result: ", compileResult);
+		const compileResult = await eden.api.compile.post({ code });
+
+		if (compileResult.error) {
+			console.log("Compiled: ", compileResult.error);
+		} else {
+			console.log("Compilation error: ", compileResult.data);
+		}
+
 		// Handle the compilation result as needed
 	} catch (error) {
 		console.error("Error during compilation: ", error);
@@ -60,7 +66,7 @@ export const Editor: Component = () => {
 
 	return (
 		<>
-			<Button.Root class="compile" onClick={compileCode}>
+			<Button.Root class="compile" onClick={() => compile(code())}>
 				Compile
 			</Button.Root>
 			<div class="editor-container">

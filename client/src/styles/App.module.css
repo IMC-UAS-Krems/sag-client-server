@@ -19,10 +19,6 @@
   color: white;
 }
 
-.link {
-  color: #b318f0;
-}
-
 @keyframes logo-spin {
   from {
     transform: rotate(0deg);
@@ -65,7 +61,7 @@
   cursor: pointer;
   text-transform: uppercase;
   transition: 0.2s;
-  width: min-content; 
+  width: min-content;
   height: min-content;
 }
 
@@ -89,4 +85,31 @@
   user-select: none;
   /* Non-prefixed version, currently supported by Chrome, Edge, Opera and Firefox */
   cursor: default;
+}
+
+.button {
+  appearance: none;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  height: 40px;
+  width: auto;
+  outline: none;
+  border-radius: 6px;
+  padding: 0 16px;
+  background-color: hsl(200 98% 39%);
+  color: white !important;
+  font-size: 16px;
+  line-height: 0;
+  transition: 250ms background-color;
+}
+.button:hover {
+  background-color: hsl(201 96% 32%);
+}
+.button:focus-visible {
+  outline: 2px solid hsl(200 98% 39%);
+  outline-offset: 2px;
+}
+.button:active {
+  background-color: hsl(201 90% 27%);
 }
