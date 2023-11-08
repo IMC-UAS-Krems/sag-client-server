@@ -1,17 +1,6 @@
-:root {
-  --background-color: #292929;
+:root {}
 
-  --primary-text: #FFFFFF;
-  --secondary-text: #6A679E;
-
-  --primary-color: #5D54A4;
-  --secondary-color: #121212;
-
-  --card-color: linear-gradient(270deg, var(--primary-color), var(--secondary-text));
-
-}
-
-.darkMode {
+.lightMode {
   --background-color: #F0F0F0;
 
   --primary-text: #000000;
@@ -23,6 +12,18 @@
   --card-color: linear-gradient(to top, #cfd9df 0%, #e2ebf0 100%);
 }
 
+.darkMode {
+  --background-color: #292929;
+
+  --primary-text: #FFFFFF;
+  --secondary-text: #6A679E;
+
+  --primary-color: #5D54A4;
+  --secondary-color: #121212;
+
+  --card-color: linear-gradient(270deg, var(--primary-color), var(--secondary-text));
+}
+
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
@@ -32,6 +33,8 @@ body {
   -moz-osx-font-smoothing: grayscale;
 
   background-color: var(--background-color);
+
+  transition: all 0.3s;
 }
 
 code {

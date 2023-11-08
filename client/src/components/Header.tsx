@@ -1,11 +1,13 @@
 import { type Component } from "solid-js";
 import { A } from "@solidjs/router";
 import { Image } from "@kobalte/core";
+import { theme } from "@store/index";
 
 import styles from "@styles/Header.module.css";
 import ThemeToggle from "./ThemeToggle";
 
-import logo from "@assets/logos/sagittarius-logo-bnc.webp";
+import logoLight from "@assets/logos/sagittarius-logo-bnc.webp";
+import logoDark from "@assets/logos/sagittarius-logo-blk.webp";
 
 const Header: Component = () => {
   return (
@@ -13,7 +15,7 @@ const Header: Component = () => {
       <Image.Root fallbackDelay={600} class={styles.img}>
         <Image.Img
           class={styles.imgImg}
-          src={logo}
+          src={theme() === "light" ? logoDark : logoLight}
           alt="Sagittarius Logo"
         />
         <Image.Fallback class={styles.imgFallback}>Sagittarius Logo</Image.Fallback>

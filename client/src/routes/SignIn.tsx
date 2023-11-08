@@ -168,7 +168,7 @@ const SignIn: Component = () => {
           onClick={() => setMode("register")}
           class={mode() === "register" ? styles.activeButton : styles.navButton}
         >
-          Registrati
+          Register
         </Button.Root>
       </nav>
     </main>
