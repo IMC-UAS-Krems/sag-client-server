@@ -1,0 +1,164 @@
+.signinMainContainer {
+  width: 100vw;
+  height: auto;
+
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: start;
+  margin-top: 30px;
+  gap: 20px
+}
+
+.signinCardContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+
+  background: var(--card-color);
+  border-radius: 12px;
+  box-shadow: 0px 5px 5px 0px rgba(0, 0, 0, 0.20), 0px 3px 14px 0px rgba(0, 0, 0, 0.12), 0px 8px 10px 0px rgba(0, 0, 0, 0.14);
+  min-height: 50vh;
+  min-width: 45vw;
+}
+
+.signinFormContainer {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 40px;
+}
+
+.signinCardContainer button {
+  background-color: transparent;
+  color: var(--primary-text);
+  font-size: 18px;
+  font-weight: 500;
+
+  width: 30%;
+  height: 40px;
+  border-radius: 6px;
+  border: 1px solid var(--primary-text);
+
+  cursor: pointer;
+  margin-top: 80px;
+
+  transition: all 0.25s;
+}
+
+.signinCardContainer button:hover {
+  background-color: var(--primary-text);
+  color: var(--secondary-color);
+}
+
+.submenuContainer {
+  background: var(--card-color);
+  width: 200px;
+  height: 150px;
+  border-radius: 12px;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px
+}
+
+.navButton {
+  background-color: transparent;
+  color: var(--primary-text);
+  font-size: 18px;
+  font-weight: 500;
+
+  width: 80%;
+  height: 40px;
+  border-radius: 6px;
+  border: 1px solid var(--primary-text);
+
+  cursor: pointer;
+  margin: 0;
+
+  transition: all 0.25s;
+}
+
+.navButton:hover {
+  background-color: var(--primary-text);
+  color: var(--secondary-color);
+}
+
+.activeButton {
+  background-color: var(--primary-text);
+  color: var(--secondary-color);
+  font-size: 18px;
+  font-weight: 500;
+
+  width: 80%;
+  height: 40px;
+  border-radius: 6px;
+  border: 1px solid var(--primary-text);
+
+  cursor: pointer;
+  margin: 0;
+
+  transition: all 0.25s;
+}
+
+
+/*---INPUT-FIELD---*/
+
+.textField {
+  display: flex;
+  flex-direction: column;
+  width: 75%;
+}
+
+.textFieldLabel {
+  color: var(--primary-text);
+  font-size: 18px;
+  font-weight: 500;
+  user-select: none;
+
+}
+
+.textFieldInput {
+  background: none;
+  border: none;
+  border-bottom: 2px solid #acacaf;
+  color: var(--primary-text);
+
+  padding: 14px 14px 14px 0;
+  width: 90%;
+
+  font-size: 16px;
+  font-weight: 700;
+  transition: all 0.5s;
+}
+
+.textFieldInput:active,
+.textFieldInput:focus,
+.textFieldInput:hover {
+  outline: none;
+  border-bottom-color: var(--primary-text);
+}
+
+/* .textFieldInput:hover {
+  border-color: hsl(240 5% 65%);
+}
+
+.textFieldInput:focus-visible {
+  outline: 2px solid hsl(200 98% 39%);
+  outline-offset: 2px;
+}
+
+.textFieldInput[data-invalid] {
+  border-color: hsl(0 72% 51%);
+  color: hsl(0 72% 51%);
+}
+
+.textFieldInput::placeholder {
+  color: hsl(240 4% 46%);
+} */

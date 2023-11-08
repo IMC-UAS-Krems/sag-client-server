@@ -1,3 +1,28 @@
+:root {
+  --background-color: #292929;
+
+  --primary-text: #FFFFFF;
+  --secondary-text: #6A679E;
+
+  --primary-color: #5D54A4;
+  --secondary-color: #121212;
+
+  --card-color: linear-gradient(270deg, var(--primary-color), var(--secondary-text));
+
+}
+
+.darkMode {
+  --background-color: #F0F0F0;
+
+  --primary-text: #000000;
+  --secondary-text: #006A67;
+
+  --primary-color: #C7D5EF;
+  --secondary-color: #E0E0E0;
+
+  --card-color: linear-gradient(to top, #cfd9df 0%, #e2ebf0 100%);
+}
+
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
@@ -5,6 +30,8 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  background-color: var(--background-color);
 }
 
 code {
