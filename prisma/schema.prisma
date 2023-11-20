@@ -107,6 +107,8 @@ model Organization {
   projects Project[]
   users    User[]
 
+  verified Boolean @default(false)
+
   // Meta
   createdAt DateTime  @default(now())
   updatedAt DateTime? @updatedAt

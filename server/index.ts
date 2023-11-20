@@ -1,262 +1,331 @@
 import { Elysia, t } from "elysia";
 import { swagger } from "@elysiajs/swagger";
-import { cookie } from "@elysiajs/cookie";
 import { jwt } from "@elysiajs/jwt";
 import { cors } from "@elysiajs/cors";
 import { prisma } from "@∆";
-import { User, Prisma } from "@prisma/client";
+import { User, Prisma, ConsumerLevel, ProducerLevel } from "@prisma/client";
+import { logger } from "@bogeychan/elysia-logger";
+import pretty from "pino-pretty";
+import { panic } from "@utils/panic";
+import crypt from "ncrypt-js";
 
-export type ValidationResult<T> = { message: string; data: T | null };
+const { encrypt, decrypt } = new crypt(
+  Bun.env.JWT_SECRET ?? panic("JWT_SECRET environment variable not set")
+);
+
+type UserResult = {
+  name: string;
+  email: string;
+  username: string;
+  municipality: {
+    name: string;
+  } | null;
+  organisation: {
+    name: string;
+  } | null;
+  project: {
+    name: string;
+  } | null;
+  writePrivilege: ProducerLevel;
+  readPrivilege: ConsumerLevel;
+  documents: {
+    id: string;
+    name: string;
+    version: number;
+    createdAt: Date;
+    updatedAt: Date | null;
+  }[];
+};
 
 const app = new Elysia()
   .use(
-    swagger({
-      path: "/docs",
-    }),
+    logger({
+      level: "info",
+      stream: pretty({ colorize: true }),
+    })
   )
   .use(
-    jwt({
-      name: "jwt",
-      secret:
-        Bun.env.JWT_SECRET ??
-        (() => {
-          throw new Error("ENV NOT SET");
-        })(),
-    }),
+    cors({
+      credentials: true,
+    })
   )
-  .use(cookie())
-  .use(cors())
+  .use(
+    swagger({
+      autoDarkMode: true,
+      path: "/docs",
+      exclude: ["/docs", "/docs/json", "/"],
+      documentation: {
+        info: {
+          title: "Sagittarius",
+          version: "1.0.0",
+          description: "Sagittarius API",
+        },
+        tags: [{ name: "auth" }, { name: "admin" }, { name: "user" }],
+      },
+    })
+  )
   .group("/auth", (app) =>
     app
       .post(
-        "/logout",
-        async ({ jwt, cookie, setCookie }): Promise<ValidationResult<User>> => {
-          setCookie("access_token", "");
-
-
-          return { message: "Logged out", data: null };
-        },
-      )
-      .post(
         "/register",
         async ({
-          jwt,
+          log,
+          set,
+          body: {
+            name,
+            email,
+            username,
+            key,
+            municipality,
+            organisation,
+            project,
+          },
           cookie,
-          setCookie,
-          body,
-        }): Promise<ValidationResult<User>> => {
-          // Validate user + jwt
-
+        }): Promise<UserResult | undefined> => {
           try {
-            const user = await prisma.user.create({
+            const { id, ...user } = await prisma.user.create({
               data: {
-                username: body.username,
-                password: body.password,
-                email: body.email,
-                name: body.name,
-                municipality: body.municipality ? {
-                  connect: {
-                    name: body.municipality,
+                name,
+                email,
+                username,
+                password: key,
+                municipality: municipality
+                  ? {
+                      connectOrCreate: {
+                        where: {
+                          name: municipality,
+                        },
+                        create: {
+                          name: municipality,
+                        },
+                      },
+                    }
+                  : undefined,
+                organisation:
+                  organisation && municipality
+                    ? {
+                        connectOrCreate: {
+                          where: {
+                            name: organisation,
+                          },
+                          create: {
+                            name: organisation,
+                            municipality: {
+                              connect: {
+                                name: municipality,
+                              },
+                            },
+                          },
+                        },
+                      }
+                    : undefined,
+                project:
+                  project && organisation
+                    ? {
+                        connectOrCreate: {
+                          where: {
+                            name: project,
+                          },
+                          create: {
+                            name: project,
+                            organisation: {
+                              connect: {
+                                name: organisation,
+                              },
+                            },
+                          },
+                        },
+                      }
+                    : undefined,
+              },
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                username: true,
+                readPrivilege: true,
+                writePrivilege: true,
+                documents: {
+                  select: {
+                    id: true,
+                    name: true,
+                    version: true,
+                    createdAt: true,
+                    updatedAt: true,
                   },
-                } : undefined,
-                organisation: body.organisation ? {
-                  connect: {
-                    name: body.organisation,
+                },
+                municipality: {
+                  select: {
+                    name: true,
                   },
-                } : undefined,
+                },
+                organisation: {
+                  select: {
+                    name: true,
+                  },
+                },
+                project: {
+                  select: {
+                    name: true,
+                  },
+                },
               },
             });
 
-            const token = await jwt.sign({
-              userId: user.id,
-            });
+            set.status = 201;
 
-            setCookie("access_token", token, {
-              httpOnly: true,
-              secure: true,
-              maxAge: 60 * 60,
-              sameSite: "lax",
-            });
+            cookie.access_token.value = encrypt(id);
+            cookie.access_token.httpOnly = true;
+            cookie.access_token.secure = true;
+            cookie.access_token.sameSite = "lax";
+            cookie.access_token.path = "/";
+            cookie.access_token.domain = ".railway.app";
+            cookie.access_token.maxAge = 60 * 60 * 24 * 2; // 2 days
 
-            return {
-              message: `User ${body.username} was registered successfully!`,
-              data: user,
-            };
-          } catch (e) {
-            if (
-              e instanceof Prisma.PrismaClientKnownRequestError
-              //&&
-              // e.code === "P2002"
-            ) {
-              return { message: e.message, data: null };
+            log.info(`User ${user.name} registered.`);
+
+            return user;
+          } catch (error) {
+            if (error instanceof Prisma.PrismaClientKnownRequestError) {
+              log.error(`PRISMA ERROR: ${error.message}. CODE: ${error.code}`);
+              set.status = 400; // Bad Request
+            } else {
+              log.error(error);
+              set.status = 500; // Internal Server Error
             }
-
-            console.log(e)
-
-            return { message: "Unknown Error", data: null };
           }
         },
         {
           body: t.Object({
-            name: t.String({
-              minLength: 2,
-            }),
-            username: t.String({
-              minLength: 4,
-            }),
-            password: t.String({
-              minLength: 8,
-            }),
-            email: t.String({
-              format: "email",
-            }),
-            municipality: t.Optional(
-              t.String({
-                minLength: 2,
-              }),
-            ),
-            organisation: t.Optional(
-              t.String({
-                minLength: 2,
-              }),
-            ),
+            name: t.String({ minLength: 4 }),
+            email: t.String({ format: "email" }),
+            username: t.String({ minLength: 4 }),
+            key: t.String({ minLength: 8 }),
+            municipality: t.Optional(t.String()),
+            organisation: t.Optional(t.String()),
+            project: t.Optional(t.String()),
           }),
-        },
+          cookie: t.Cookie({
+            access_token: t.String(),
+          }),
+          detail: { tags: ["auth"] },
+        }
       )
       .post(
         "/login",
         async ({
-          jwt,
-          cookie,
-          setCookie,
-          body,
-        }): Promise<ValidationResult<User>> => {
-          // Validate user + jwt
-
-          try {
-            const user = await prisma.user.findUnique({
-              where: {
-                username: body.username,
-              },
-            });
-
-            if (!user) {
-              return { message: "User not found", data: null };
-            }
-
-            if (user.password !== body.password) {
-              return { message: "Wrong credentials!", data: null };
-            }
-
-            const token = await jwt.sign({
-              userId: user.id,
-            });
-
-            setCookie("access_token", token, {
-              httpOnly: true,
-              secure: true,
-              maxAge: 60 * 60,
-              sameSite: "lax",
-            });
-
-            return { message: "Logged in", data: user };
-          } catch (e) {
-            if (e instanceof Prisma.PrismaClientKnownRequestError) {
-              return { message: e.message, data: null };
-            }
-          }
-
-          return { message: "Logged in", data: null };
-        },
-        {
-          body: t.Object({
-            username: t.String(),
-            password: t.String({
-              minLength: 8,
-            }),
-          }),
-        },
-      ),
-  )
-  .group("/api", (app) =>
-    app
-      .derive(async ({ cookie, jwt, set }): Promise<ValidationResult<User>> => {
-        if (!cookie.access_token) {
-          set.status = 401;
-          return {
-            message: "Unauthorized",
-            data: null,
-          };
-        }
-
-        const result = await jwt.verify(cookie.access_token);
-
-        if (!result || !result.userId) {
-          set.status = 401;
-          return {
-            message: "Unauthorized",
-            data: null,
-          };
-        }
-
-        const userId = result.userId;
-
-        const user = await prisma.user.findUnique({
-          where: {
-            id: userId,
-          },
-        });
-
-        if (!user) {
-          set.status = 401;
-          return {
-            message: "Unauthorized",
-            data: null,
-          };
-        }
-
-        return {
-          message: "Authorized",
-          data: user,
-        };
-      })
-      .get("/hello", async ({ cookie, setCookie, jwt, message, data, set }): Promise<string | null> => {
-        if (data === null) {
-          set.status = 401;
-          return null;
-        }
-
-        return `Hello ${data.username}!`;
-      })
-      .post(
-        "/compile",
-        async ({
-          cookie,
-          setCookie,
-          jwt,
-          message,
-          data,
+          log,
           set,
-          body,
-        }): Promise<string | null> => {
-          if (data === null) {
-            set.status = 401;
-            return null;
+          body: { identifier, key },
+          cookie,
+        }): Promise<UserResult | undefined> => {
+          const select = {
+            id: true,
+            name: true,
+            email: true,
+            username: true,
+            password: true,
+            readPrivilege: true,
+            writePrivilege: true,
+            documents: {
+              select: {
+                id: true,
+                name: true,
+                version: true,
+                createdAt: true,
+                updatedAt: true,
+              },
+            },
+            municipality: {
+              select: {
+                name: true,
+              },
+            },
+            organisation: {
+              select: {
+                name: true,
+              },
+            },
+            project: {
+              select: {
+                name: true,
+              },
+            },
+          };
+
+          // try with email
+          const userFromEmail = await prisma.user.findUnique({
+            where: {
+              email: identifier,
+            },
+            select,
+          });
+
+          const userWithPassword =
+            userFromEmail ??
+            (await prisma.user.findUnique({
+              where: {
+                username: identifier,
+              },
+              select,
+            }));
+
+          if (!userWithPassword) {
+            set.status = 401; // Unauthorized
+            log.warn(`User not found: ${identifier}`);
+            return;
           }
 
-          return `Hello ${data.username}. I compiled ${body.code} for you!`;
+          if (userWithPassword.password !== key) {
+            set.status = 401; // Unauthorized
+            log.warn(`Invalid password from user: ${identifier}`);
+            return;
+          }
+
+          const { password, id, ...user } = userWithPassword;
+
+          cookie.access_token.value = encrypt(id);
+          cookie.access_token.httpOnly = true;
+          cookie.access_token.secure = true;
+          cookie.access_token.sameSite = "lax";
+          cookie.access_token.path = "/";
+          cookie.access_token.domain = ".railway.app";
+          cookie.access_token.maxAge = 60 * 60 * 24 * 2; // 2 days
+
+          log.info(`User ${user.name} logged in.`);
+
+          return user;
         },
         {
           body: t.Object({
-            code: t.String(),
+            identifier: t.String() /** <-- Check for both email and username */,
+            key: t.String({ minLength: 8 }),
           }),
+          cookie: t.Cookie({
+            access_token: t.String(),
+          }),
+          detail: { tags: ["auth"] },
+        }
+      )
+      .post(
+        "/logout",
+        async ({ log, set, body, cookie }) => {
+          cookie.access_token.remove();
+          set.status = 200;
         },
-      ),
+        {
+          body: t.Object({}),
+          cookie: t.Cookie({ access_token: t.String() }),
+          detail: { tags: ["auth"] },
+        }
+      )
   )
-  .listen(3000);
+  .group("/admin", (app) => app)
+  .group("/user", (app) => app)
+  .listen(9512);
 
 export type Router = typeof app;
 
 console.log(
-  `🦊 Elysia is running at ${app.server?.hostname}:${app.server?.port}`,
+  `🦊 Elysia is running at ${app.server?.hostname}:${app.server?.port}`
 );
