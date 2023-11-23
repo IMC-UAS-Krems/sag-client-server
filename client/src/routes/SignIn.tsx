@@ -1,5 +1,5 @@
 import { type Component, createSignal } from "solid-js";
-import { useI18n } from "@solid-primitives/i18n";
+// import { useI18n } from "@solid-primitives/i18n";
 import { TextField, Button } from "@kobalte/core";
 import { eden } from "@client/api";
 import type { Accessor, Setter } from "solid-js";
@@ -14,24 +14,29 @@ const FormField: Component<{
 }> = ({ getter, setter, labelText, password }) => {
   return (
     <TextField.Root class={styles.textField} value={getter()} onChange={setter}>
-      <TextField.Label class={styles.textFieldLabel}>{labelText}</TextField.Label>
-      <TextField.Input class={styles.textFieldInput} type={password ? "password" : "text"} />
+      <TextField.Label class={styles.textFieldLabel}>
+        {labelText}
+      </TextField.Label>
+      <TextField.Input
+        class={styles.textFieldInput}
+        type={password ? "password" : "text"}
+      />
     </TextField.Root>
   );
 };
 
 const Register: Component = () => {
-  const [t, { add, locale, dict }] = useI18n();
+  // const [t, { add, locale, dict }] = useI18n();
 
   const [name, setName] = createSignal<string | undefined>(undefined);
   const [email, setEmail] = createSignal<string | undefined>(undefined);
   const [username, setUsername] = createSignal<string | undefined>(undefined);
   const [password, setPassword] = createSignal<string | undefined>(undefined);
   const [municipality, setMunicipality] = createSignal<string | undefined>(
-    undefined,
+    undefined
   );
   const [organisation, setOrganisation] = createSignal<string | undefined>(
-    undefined,
+    undefined
   );
 
   const submit = async () => {
@@ -51,24 +56,25 @@ const Register: Component = () => {
       name: formName,
       email: formEmail,
       username: formUsername,
-      password: formPassword,
+      key: formPassword,
       municipality: formMunicipality,
       organisation: formOrganisation,
     });
 
-    if (!registered || registered.error) {
+    if (!registered.data || registered.error) {
       console.log(registered.error);
       return;
     }
 
-    console.log(
-      `Registration successful. Welcome ${registered.data.data?.name}.`,
-    );
+    console.log(`Registration successful. Welcome ${registered.data.name}.`);
   };
 
   return (
     <>
-      <div style={{ padding: "50px 0 50px 0", "margin-bottom": "30px" }} class={styles.signinCardContainer}>
+      <div
+        style={{ padding: "50px 0 50px 0", "margin-bottom": "30px" }}
+        class={styles.signinCardContainer}
+      >
         <form class={styles.signinFormContainer}>
           <FormField getter={name} setter={setName} labelText="Name" />
           <FormField getter={email} setter={setEmail} labelText="Email" />
@@ -101,7 +107,7 @@ const Register: Component = () => {
 };
 
 const Login: Component = () => {
-  const [t, { add, locale, dict }] = useI18n();
+  // const [t, { add, locale, dict }] = useI18n();
 
   const [username, setUsername] = createSignal<string | undefined>(undefined);
   const [password, setPassword] = createSignal<string | undefined>(undefined);
@@ -116,16 +122,16 @@ const Login: Component = () => {
     }
 
     const logged = await eden.auth.login.post({
-      username: formUsername,
-      password: formPassword,
+      identifier: formUsername,
+      key: formPassword,
     });
 
-    if (!logged || logged.error) {
+    if (!logged.data || logged.error) {
       console.log(logged.error);
       return;
     }
 
-    console.log(`Login successful. Welcome ${logged.data.data?.name}.`);
+    console.log(`Login successful. Welcome ${logged.data.name}.`);
   };
 
   return (
@@ -152,7 +158,7 @@ const Login: Component = () => {
 
 const SignIn: Component = () => {
   const [mode, setMode] = createSignal<"login" | "register">("login");
-  const [t, { add, locale, dict }] = useI18n();
+  // const [t, { add, locale, dict }] = useI18n();
 
   return (
     <main class={styles.signinMainContainer}>

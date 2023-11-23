@@ -1,0 +1,44 @@
+FROM node:20-buster as builder
+
+WORKDIR /app
+
+RUN apt update
+RUN apt install curl unzip -y
+
+RUN curl https://bun.sh/install | bash
+
+COPY package.json .
+# COPY bun.lockb .
+COPY tsconfig.json .
+COPY prisma prisma
+
+RUN /root/.bun/bin/bun install
+RUN npx prisma generate
+
+# ? -------------------------
+FROM oven/bun
+
+WORKDIR /app
+
+ARG DATABASE_URL
+ARG JWT_SECRET
+ARG PORT
+
+ENV DATABASE_URL $DATABASE_URL
+ENV JWT_SECRET $JWT_SECRET
+ENV PORT $PORT
+
+COPY --from=builder /root/.bun/bin/bun bun
+# COPY --from=builder /root/.bun/bin/bunx bunx
+COPY --from=builder /app/node_modules node_modules
+
+
+COPY server server
+# COPY public public
+COPY tsconfig.json .
+COPY utils utils
+
+ENV ENV production
+CMD ["./bun", "server/index.ts"]
+
+EXPOSE $PORT

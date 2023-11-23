@@ -9,8 +9,10 @@ import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
 import { tags } from "@lezer/highlight";
 import { eden } from "@client/api";
 import "../styles/Editor.css";
-import { useI18n } from "@solid-primitives/i18n";
+// import { useI18n } from "@solid-primitives/i18n";
 import { Button } from "@kobalte/core";
+
+const t = (s: string) => s;
 
 const compile = async (code: string) => {
   // Perform the compilation logic here
@@ -32,7 +34,7 @@ const compile = async (code: string) => {
 
 export const Editor: Component = () => {
   const [code, setCode] = createSignal("");
-  const [t, { add, locale, dict }] = useI18n();
+  // const [t, { add, locale, dict }] = useI18n();
 
   const {
     editorView,

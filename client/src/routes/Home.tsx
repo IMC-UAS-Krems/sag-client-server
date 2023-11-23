@@ -1,16 +1,20 @@
 import { Component } from "solid-js";
-import { useI18n } from "@solid-primitives/i18n";
+// import { useI18n } from "@solid-primitives/i18n";
+
+const t = (s: string) => s;
 
 import styles from "@styles/Home.module.css";
 
 const Home: Component = () => {
-  const [t, { add, locale, dict }] = useI18n();
+  // const [t, { add, locale, dict }] = useI18n();
 
   return (
     <>
-      <main class={styles.mainHomeContainer}>{`${t("Home")} ${t("page")}`}</main>
+      <main class={styles.mainHomeContainer}>{`${t("Home")} ${t(
+        "page"
+      )}`}</main>
     </>
-  )
+  );
 };
 
 export default Home;

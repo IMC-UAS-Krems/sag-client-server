@@ -40,7 +40,7 @@ type UserResult = {
 const app = new Elysia()
   .use(
     logger({
-      level: "info",
+      level: "error",
       stream: pretty({ colorize: true }),
     })
   )
@@ -60,7 +60,7 @@ const app = new Elysia()
           version: "1.0.0",
           description: "Sagittarius API",
         },
-        tags: [{ name: "auth" }, { name: "admin" }, { name: "user" }],
+        tags: [{ name: "auth" }, { name: "admin" }, { name: "api" }],
       },
     })
   )
@@ -174,7 +174,7 @@ const app = new Elysia()
 
             set.status = 201;
 
-            cookie.access_token.value = encrypt(id);
+            cookie.access_token.value = { inner: encrypt(id) };
             cookie.access_token.httpOnly = true;
             cookie.access_token.secure = true;
             cookie.access_token.sameSite = "lax";
@@ -206,7 +206,9 @@ const app = new Elysia()
             project: t.Optional(t.String()),
           }),
           cookie: t.Cookie({
-            access_token: t.String(),
+            access_token: t.Object({
+              inner: t.String(),
+            }),
           }),
           detail: { tags: ["auth"] },
         }
@@ -284,7 +286,9 @@ const app = new Elysia()
 
           const { password, id, ...user } = userWithPassword;
 
-          cookie.access_token.value = encrypt(id);
+          cookie.access_token.value = cookie.access_token.value = {
+            inner: encrypt(id),
+          };
           cookie.access_token.httpOnly = true;
           cookie.access_token.secure = true;
           cookie.access_token.sameSite = "lax";
@@ -302,7 +306,9 @@ const app = new Elysia()
             key: t.String({ minLength: 8 }),
           }),
           cookie: t.Cookie({
-            access_token: t.String(),
+            access_token: t.Object({
+              inner: t.String(),
+            }),
           }),
           detail: { tags: ["auth"] },
         }
@@ -315,14 +321,57 @@ const app = new Elysia()
         },
         {
           body: t.Object({}),
-          cookie: t.Cookie({ access_token: t.String() }),
+          cookie: t.Cookie({
+            access_token: t.Object({
+              inner: t.String(),
+            }),
+          }),
           detail: { tags: ["auth"] },
         }
       )
   )
   .group("/admin", (app) => app)
-  .group("/user", (app) => app)
-  .listen(9512);
+  .group("/api", (app) =>
+    app.post(
+      "/compile",
+      async ({ log, set, body: { code }, cookie }) => {
+        const id = decrypt(cookie.access_token.value.inner) as string;
+
+        const user = await prisma.user.findUnique({
+          where: {
+            id,
+          },
+          select: {
+            email: true,
+          },
+        });
+
+        if (!user) {
+          set.status = 401; // Unauthorized
+          log.warn(`User not found: ${id}`);
+          return;
+        }
+
+        set.status = 200;
+        log.info(`User ${user.email} compiled.`);
+        return {
+          compiled: code,
+        };
+      },
+      {
+        body: t.Object({
+          code: t.String(),
+        }),
+        cookie: t.Cookie({
+          access_token: t.Object({
+            inner: t.String(),
+          }),
+        }),
+        detail: { tags: ["api"] },
+      }
+    )
+  )
+  .listen(Bun.env.PORT ?? panic("PORT environment variable not set"));
 
 export type Router = typeof app;
 

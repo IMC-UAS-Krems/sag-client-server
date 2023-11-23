@@ -18,28 +18,30 @@ import SignIn from "./routes/SignIn";
 import { user, setUser } from "@store/index";
 import { eden } from "@client/api";
 import { createSignal } from "solid-js";
-import { useI18n } from "@solid-primitives/i18n";
+// import { useI18n } from "@solid-primitives/i18n";
 import { Facet } from "@codemirror/state";
 
-const getMessage = async (): Promise<string | null> => {
-  const mes = (await eden.api.hello.get()).data;
+const t = (s: string) => s;
 
-  console.log("Got a message: ", mes);
-
-  const compile = await eden.api.compile.post({ code: "hello" });
-
-  return compile.data;
-};
+// const getMessage = async (): Promise<string | null> => {
+//   const mes = (await eden.api.hello.get()).data;
+//
+//   console.log("Got a message: ", mes);
+//
+//   const compile = await eden.api.compile.post({ code: "hello" });
+//
+//   return compile.data;
+// };
 
 const App: Component = () => {
-  const [message] = createResource(getMessage);
-  const [t, { add, locale, dict }] = useI18n();
+  // const [message] = createResource(getMessage);
+  // const [t, { add, locale, dict }] = useI18n();
 
   // Function to toggle between English and German
-  const toggleLanguage = () => {
-    const newLocale = locale() === "en" ? "de" : "en";
-    locale(newLocale);
-  };
+  // const toggleLanguage = () => {
+  //   const newLocale = locale() === "en" ? "de" : "en";
+  //   locale(newLocale);
+  // };
 
   return (
     <>

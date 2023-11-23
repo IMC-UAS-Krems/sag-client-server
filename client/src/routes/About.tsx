@@ -1,8 +1,10 @@
 import { Component } from "solid-js";
-import { useI18n } from "@solid-primitives/i18n";
+// import { useI18n } from "@solid-primitives/i18n";
+
+const t = (s: string) => s;
 
 const About: Component = () => {
-  const [t, { add, locale, dict }] = useI18n();
+  // const [t, { add, locale, dict }] = useI18n();
 
   return <main>{`${t("About")} ${t("page")}`}</main>;
 };
