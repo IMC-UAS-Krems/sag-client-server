@@ -22,28 +22,23 @@ WORKDIR /app
 
 ARG DATABASE_URL
 ARG JWT_SECRET
-ARG VITE_SERVER_PORT
-ARG VITE_CLIENT_PORT
-ARG VITE_SERVER_URL
+ARG PORT
 
 ENV DATABASE_URL $DATABASE_URL
 ENV JWT_SECRET $JWT_SECRET
-ENV VITE_SERVER_PORT $VITE_SERVER_PORT
-ENV VITE_CLIENT_PORT $VITE_CLIENT_PORT
-ENV VITE_SERVER_URL $VITE_SERVER_URL
+ENV PORT $PORT
 
 COPY --from=builder /root/.bun/bin/bun bun
 # COPY --from=builder /root/.bun/bin/bunx bunx
 COPY --from=builder /app/node_modules node_modules
 
-COPY package.json .
+RUN mkdir -p dist
 COPY server server
-COPY client client
 # COPY public public
 COPY tsconfig.json .
 COPY utils utils
 
 ENV ENV production
-RUN bun run build
+CMD ["./bun", "server/index.ts"]
 
-CMD ["./bun", "vite", "dist", "--host", "0.0.0.0", "--port", "8100"]
+EXPOSE $PORT

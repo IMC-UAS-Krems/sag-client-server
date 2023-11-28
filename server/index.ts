@@ -174,7 +174,11 @@ const app = new Elysia()
 
             set.status = 201;
 
-            cookie.access_token.value = { inner: encrypt(id) };
+            const token = encrypt(id);
+
+            log.info(`Producing token: ${token}`);
+
+            cookie.access_token.value = token;
             cookie.access_token.httpOnly = true;
             cookie.access_token.secure = true;
             cookie.access_token.sameSite = "lax";
@@ -206,9 +210,7 @@ const app = new Elysia()
             project: t.Optional(t.String()),
           }),
           cookie: t.Cookie({
-            access_token: t.Object({
-              inner: t.String(),
-            }),
+            access_token: t.String(),
           }),
           detail: { tags: ["auth"] },
         }
@@ -286,9 +288,11 @@ const app = new Elysia()
 
           const { password, id, ...user } = userWithPassword;
 
-          cookie.access_token.value = cookie.access_token.value = {
-            inner: encrypt(id),
-          };
+          const token = encrypt(id);
+
+          log.info(`Producing token: ${token}`);
+
+          cookie.access_token.value = token;
           cookie.access_token.httpOnly = true;
           cookie.access_token.secure = true;
           cookie.access_token.sameSite = "lax";
@@ -306,9 +310,7 @@ const app = new Elysia()
             key: t.String({ minLength: 8 }),
           }),
           cookie: t.Cookie({
-            access_token: t.Object({
-              inner: t.String(),
-            }),
+            access_token: t.String(),
           }),
           detail: { tags: ["auth"] },
         }
