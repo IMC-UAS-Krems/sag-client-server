@@ -1,9 +1,78 @@
 .mainHomeContainer {
-  display: flex;
+  /* display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   color: var(--primary-text);
 
-  margin-top: 30px;
+  margin-top: 30px; */
+  width: 100vw;
+}
+
+.mainArticleContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.introSection {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0 8% 0 8%;
+}
+
+.introSection h1 {
+  font-size: var(--h1-text-linear);
+  color: var(--primary-text);
+
+  margin: clamp(0.625rem, 0.3750rem + 1.2500vw, 1.875rem) 0 clamp(0.625rem, 0.3750rem + 1.2500vw, 1.875rem) 0;
+  padding: 0;
+}
+
+.introSection p {
+  font-size: var(--body-text-linear);
+  color: var(--primary-text);
+  line-height: 35px;
+
+  margin: clamp(0.625rem, 0.3750rem + 1.2500vw, 1.875rem) 0 clamp(0.625rem, 0.3750rem + 1.2500vw, 1.875rem) 0;
+  padding: 0;
+}
+
+.mapSectionContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  width: 100%;
+  height: 75vh;
+
+  margin-bottom: 20px;
+}
+
+.mapSectionContainer h1 {
+  font-size: var(--h1-text-linear);
+  color: var(--primary-text);
+
+  margin: clamp(0.625rem, 0.3750rem + 1.2500vw, 1.875rem) 0 clamp(0.625rem, 0.3750rem + 1.2500vw, 1.875rem) 0;
+  padding: 0;
+}
+
+.mapContainer {
+  position: relative;
+  width: 85%;
+  height: 100%;
+  border-radius: 12px;
+  z-index: 0;
+  border: 3px solid var(--primary-text);
+}
+
+.mapClass {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: 8px;
 }

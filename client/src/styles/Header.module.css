@@ -22,7 +22,7 @@
   text-decoration: none;
   color: var(--primary-text);
   font-weight: 500;
-  font-size: 16px;
+  font-size: var(--body-2-text-linear);
   padding: 10px;
 
 }
