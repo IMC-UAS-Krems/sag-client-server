@@ -1,4 +1,4 @@
-import { Component, createSignal } from "solid-js";
+import { Component, createSignal, Show } from "solid-js";
 import {
   createCodeMirror,
   createEditorControlledValue,
@@ -11,18 +11,19 @@ import { eden } from "@client/api";
 import "../styles/Editor.css";
 // import { useI18n } from "@solid-primitives/i18n";
 import { Button } from "@kobalte/core";
+import { Alert } from "@kobalte/core";
 
 const t = (s: string) => s;
 
-const compile = async (code: string) => {
+const compile = async (code: string): Promise<string | undefined> => {
   // Perform the compilation logic here
   try {
     const compileResult = await eden.api.compile.post({ code });
 
-    if (compileResult.error) {
-      console.log("Compiled: ", compileResult.error);
+    if (compileResult.error || !compileResult.data) {
+      console.log(compileResult.error);
     } else {
-      console.log("Compilation error: ", compileResult.data);
+      return compileResult.data.compiled;
     }
 
     // Handle the compilation result as needed
@@ -35,6 +36,7 @@ const compile = async (code: string) => {
 export const Editor: Component = () => {
   const [code, setCode] = createSignal("");
   // const [t, { add, locale, dict }] = useI18n();
+  const [url, setUrl] = createSignal<string | undefined>(undefined);
 
   const {
     editorView,
@@ -68,11 +70,34 @@ export const Editor: Component = () => {
 
   return (
     <main>
-      <Button.Root class="compile" onClick={() => compile(code())}>
+      <Show when={url() !== undefined}>
+        <Alert.Root class="alert">{url()}</Alert.Root>
+      </Show>
+      <Button.Root
+        class="compile"
+        onClick={async () => {
+          setUrl("Compiling...");
+
+          const result = await compile(code());
+
+          if (result === undefined) {
+            setUrl("Something went wrong. Please try again.");
+          } else {
+            setUrl(
+              `Success! Navigate to ${result} to visualize the dashboard.`
+            );
+
+            setTimeout(() => {
+              setUrl(undefined);
+            }, 10000);
+          }
+        }}
+      >
         Compile
       </Button.Root>
       <div class="editor-container">
         <div class="left-column">{t("Left")}</div>
+
         <div class="middle-column">
           <div ref={editorRef} />
         </div>

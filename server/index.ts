@@ -337,27 +337,50 @@ const app = new Elysia()
     app.post(
       "/compile",
       async ({ log, set, body: { code }, cookie }) => {
-        const id = decrypt(cookie.access_token.value.inner) as string;
+        // const id = decrypt(cookie.access_token.value.inner) as string;
+        //
+        // const user = await prisma.user.findUnique({
+        //   where: {
+        //     id,
+        //   },
+        //   select: {
+        //     email: true,
+        //   },
+        // });
+        //
+        // if (!user) {
+        //   set.status = 401; // Unauthorized
+        //   log.warn(`User not found: ${id}`);
+        //   return;
+        // }
 
-        const user = await prisma.user.findUnique({
-          where: {
-            id,
-          },
-          select: {
-            email: true,
-          },
-        });
+        const compiled = await fetch(
+          "https://sagittarius-compose-production.up.railway.app/deploy",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              source: code,
+              app_name: `sagittarius-test-run-deploy-${
+                (Math.random() * 2000) << 0
+              }`,
+            }),
+          }
+        );
 
-        if (!user) {
-          set.status = 401; // Unauthorized
-          log.warn(`User not found: ${id}`);
-          return;
+        if (!compiled.ok) {
+          set.status = compiled.status;
+          log.error(`${compiled.statusText}`);
         }
 
+        const data = await compiled.json();
+
         set.status = 200;
-        log.info(`User ${user.email} compiled.`);
+        log.info(`Data ${data} compiled.`);
         return {
-          compiled: code,
+          compiled: data,
         };
       },
       {

@@ -3,7 +3,8 @@
   height: 86vh; /* Set the editor container to occupy full viewport height */
 }
 
-.left-column, .right-column {
+.left-column,
+.right-column {
   flex: 1; /* Allow all columns to take up equal space */
   padding: 10px;
   border: 1px solid #ccc;
@@ -47,4 +48,12 @@
 .compile:hover {
   background-color: #020205;
   color: #fafafa;
+}
+
+.alert {
+  border-radius: 6px;
+  padding: 12px 16px;
+  background-color: hsl(204 100% 97%);
+  color: hsl(201 96% 32%);
+  font-size: 16px;
 }
