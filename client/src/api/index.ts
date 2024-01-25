@@ -4,5 +4,5 @@ import { edenTreaty } from "@elysiajs/eden";
 // export const eden = edenTreaty<Router>("http://localhost:9512");
 
 export const eden = edenTreaty<Router>(
-  "https://sagittarius-server-production.up.railway.app"
+    "https://sag-client.azurewebsites.net/"
 );

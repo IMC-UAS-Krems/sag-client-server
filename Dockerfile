@@ -43,7 +43,11 @@ COPY client client
 COPY tsconfig.json .
 COPY utils utils
 
-ENV ENV production
-RUN bun run build
+# WARNING: This is a hack to make vite work in azure. Chnage this to production later on when one origin is set up.
 
-CMD ["./bun", "vite", "dist", "--host", "0.0.0.0", "--port", "8100"]
+# ENV ENV production
+# RUN bun run build
+
+# CMD ["./bun", "vite", "dist", "--host", "0.0.0.0", "--port", "8100"]
+CMD ["./bun", "run", "dev", "--host", "0.0.0.0", "--port", "8100"]
+EXPOSE 8100
