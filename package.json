@@ -28,21 +28,23 @@
     "mapbox-gl": "^3.0.0",
     "maplibre-gl": "^3.6.2",
     "ncrypt-js": "^2.0.0",
+    "or": "^0.2.0",
     "pino-pretty": "^10.2.3",
     "prisma": "^5.6.0",
     "solid-codemirror": "^2.3.0",
     "solid-icons": "^1.1.0",
     "solid-js": "^1.8.5",
     "solid-map-gl": "^1.10.2",
-    "solid-meta": "^0.28.1"
+    "solid-meta": "^0.28.1",
+    "sweetalert2": "^11.10.4"
   },
   "devDependencies": {
+    "@types/node": "^20.4.2",
     "bun-types": "latest",
     "solid-devtools": "^0.27.3",
     "typescript": "^5.2.2",
     "vite": "^5.0.12",
     "vite-plugin-solid": "^2.7.0",
-    "@types/node": "^20.4.2",
     "vite-tsconfig-paths": "^4.2.0"
   },
   "module": "server/index.js"
