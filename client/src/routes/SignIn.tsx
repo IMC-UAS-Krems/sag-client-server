@@ -96,11 +96,18 @@ const Register: Component = () => {
             labelText="Password"
             password={true}
           />
-          <FormField
-            getter={municipality}
-            setter={setMunicipality}
-            labelText="Municipality"
-          />
+          <div class={styles.textField}>
+            <label class={styles.textFieldLabel}>Municipality</label>
+            <select
+              class={styles.textFieldInput}
+              value={municipality()}
+              onInput={(e) => setMunicipality(e.currentTarget.value)}
+            >
+              <option value="A">Krems</option>
+              <option value="B">Sankt Pölten</option>
+              <option value="C">Tulln</option>
+            </select>
+          </div>
           <FormField
             getter={organisation}
             setter={setOrganisation}
