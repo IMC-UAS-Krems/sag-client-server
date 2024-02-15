@@ -20,13 +20,8 @@ FROM oven/bun
 
 WORKDIR /app
 
-ARG DATABASE_URL
-ARG JWT_SECRET
-ARG PORT
-
 ENV DATABASE_URL $DATABASE_URL
 ENV JWT_SECRET $JWT_SECRET
-ENV PORT $PORT
 
 COPY --from=builder /root/.bun/bin/bun bun
 # COPY --from=builder /root/.bun/bin/bunx bunx
@@ -41,4 +36,4 @@ COPY utils utils
 ENV ENV production
 CMD ["./bun", "server/index.ts"]
 
-EXPOSE $PORT
+EXPOSE 9512
