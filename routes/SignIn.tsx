@@ -1,4 +1,4 @@
-import { type Component, createSignal } from "solid-js";
+import { type Component, createSignal, createEffect } from "solid-js";
 // import { useI18n } from "@solid-primitives/i18n";
 import { TextField, Button } from "@kobalte/core";
 import { eden } from "@client/api";
@@ -40,6 +40,22 @@ const Register: Component = () => {
   const [organisation, setOrganisation] = createSignal<string | undefined>(
     undefined
   );
+  const [municipalities, setMunicipalities] = createSignal<string[]>([]);
+
+  const fetchMunicipalities = async () => {
+    try {
+      const response = await eden.api.municipalities.get();
+      if (response.data) {
+        setMunicipalities(response.data);
+      }
+    } catch (error) {
+      console.error("Error fetching municipalities:", error);
+    }
+  };
+
+  createEffect(() => {
+    fetchMunicipalities();
+  });
 
   const submit = async () => {
     const formName = name();
@@ -100,12 +116,13 @@ const Register: Component = () => {
             <label class={styles.textFieldLabel}>Municipality</label>
             <select
               class={styles.textFieldInput}
-              value={municipality()}
-              onInput={(e) => setMunicipality(e.currentTarget.value)}
+              onChange={(e) => setMunicipality(e.currentTarget.value)}
             >
-              <option value="A">Krems</option>
-              <option value="B">Sankt Pölten</option>
-              <option value="C">Tulln</option>
+              {municipalities().map((municipality) => (
+                <option key={municipality} value={municipality}>
+                  {municipality}
+                </option>
+              ))}
             </select>
           </div>
           <FormField
