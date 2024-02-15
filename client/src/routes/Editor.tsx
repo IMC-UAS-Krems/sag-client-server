@@ -15,6 +15,7 @@ import { Alert } from "@kobalte/core";
 import cors from "@elysiajs/cors";
 
 const t = (s: string) => s;
+const DEPLOYER_URL = import.meta.env.VITE_DEPLOYER_URL || "http://localhost:9000";
 
 type CompileResult = {
     error: string | undefined;
@@ -24,7 +25,18 @@ type CompileResult = {
 const compile = async (code: string): Promise<CompileResult | undefined> => {
     // Perform the compilation logic here
     try {
-        const compileResult = await eden.api.compile.post({ code });
+        const compileResult = await eden.api.compile.post({
+            code,
+            $fetch: {
+                mode: "cors",
+                credentials: "include",
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+
+            }
+        });
         // console.log("compileResult: ", compileResult);
 
         if (compileResult.error || !compileResult.data) {
@@ -35,7 +47,7 @@ const compile = async (code: string): Promise<CompileResult | undefined> => {
             };
         }
 
-        const url = await fetch("https://sag-deploy.azurewebsites.net/deploy", {
+        const url = await fetch(`${DEPLOYER_URL}/deploy`, {
             body: JSON.stringify({
                 user_id: compileResult.data.user_id,
                 source: JSON.stringify(compileResult.data.compiled),
