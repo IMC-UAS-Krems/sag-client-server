@@ -1,4 +1,4 @@
-import { type Component, createSignal } from "solid-js";
+import { type Component, createSignal, createEffect } from "solid-js";
 // import { useI18n } from "@solid-primitives/i18n";
 import { TextField, Button } from "@kobalte/core";
 import { eden } from "@client/api";
@@ -7,6 +7,8 @@ import type { Accessor, Setter } from "solid-js";
 import styles from "@styles/Signin.module.css";
 
 import Swal from "sweetalert2";
+
+import authStore from "@store/authStore";
 
 const FormField: Component<{
   getter: Accessor<string | undefined>;
@@ -40,6 +42,22 @@ const Register: Component = () => {
   const [organisation, setOrganisation] = createSignal<string | undefined>(
     undefined
   );
+  const [municipalities, setMunicipalities] = createSignal<string[]>([]);
+
+  const fetchMunicipalities = async () => {
+    try {
+      const response = await eden.api.municipalities.get();
+      if (response.data) {
+        setMunicipalities(response.data);
+      }
+    } catch (error) {
+      console.error("Error fetching municipalities:", error);
+    }
+  };
+
+  createEffect(() => {
+    fetchMunicipalities();
+  });
 
   const submit = async () => {
     const formName = name();
@@ -100,12 +118,13 @@ const Register: Component = () => {
             <label class={styles.textFieldLabel}>Municipality</label>
             <select
               class={styles.textFieldInput}
-              value={municipality()}
-              onInput={(e) => setMunicipality(e.currentTarget.value)}
+              onChange={(e) => setMunicipality(e.currentTarget.value)}
             >
-              <option value="A">Krems</option>
-              <option value="B">Sankt Pölten</option>
-              <option value="C">Tulln</option>
+              {municipalities().map((municipality) => (
+                <option key={municipality} value={municipality}>
+                  {municipality}
+                </option>
+              ))}
             </select>
           </div>
           <FormField
@@ -147,10 +166,18 @@ const Login: Component = () => {
 
     if (!logged.data || logged.error) {
       console.log(logged.error);
+      Swal.fire({
+        title: "Error",
+        text: "Wrong login data",
+        icon: "error",
+      });
       return;
     }
 
     console.log(`Login successful. Welcome ${logged.data.name}.`);
+
+    authStore.state().isAuthenticated = true;
+    authStore.state().user = logged.data;
 
     window.location.href = "/editor";
   };
