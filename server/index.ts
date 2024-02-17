@@ -191,12 +191,12 @@ const app = new Elysia()
 
                         log.info(`Producing token: ${token}`);
 
+
                         setCookie("access_token", token, {
                             httpOnly: true,
                             secure: true,
                             sameSite: "none",
                             // path: "/",
-                            // domain: "azurewebsites.net",
                             maxAge: 60 * 60 * 24 * 2, // 2 days
                         });
 
@@ -315,16 +315,6 @@ const app = new Elysia()
                         maxAge: 60 * 60 * 24 * 2, // 2 days
                     });
 
-                    // access_token.set({
-                    //     value: token,
-                    //     // httpOnly: false,
-                    //     // secure: true,
-                    //     // sameSite: "lax",
-                    //     // path: "/",
-                    //     // domain: "azurewebsites.net",
-                    //     maxAge: 60 * 60 * 24 * 2, // 2 days
-                    //
-                    // });
 
                     log.info(`User ${user.name} logged in.`);
 

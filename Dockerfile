@@ -38,8 +38,6 @@ COPY client client
 COPY tsconfig.json .
 COPY utils utils
 
-# WARNING: This is a hack to make vite work in azure. Chnage this to production later on when one origin is set up.
-
 ENV ENV production
 RUN bun run build
 
