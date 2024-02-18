@@ -70,9 +70,6 @@ const Register: Component = () => {
                 mode: "cors",
                 credentials: "include",
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
 
             }
 
@@ -157,9 +154,6 @@ const Login: Component = () => {
                 mode: "cors",
                 credentials: "include",
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
 
             }
 

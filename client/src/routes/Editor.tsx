@@ -31,9 +31,6 @@ const compile = async (code: string): Promise<CompileResult | undefined> => {
                 mode: "cors",
                 credentials: "include",
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
 
             }
         });

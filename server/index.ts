@@ -196,7 +196,7 @@ const app = new Elysia()
                             httpOnly: true,
                             secure: true,
                             sameSite: "none",
-                            // path: "/",
+                            path: "/",
                             maxAge: 60 * 60 * 24 * 2, // 2 days
                         });
 
@@ -310,8 +310,7 @@ const app = new Elysia()
                         httpOnly: true,
                         secure: true,
                         sameSite: "none",
-                        // path: "/",
-                        // domain: "sag-client.azurewebsites.net",
+                        path: "/",
                         maxAge: 60 * 60 * 24 * 2, // 2 days
                     });
 
