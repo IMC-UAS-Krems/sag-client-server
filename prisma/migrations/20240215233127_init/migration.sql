@@ -13,8 +13,8 @@ CREATE TABLE "users" (
     "password" TEXT NOT NULL,
     "writePrivilege" "ProducerLevel" NOT NULL DEFAULT 'NO_ACCESS',
     "readPrivilege" "ConsumerLevel" NOT NULL DEFAULT 'NO_ACCESS',
-    "municipalityId" TEXT NOT NULL,
-    "orgId" TEXT NOT NULL,
+    "municipalityId" TEXT,
+    "orgId" TEXT,
     "projectId" TEXT,
     "registered" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3),
@@ -51,6 +51,7 @@ CREATE TABLE "organisations" (
     "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "municipalityId" TEXT NOT NULL,
+    "verified" BOOLEAN NOT NULL DEFAULT false,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3),
 
@@ -101,10 +102,10 @@ CREATE UNIQUE INDEX "projects_id_key" ON "projects"("id");
 CREATE UNIQUE INDEX "projects_name_key" ON "projects"("name");
 
 -- AddForeignKey
-ALTER TABLE "users" ADD CONSTRAINT "users_municipalityId_fkey" FOREIGN KEY ("municipalityId") REFERENCES "municipalities"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "users" ADD CONSTRAINT "users_municipalityId_fkey" FOREIGN KEY ("municipalityId") REFERENCES "municipalities"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "users" ADD CONSTRAINT "users_orgId_fkey" FOREIGN KEY ("orgId") REFERENCES "organisations"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "users" ADD CONSTRAINT "users_orgId_fkey" FOREIGN KEY ("orgId") REFERENCES "organisations"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "users" ADD CONSTRAINT "users_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "projects"("id") ON DELETE SET NULL ON UPDATE CASCADE;
