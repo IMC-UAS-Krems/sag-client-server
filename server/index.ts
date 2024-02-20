@@ -13,6 +13,8 @@ import { cookie } from '@elysiajs/cookie'
 const { encrypt, decrypt } = new crypt(
     Bun.env.JWT_SECRET ?? panic("JWT_SECRET environment variable not set")
 );
+const COMPILER_URL = Bun.env.COMPILER_URL || "http://localhost:8080";
+
 
 // TODO: @elysiajs/cookie not needed, can be reverted to original
 // TODO: check cors settings for production
@@ -53,7 +55,7 @@ const app = new Elysia()
     .use(
         cors({
             credentials: true,
-            methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+            // methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
             allowedHeaders: ["Content-Type", "*"],
             origin: true
         })
@@ -89,10 +91,9 @@ const app = new Elysia()
                         organisation,
                         project,
                     },
-                    cookie: { access_token }, setCookie, removeCookie
+                    setCookie
                 }): Promise<UserResult | undefined> => {
                     try {
-                        log.info(access_token);
                         log.info("Trying to create user");
                         const { id, ...user } = await prisma.user.create({
                             data: {
@@ -190,12 +191,12 @@ const app = new Elysia()
 
                         log.info(`Producing token: ${token}`);
 
+
                         setCookie("access_token", token, {
-                            httpOnly: false,
+                            httpOnly: true,
                             secure: true,
                             sameSite: "none",
                             path: "/",
-                            domain: "azurewebsites.net",
                             maxAge: 60 * 60 * 24 * 2, // 2 days
                         });
 
@@ -234,9 +235,8 @@ const app = new Elysia()
                     log,
                     set,
                     body: { identifier, key },
-                    cookie: { access_token }, setCookie, removeCookie
+                    setCookie
                 }): Promise<UserResult | undefined> => {
-                    log.info("Token: ", access_token);
                     const select = {
                         id: true,
                         name: true,
@@ -307,24 +307,13 @@ const app = new Elysia()
                     log.info(`Producing token: ${token}`);
 
                     setCookie("access_token", token, {
-                        httpOnly: false,
+                        httpOnly: true,
                         secure: true,
                         sameSite: "none",
                         path: "/",
-                        domain: "sag-client.azurewebsites.net",
                         maxAge: 60 * 60 * 24 * 2, // 2 days
                     });
 
-                    // access_token.set({
-                    //     value: token,
-                    //     // httpOnly: false,
-                    //     // secure: true,
-                    //     // sameSite: "lax",
-                    //     // path: "/",
-                    //     // domain: "azurewebsites.net",
-                    //     maxAge: 60 * 60 * 24 * 2, // 2 days
-                    //
-                    // });
 
                     log.info(`User ${user.name} logged in.`);
 
@@ -358,70 +347,79 @@ const app = new Elysia()
     )
     .group("/admin", (app) => app)
     .group("/api", (app) =>
-        app.post(
-            "/compile",
-            async ({ log, set, body: { code }, cookie }) => {
-                const id = decrypt(cookie.access_token) as string;
-                console.log("id: ", id);
+        app.get("/municipalities", async ({ set }) => {
+            const municipalities = await prisma.municipality.findMany({
+                select: {
+                    name: true,
+                },
+            });
+            set.status = 200;
+            return municipalities.map((m) => m.name);
+        })
+            .post(
+                "/compile",
+                async ({ log, set, body: { code }, cookie }) => {
+                    const id = decrypt(cookie.access_token) as string;
+                    console.log("id: ", id);
 
-                const user = await prisma.user.findUnique({
-                    where: {
-                        id,
-                    },
-                    select: {
-                        email: true,
-                        id: true,
-                    },
-                });
-
-                if (!user) {
-                    set.status = 401; // Unauthorized
-                    log.warn(`User not found: ${id}`);
-                    return;
-                }
-                console.log(user);
-
-                // "https://sagittarius-compose-production.up.railway.app/deploy",
-                const compiled = await fetch(
-                    "https://sag-compiler.azurewebsites.net/grafana",
-                    {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json",
+                    const user = await prisma.user.findUnique({
+                        where: {
+                            id,
                         },
-                        body: JSON.stringify({
-                            source: code,
-                            app_name: `sagittarius-test-run-deploy-${(Math.random() * 2000) << 0
-                                }`,
-                        }),
+                        select: {
+                            email: true,
+                            id: true,
+                        },
+                    });
+
+                    if (!user) {
+                        set.status = 401; // Unauthorized
+                        log.warn(`User not found: ${id}`);
+                        return;
                     }
-                );
-                const data = await compiled.json();
+                    console.log(user);
 
-                if (!compiled.ok) {
-                    set.status = compiled.status;
-                    log.error(`${data.error}`);
-                    set.status = 400;
-                    return data.error;
+                    // "https://sagittarius-compose-production.up.railway.app/deploy",
+                    const compiled = await fetch(
+                        `${COMPILER_URL}/grafana`,
+                        {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                            },
+                            body: JSON.stringify({
+                                source: code,
+                            }),
+                        }
+                    );
+                    const data = await compiled.json();
+
+                    if (!compiled.ok) {
+                        set.status = compiled.status;
+                        log.error(`${data.error}`);
+                        set.status = 400;
+                        return data.error;
+                    }
+
+                    set.status = 200;
+                    log.info(`Data ${data} compiled.`);
+                    return {
+                        compiled: data,
+                        user_id: user.id,
+                    };
+                },
+                {
+                    body: t.Object({
+                        code: t.String(),
+                    }),
+                    // WARNING: wasn't able to make it work (fails even when the cookie is present)
+                    //
+                    // cookie: t.Cookie({
+                    //     access_token: t.String(),
+                    // }),
+                    detail: { tags: ["api"] },
                 }
-
-                set.status = 200;
-                log.info(`Data ${data} compiled.`);
-                return {
-                    compiled: data,
-                    user_id: user.id,
-                };
-            },
-            {
-                body: t.Object({
-                    code: t.String(),
-                }),
-                cookie: t.Cookie({
-                    access_token: t.String(),
-                }),
-                detail: { tags: ["api"] },
-            }
-        )
+            )
     )
     .get("/status", async ({ set }) => {
         const statuses = ["Single", "In a relationship", "Married", "In love", "It's complicated"];
@@ -432,7 +430,7 @@ const app = new Elysia()
         set.redirect = "/status";
     })
     .listen(
-        { port: Bun.env.PORT ?? panic("PORT environment variable not set"), hostname: "0.0.0.0" });
+        { port: "9512", hostname: "0.0.0.0" });
 
 export type Router = typeof app;
 
