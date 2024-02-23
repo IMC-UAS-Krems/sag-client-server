@@ -177,11 +177,7 @@ const Login: Component = () => {
     }
 
     console.log(`Login successful. Welcome ${logged.data.name}.`);
-    //print the user name
-    console.log(logged.data.name);
-    console.log(formUsername);
     authStore.setState({ isAuthenticated: true, user: formUsername });
-    console.log(authStore.state().isAuthenticated);
 
     navigate("/editor", { replace: true });
   };
