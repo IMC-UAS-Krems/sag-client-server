@@ -44,6 +44,7 @@ const Register: Component = () => {
     undefined
   );
   const [municipalities, setMunicipalities] = createSignal<string[]>([]);
+  const navigate = useNavigate();
 
   const fetchMunicipalities = async () => {
     try {
@@ -91,6 +92,16 @@ const Register: Component = () => {
       console.log(registered.error);
       return;
     }
+
+    authStore.setState({ isAuthenticated: true, user: formUsername });
+
+    navigate("/editor", { replace: true });
+
+    Swal.fire({
+      title: "Success",
+      text: `Login successful.`,
+      icon: "success",
+    });
 
     console.log(`Registration successful. Welcome ${registered.data.name}.`);
   };
