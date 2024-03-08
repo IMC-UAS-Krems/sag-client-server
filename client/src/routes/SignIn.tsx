@@ -9,7 +9,9 @@ import styles from "@styles/Signin.module.css";
 import Swal from "sweetalert2";
 
 import authStore from "@store/authStore";
+
 import { useNavigate } from "@solidjs/router";
+
 
 const FormField: Component<{
   getter: Accessor<string | undefined>;
@@ -44,6 +46,7 @@ const Register: Component = () => {
     undefined
   );
   const [municipalities, setMunicipalities] = createSignal<string[]>([]);
+
   const navigate = useNavigate();
 
   const fetchMunicipalities = async () => {
@@ -92,6 +95,7 @@ const Register: Component = () => {
       console.log(registered.error);
       return;
     }
+
 
     authStore.setState({ isAuthenticated: true, user: formUsername });
 
@@ -156,6 +160,7 @@ const Login: Component = () => {
 
   const [username, setUsername] = createSignal<string | undefined>(undefined);
   const [password, setPassword] = createSignal<string | undefined>(undefined);
+
   const navigate = useNavigate();
 
   const submit = async () => {
@@ -188,6 +193,7 @@ const Login: Component = () => {
     }
 
     console.log(`Login successful. Welcome ${logged.data.name}.`);
+
     authStore.setState({ isAuthenticated: true, user: formUsername });
 
     navigate("/editor", { replace: true });
