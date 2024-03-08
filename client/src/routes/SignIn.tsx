@@ -10,6 +10,9 @@ import Swal from "sweetalert2";
 
 import authStore from "@store/authStore";
 
+import { useNavigate } from "@solidjs/router";
+
+
 const FormField: Component<{
   getter: Accessor<string | undefined>;
   setter: Setter<string | undefined>;
@@ -43,6 +46,8 @@ const Register: Component = () => {
     undefined
   );
   const [municipalities, setMunicipalities] = createSignal<string[]>([]);
+
+  const navigate = useNavigate();
 
   const fetchMunicipalities = async () => {
     try {
@@ -90,6 +95,17 @@ const Register: Component = () => {
       console.log(registered.error);
       return;
     }
+
+
+    authStore.setState({ isAuthenticated: true, user: formUsername });
+
+    navigate("/editor", { replace: true });
+
+    Swal.fire({
+      title: "Success",
+      text: `Login successful.`,
+      icon: "success",
+    });
 
     console.log(`Registration successful. Welcome ${registered.data.name}.`);
   };
@@ -145,6 +161,8 @@ const Login: Component = () => {
   const [username, setUsername] = createSignal<string | undefined>(undefined);
   const [password, setPassword] = createSignal<string | undefined>(undefined);
 
+  const navigate = useNavigate();
+
   const submit = async () => {
     const formUsername = username();
     const formPassword = password();
@@ -176,10 +194,9 @@ const Login: Component = () => {
 
     console.log(`Login successful. Welcome ${logged.data.name}.`);
 
-    authStore.state().isAuthenticated = true;
-    authStore.state().user = logged.data;
+    authStore.setState({ isAuthenticated: true, user: formUsername });
 
-    window.location.href = "/editor";
+    navigate("/editor", { replace: true });
   };
 
   return (
