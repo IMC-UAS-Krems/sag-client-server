@@ -9,10 +9,10 @@ const DRoutes: Component = () => {
   return (
     <>
       <Routes>
-        <Route path="/" component={Home} />
+        <Route path="/" component={SignIn} />
         <Route path="/editor" component={Editor} />
         <Route path="/about" component={About} />
-        <Route path="/sign-in" component={SignIn} />
+        <Route path="/home" component={Home} />
         <Route path="*" component={() => <Navigate href="/" />} />
       </Routes>
     </>
