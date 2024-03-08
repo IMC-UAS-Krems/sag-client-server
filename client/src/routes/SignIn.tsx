@@ -89,6 +89,11 @@ const Register: Component = () => {
       key: formPassword,
       municipality: formMunicipality,
       organisation: formOrganisation,
+      $fetch: {
+        mode: "cors",
+        credentials: "include",
+        method: "POST",
+      }
     });
 
     if (!registered.data || registered.error) {
@@ -180,6 +185,11 @@ const Login: Component = () => {
     const logged = await eden.auth.login.post({
       identifier: formUsername,
       key: formPassword,
+      $fetch: {
+        mode: "cors",
+        credentials: "include",
+        method: "POST",
+      }
     });
 
     if (!logged.data || logged.error) {
