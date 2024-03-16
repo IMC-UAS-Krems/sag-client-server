@@ -1,4 +1,4 @@
-import { Component, createSignal, Show } from "solid-js";
+import { Component, createSignal, Show, createEffect } from "solid-js";
 import {
   createCodeMirror,
   createEditorControlledValue,
@@ -41,13 +41,16 @@ const compile = async (code: string): Promise<CompileResult | undefined> => {
     let result = await compileResult.data.compiled;
     console.log("result: ", result.status);
 
-    if (result.status === "error") {
+
+    if (result.status === "error" && code.trim() !== "") {
       const errors = result.errors as Error[];
       setErrors(errors);
       return {
         error: compileResult.error?.value,
         url: undefined,
       };
+    } else {
+      setErrors([]);
     }
 
     const url = await fetch(`${DEPLOYER_URL}/deploy`, {
@@ -84,6 +87,12 @@ export const Editor: Component = () => {
   const [code, setCode] = createSignal("");
   // const [t, { add, locale, dict }] = useI18n();
   const [url, setUrl] = createSignal<string | undefined>(undefined);
+
+  createEffect(() => {
+    //const currentCode = code();
+    //console.log(currentCode);
+    compile(code());
+  });
 
   const {
     editorView,
