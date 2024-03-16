@@ -83,15 +83,47 @@ const compile = async (code: string): Promise<CompileResult | undefined> => {
   }
 };
 
+const check = async (code: string): Promise<CompileResult | undefined> => {
+  // Perform the compilation logic here
+  try {
+    const compileResult = await eden.api.compile.post({
+      code,
+      $fetch: {
+        mode: "cors",
+        credentials: "include",
+        method: "POST",
+      },
+    });
+    console.log("compileResult: ", compileResult);
+
+    let result = await compileResult.data.compiled;
+    console.log("result: ", result.status);
+
+    if (result.status === "error" && code.trim() !== "") {
+      const errors = result.errors as Error[];
+      setErrors(errors);
+      return {
+        error: compileResult.error?.value,
+        url: undefined,
+      };
+    } else {
+      setErrors([]);
+    }
+
+    // Handle the compilation result as needed
+  } catch (error) {
+    console.error("Error during compilation: ", error);
+    // Handle the error during compilation
+  }
+};
+
 export const Editor: Component = () => {
   const [code, setCode] = createSignal("");
   // const [t, { add, locale, dict }] = useI18n();
   const [url, setUrl] = createSignal<string | undefined>(undefined);
 
   createEffect(() => {
-    //const currentCode = code();
-    //console.log(currentCode);
-    compile(code());
+    check(code());
   });
 
   const {
