@@ -1,4 +1,5 @@
 import { Component, createSignal, Show, createEffect } from "solid-js";
+import { linter, Diagnostic, lintGutter } from "@codemirror/lint";
 import {
   createCodeMirror,
   createEditorControlledValue,
@@ -15,6 +16,8 @@ import { Alert } from "@kobalte/core";
 import cors from "@elysiajs/cors";
 import { errors, setErrors, Error } from "@store/index";
 import { RightSideBar } from "../components/RightSideBar";
+import { error } from "console";
+import { Codemirror } from "vue-codemirror";
 
 const t = (s: string) => s;
 const DEPLOYER_URL =
@@ -117,6 +120,20 @@ const check = async (code: string): Promise<CompileResult | undefined> => {
   }
 };
 
+const checkErrors = () => {
+  const errorList = errors();
+  const errorMap = new Map<number, Error[]>();
+  for (const error of errorList) {
+    if (errorMap.has(error.line_start)) {
+      errorMap.get(error.line_start)?.push(error);
+    } else {
+      errorMap.set(error.line_start, [error]);
+    }
+  }
+  console.log(errorMap);
+  return errorMap;
+};
+
 export const Editor: Component = () => {
   const [code, setCode] = createSignal("");
   // const [t, { add, locale, dict }] = useI18n();
@@ -156,6 +173,55 @@ export const Editor: Component = () => {
 
   createExtension(lineNumbers);
 
+  const lint = linter((view: EditorView) => {
+    const diagnostics: Diagnostic[] = [];
+    const errorMap = checkErrors();
+
+    for (const [line, errors] of errorMap) {
+      for (const error of errors) {
+        const lineObj = view.state.doc.line(line);
+        let from = 0;
+        let to = lineObj.to;
+
+        if (error.error === "Invalid indentation") {
+          from = view.state.doc.line(line).from;
+          for (let i = 0; i < lineObj.text.length; i++) {
+            if (lineObj.text[i] !== " ") {
+              to = lineObj.from + i;
+              break;
+            }
+          }
+        } else {
+          for (let i = error.column_start - 1; i > -1; i--) {
+            if (lineObj.text[i] === " ") {
+              from = lineObj.from + i + 1;
+              break;
+            }
+          }
+
+          for (let i = error.column_start; i < lineObj.text.length; i++) {
+            if (lineObj.text[i] === " ") {
+              to = lineObj.from + i;
+              break;
+            }
+          }
+        }
+
+        diagnostics.push({
+          from,
+          to,
+          message: error.error,
+          severity: "error",
+        });
+      }
+    }
+
+    return diagnostics;
+  });
+
+  createExtension(lint);
+  createExtension(lintGutter());
+
   return (
     <main>
       <Show when={url() !== undefined}>
@@ -191,9 +257,9 @@ export const Editor: Component = () => {
       </Button.Root>
       <div class="editor-container">
         <div class="left-column">{t("Left")}</div>
-
         <div class="middle-column">
-          <div ref={editorRef} />
+          <div ref={editorRef}>
+          </div>
         </div>
         <RightSideBar />
       </div>
