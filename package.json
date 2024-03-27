@@ -12,6 +12,7 @@
   "dependencies": {
     "@bogeychan/elysia-logger": "^0.0.13",
     "@codemirror/language": "6.9.2",
+    "@codemirror/lint": "^6.5.0",
     "@codemirror/state": "^6.3.1",
     "@codemirror/view": "^6.22.0",
     "@elysiajs/cookie": "^0.8.0",
@@ -24,7 +25,7 @@
     "@prisma/client": "5.6.0",
     "@solid-primitives/i18n": "^2.0.0",
     "@solidjs/router": "^0.9.1",
-    "elysia": "0.8.15",
+    "elysia": "latest",
     "mapbox-gl": "^3.0.0",
     "maplibre-gl": "^3.6.2",
     "ncrypt-js": "^2.0.0",
