@@ -5,7 +5,7 @@ import {
   createEditorControlledValue,
 } from "solid-codemirror";
 import { type Transaction } from "@codemirror/state";
-import { EditorView, lineNumbers } from "@codemirror/view";
+import { EditorView, ViewUpdate, lineNumbers } from "@codemirror/view";
 import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
 import { tags } from "@lezer/highlight";
 import { eden } from "@client/api";
@@ -18,6 +18,7 @@ import { errors, setErrors, Error } from "@store/index";
 import { RightSideBar } from "../components/RightSideBar";
 import { error } from "console";
 import { Codemirror } from "vue-codemirror";
+import { keymap } from "@codemirror/view";
 
 const t = (s: string) => s;
 const DEPLOYER_URL =
@@ -221,6 +222,33 @@ export const Editor: Component = () => {
 
   createExtension(lint);
   createExtension(lintGutter());
+
+  const tabIndent = keymap.of([
+    {
+      key: "Tab",
+      run: (view) => {
+        const { state } = view;
+        const selection = state.selection.main;
+
+        const newCursorPosition = selection.head + 4;
+
+        view.dispatch({
+          changes: {
+            from: selection.head,
+            to: selection.head,
+            insert: "    ",
+          },
+          selection: {
+            anchor: newCursorPosition,
+            head: newCursorPosition,
+          },
+        });
+        return true;
+      },
+    },
+  ]);
+
+  createExtension(tabIndent);
 
   return (
     <main>
