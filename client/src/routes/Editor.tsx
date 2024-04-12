@@ -177,6 +177,7 @@ export const Editor: Component = () => {
   const lint = linter((view: EditorView) => {
     const diagnostics: Diagnostic[] = [];
     const errorMap = checkErrors();
+    let lineContainsOnlySpaces = 1;
 
     for (const [line, errors] of errorMap) {
       for (const error of errors) {
@@ -193,24 +194,35 @@ export const Editor: Component = () => {
             }
           }
         } else {
-          for (let i = error.column_start - 1; i > -1; i--) {
-            if (lineObj.text[i] === " ") {
-              from = lineObj.from + i + 1;
+          from = lineObj.from;
+
+          for (let i = 0; i < lineObj.text.length; i++) {
+            if (lineObj.text[i] !== " ") {
+              lineContainsOnlySpaces = 0;
               break;
             }
           }
 
-          for (let i = error.column_start; i < lineObj.text.length; i++) {
-            if (lineObj.text[i] === " ") {
-              to = lineObj.from + i;
-              break;
+          if (lineContainsOnlySpaces === 0) {
+            for (let i = error.column_start - 1; i > -1; i--) {
+              if (lineObj.text[i] === " ") {
+                from = lineObj.from + i + 1;
+                break;
+              }
+            }
+
+            for (let i = error.column_start; i < lineObj.text.length; i++) {
+              if (lineObj.text[i] === " ") {
+                to = lineObj.from + i;
+                break;
+              }
             }
           }
         }
 
         diagnostics.push({
-          from,
-          to,
+          from: from,
+          to: to,
           message: error.error,
           severity: "error",
         });
@@ -223,7 +235,7 @@ export const Editor: Component = () => {
   createExtension(lint);
   createExtension(lintGutter());
 
-  const tabIndent = keymap.of([
+  const customKeyBehaviour = keymap.of([
     {
       key: "Tab",
       run: (view) => {
@@ -246,9 +258,40 @@ export const Editor: Component = () => {
         return true;
       },
     },
+    {
+      key: "Enter",
+      // Upon pressing enter, for the next line, have the indentation accordingly
+      run: (view) => {
+        const { state } = view;
+        const selection = state.selection.main;
+        const currentLine = state.doc.lineAt(selection.head);
+        const currentLineText = currentLine.text;
+
+        // get the amount of spaces in the beginning of the line
+        let currentLineIndent = currentLineText.match(/^\s*/)?.[0] || "";
+
+        //check if the last character of current line is a colon
+        if (currentLineText.trim().endsWith(":")) {
+          currentLineIndent += "    ";
+        }
+
+        view.dispatch({
+          changes: {
+            from: selection.head,
+            to: selection.head,
+            insert: "\n" + currentLineIndent,
+          },
+          selection: {
+            anchor: selection.head + 1 + currentLineIndent.length,
+            head: selection.head + 1 + currentLineIndent.length,
+          },
+        });
+        return true;
+      },
+    }
   ]);
 
-  createExtension(tabIndent);
+  createExtension(customKeyBehaviour);
 
   return (
     <main>
