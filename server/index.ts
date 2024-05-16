@@ -410,7 +410,7 @@ const app = new Elysia()
           // }),
           response: t.Union([
             t.Object({ status: t.Literal("ok"), url: t.String() }),
-            t.Object({ status: t.Literal("error"), errors: t.String() }),
+            t.Object({ status: t.Literal("error"), errors: t.Array(t.Any()) }),
             t.Object({ status: t.Literal("error"), error: t.String() }),
           ]),
           detail: { tags: ["api"] },
@@ -473,7 +473,10 @@ const app = new Elysia()
           // }),
           response: t.Union([
             t.Object({ status: t.Literal("ok") }),
-            t.Object({ status: t.Literal("error"), errors: t.String() }),
+            t.Object({
+              status: t.Literal("error"),
+              errors: t.Array(t.Any()),
+            }),
           ]),
           detail: { tags: ["api"] },
         }
