@@ -353,6 +353,94 @@ const app = new Elysia()
         set.status = 200;
         return municipalities.map((m) => m.name);
       })
+      .get(
+        "/initialDocuments",
+        async ({ log, set, cookie }) => {
+          const id = decrypt(cookie.access_token) as string;
+          console.log("id: ", id);
+
+          const user = await prisma.user.findUnique({
+            where: {
+              id,
+            },
+            select: {
+              email: true,
+              id: true,
+            },
+          });
+
+          if (!user) {
+            set.status = 401; // Unauthorized
+            log.warn(`User not found: ${id}`);
+            return;
+          }
+          const documents = await prisma.user.findFirst({
+            select: {
+              initialDocuments: true,
+            },
+            where: {
+              id: user.id,
+            },
+          });
+          set.status = 200;
+          return documents.initialDocuments;
+        },
+        {
+          response: t.Array(t.Any()),
+          // WARNING: wasn't able to make it work (fails even when the cookie is present)
+          //
+          // cookie: t.Cookie({
+          //     access_token: t.String(),
+          // }),
+          detail: { tags: ["api"] },
+        }
+      )
+      .post(
+        "/initialDocuments",
+        async ({ log, set, cookie, body: { documents } }) => {
+          const id = decrypt(cookie.access_token) as string;
+          console.log("id: ", id);
+          // convert documents to JSON array
+
+          const user = await prisma.user.findUnique({
+            where: {
+              id,
+            },
+            select: {
+              email: true,
+              id: true,
+            },
+          });
+
+          if (!user) {
+            set.status = 401; // Unauthorized
+            log.warn(`User not found: ${id}`);
+            return;
+          }
+          const updated_documents = await prisma.user.update({
+            where: {
+              id: user.id,
+            },
+            data: {
+              initialDocuments: documents,
+            },
+          });
+          set.status = 200;
+          return updated_documents.initialDocuments;
+        },
+        {
+          body: t.Object({
+            documents: t.Array(t.Any()),
+          }),
+          response: t.Array(t.Any()),
+          // WARNING: wasn't able to make it work (fails even when the cookie is present)
+          //
+          // cookie: t.Cookie({
+          //     access_token: t.String(),
+          // }),
+          detail: { tags: ["api"] },
+        }
+      )
       .post(
         "/compile",
         async ({ log, set, body: { code }, cookie }) => {
