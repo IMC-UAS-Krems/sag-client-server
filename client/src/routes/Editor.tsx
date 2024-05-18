@@ -4,23 +4,16 @@ import {
   createCodeMirror,
   createEditorControlledValue,
 } from "solid-codemirror";
-import { type Transaction } from "@codemirror/state";
-import { EditorView, ViewUpdate, lineNumbers } from "@codemirror/view";
-import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
-import { tags } from "@lezer/highlight";
+import { EditorView, lineNumbers } from "@codemirror/view";
 import { eden } from "@client/api";
 import "../styles/Editor.css";
-// import { useI18n } from "@solid-primitives/i18n";
 import { Button } from "@kobalte/core";
 import { Alert } from "@kobalte/core";
-import cors from "@elysiajs/cors";
 import { errors, setErrors, Error } from "@store/index";
 import { RightSideBar } from "../components/RightSideBar";
-import { error } from "console";
-import { Codemirror } from "vue-codemirror";
 import { keymap } from "@codemirror/view";
+import { LeftSideBar } from "../components/LeftSideBar";
 
-const t = (s: string) => s;
 const DEPLOYER_URL =
   import.meta.env.VITE_DEPLOYER_URL || "http://localhost:9000";
 
@@ -44,7 +37,6 @@ const compile = async (code: string): Promise<CompileResult | undefined> => {
 
     let result = await compileResult.data.compiled;
     console.log("result: ", result.status);
-
 
     if (result.status === "error" && code.trim() !== "") {
       const errors = result.errors as Error[];
@@ -139,6 +131,28 @@ export const Editor: Component = () => {
   const [code, setCode] = createSignal("");
   // const [t, { add, locale, dict }] = useI18n();
   const [url, setUrl] = createSignal<string | undefined>(undefined);
+  const handleFileClick = (content: string | undefined) => {
+    if (content && content.length > 0) {
+      console.log("content: ", content);
+      setCode(content);
+      editorView().dispatch({
+        changes: {
+          from: 0,
+          to: editorView().state.doc.length,
+          insert: content,
+        },
+      });
+    } else if (content === "") {
+      setCode("");
+      editorView().dispatch({
+        changes: {
+          from: 0,
+          to: editorView().state.doc.length,
+          insert: "",
+        },
+      });
+    }
+  };
 
   createEffect(() => {
     check(code());
@@ -288,7 +302,7 @@ export const Editor: Component = () => {
         });
         return true;
       },
-    }
+    },
   ]);
 
   createExtension(customKeyBehaviour);
@@ -310,11 +324,11 @@ export const Editor: Component = () => {
           } else {
             if (result.error) {
               setUrl(
-                `Error: ${result.error}\nPlease check your code and try again.`
+                `Error: ${result.error}\nPlease check your code and try again.`,
               );
             } else {
               setUrl(
-                `Success! Navigate to ${result.url} to visualize the dashboard.`
+                `Success! Navigate to ${result.url} to visualize the dashboard.`,
               );
             }
 
@@ -327,10 +341,9 @@ export const Editor: Component = () => {
         Compile
       </Button.Root>
       <div class="editor-container">
-        <div class="left-column">{t("Left")}</div>
+        <LeftSideBar onFileClick={handleFileClick} code={code()} />
         <div class="middle-column">
-          <div ref={editorRef}>
-          </div>
+          <div ref={editorRef}></div>
         </div>
         <RightSideBar />
       </div>
