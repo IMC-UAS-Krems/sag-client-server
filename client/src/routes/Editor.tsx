@@ -42,39 +42,24 @@ const compile = async (code: string): Promise<CompileResult | undefined> => {
     });
     console.log("compileResult: ", compileResult);
 
-    let result = await compileResult.data.compiled;
-    console.log("result: ", result.status);
+    if (compileResult.data?.status === "error" && code.trim() !== "") {
+      if (compileResult.data?.hasOwnProperty("errors")) {
+        const errors = compileResult.data?.errors as Error[];
 
+        setErrors(errors);
+        return;
+      } else {
+        setErrors([]);
 
-    if (result.status === "error" && code.trim() !== "") {
-      const errors = result.errors as Error[];
-      setErrors(errors);
-      return {
-        error: compileResult.error?.value,
-        url: undefined,
-      };
-    } else {
-      setErrors([]);
+        return {
+          error: compileResult.error?.value,
+          url: undefined,
+        };
+      }
     }
+    setErrors([]);
+    const url = compileResult.data?.url;
 
-    const url = await fetch(`${DEPLOYER_URL}/deploy`, {
-      body: JSON.stringify({
-        user_id: compileResult.data.user_id,
-        source: JSON.stringify(compileResult.data.compiled),
-      }),
-      mode: "cors",
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    })
-      .then((res) => res.text())
-      .then((res) => {
-        console.log("res: ", res);
-        return res;
-      });
-
-    console.log("Success: ", compileResult.data);
     return {
       error: undefined,
       url: url,
@@ -90,7 +75,7 @@ const compile = async (code: string): Promise<CompileResult | undefined> => {
 const check = async (code: string): Promise<CompileResult | undefined> => {
   // Perform the compilation logic here
   try {
-    const compileResult = await eden.api.compile.post({
+    const compileResult = await eden.api.check.post({
       code,
       $fetch: {
         mode: "cors",
@@ -100,16 +85,9 @@ const check = async (code: string): Promise<CompileResult | undefined> => {
     });
     console.log("compileResult: ", compileResult);
 
-    let result = await compileResult.data.compiled;
-    console.log("result: ", result.status);
-
-    if (result.status === "error" && code.trim() !== "") {
-      const errors = result.errors as Error[];
+    if (compileResult.data?.status === "error" && code.trim() !== "") {
+      const errors = compileResult.data?.errors as Error[];
       setErrors(errors);
-      return {
-        error: compileResult.error?.value,
-        url: undefined,
-      };
     } else {
       setErrors([]);
     }
@@ -288,7 +266,7 @@ export const Editor: Component = () => {
         });
         return true;
       },
-    }
+    },
   ]);
 
   createExtension(customKeyBehaviour);
@@ -329,8 +307,7 @@ export const Editor: Component = () => {
       <div class="editor-container">
         <div class="left-column">{t("Left")}</div>
         <div class="middle-column">
-          <div ref={editorRef}>
-          </div>
+          <div ref={editorRef}></div>
         </div>
         <RightSideBar />
       </div>
@@ -339,3 +316,4 @@ export const Editor: Component = () => {
 };
 
 export default Editor;
+
