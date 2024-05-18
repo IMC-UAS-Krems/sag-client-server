@@ -1,8 +1,15 @@
-import { createSignal } from 'solid-js';
-import { Menu, Item, useContextMenu, animation, Submenu } from 'solid-contextmenu';
-import Swal from 'sweetalert2';
-import "../../../node_modules/solid-contextmenu/dist/style.css";
-import { Button } from '@kobalte/core';
+import { createSignal, onMount } from "solid-js";
+import {
+  Menu,
+  Item,
+  useContextMenu,
+  animation,
+  Submenu,
+} from "solid-contextmenu";
+import Swal from "sweetalert2";
+import "solid-contextmenu/dist/style.css";
+import { Button } from "@kobalte/core";
+import { eden } from "@client/api";
 
 interface File {
   name: string;
@@ -12,27 +19,54 @@ interface File {
   isSelected?: boolean;
 }
 
-const MENU_ID = 'menu-id';
+const MENU_ID = "menu-id";
 
 const initialFiles: File[] = [
   {
-    name: 'Folder 1',
+    name: "Folder 1",
     isExpanded: false,
     files: [
-      { name: 'File 1.1', isExpanded: false, content: 'Content of File 1.1', isSelected: false },
-      { name: 'File 1.2', isExpanded: false, content: 'Content of File 1.2', isSelected: false },
+      {
+        name: "File 1.1",
+        isExpanded: false,
+        content: "Content of File 1.1",
+        isSelected: false,
+      },
+      {
+        name: "File 1.2",
+        isExpanded: false,
+        content: "Content of File 1.2",
+        isSelected: false,
+      },
     ],
   },
   {
-    name: 'Folder 2',
+    name: "Folder 2",
     isExpanded: false,
     files: [
-      { name: 'File 2.1', isExpanded: false, content: 'Content of File 2.1', isSelected: false },
       {
-        name: 'Subfolder 2.2', isExpanded: false, files: [
-          { name: 'File 2.2.1', isExpanded: false, content: 'Content of File 2.2.1', isSelected: false },
-          { name: 'File 2.2.2', isExpanded: false, content: 'Content of File 2.2.2', isSelected: false },
-        ]
+        name: "File 2.1",
+        isExpanded: false,
+        content: "Content of File 2.1",
+        isSelected: false,
+      },
+      {
+        name: "Subfolder 2.2",
+        isExpanded: false,
+        files: [
+          {
+            name: "File 2.2.1",
+            isExpanded: false,
+            content: "Content of File 2.2.1",
+            isSelected: false,
+          },
+          {
+            name: "File 2.2.2",
+            isExpanded: false,
+            content: "Content of File 2.2.2",
+            isSelected: false,
+          },
+        ],
       },
     ],
   },
@@ -44,13 +78,50 @@ interface LeftSideBarProps {
 }
 
 export function LeftSideBar(props: LeftSideBarProps) {
-  const [files, setFiles] = createSignal(initialFiles);
+  const [files, setFiles] = createSignal<File[]>([]);
   const [_animation, setAnimation] = createSignal(animation.scale);
   const [_theme, setTheme] = createSignal<"light" | "dark">("light");
   const { show } = useContextMenu({ id: MENU_ID });
 
   let rightClickedFileOrFolder: File | null = null;
   let leftClickedFileOrFolder: File | null = null;
+
+  const fetchFiles = async (): Promise<File[]> => {
+    let files = await eden.api.initialDocuments.get({
+      $fetch: {
+        mode: "cors",
+        credentials: "include",
+        method: "GET",
+      },
+    });
+    return files.data as File[];
+  };
+
+  const updateFiles = async (files: File[]): Promise<File[]> => {
+    let updated_files = await eden.api.initialDocuments.post({
+      documents: files,
+      $fetch: {
+        mode: "cors",
+        credentials: "include",
+        method: "POST",
+      },
+    });
+    return updated_files.data as File[];
+  };
+
+  onMount(async () => {
+    const initialFiles = await fetchFiles();
+    setFiles(initialFiles);
+  });
+
+  async function setFilesAndUpdate(files: File[]) {
+    setFiles(files);
+    try {
+      await updateFiles(files);
+    } catch (error) {
+      console.error("Failed to update files:", error);
+    }
+  }
 
   function toggleExpand(file: File) {
     setFiles((currentFiles) => {
@@ -61,19 +132,25 @@ export function LeftSideBar(props: LeftSideBarProps) {
         if (currentFile.files && currentFile.files.includes(file)) {
           return {
             ...currentFile,
-            files: currentFile.files.map((subfile) => (subfile === file ? { ...subfile, isExpanded: !subfile.isExpanded } : subfile))
+            files: currentFile.files.map((subfile) =>
+              subfile === file
+                ? { ...subfile, isExpanded: !subfile.isExpanded }
+                : subfile
+            ),
           };
         }
         if (currentFile.files) {
           return {
             ...currentFile,
-            files: currentFile.files.map(updateFileAndNested)
+            files: currentFile.files.map(updateFileAndNested),
           };
         }
         return currentFile;
       };
 
-      return currentFiles.map(updateFileAndNested);
+      const updatedFiles = currentFiles.map(updateFileAndNested);
+      setFilesAndUpdate(updatedFiles);
+      return updatedFiles;
     });
   }
 
@@ -88,7 +165,7 @@ export function LeftSideBar(props: LeftSideBarProps) {
 
   function handleClick(file: File) {
     if (file.content !== undefined) {
-      console.log('Selected file content: ', file.content);
+      console.log("Selected file content: ", file.content);
       props.onFileClick(file.content);
     } else {
       props.onFileClick(undefined);
@@ -96,14 +173,15 @@ export function LeftSideBar(props: LeftSideBarProps) {
     setFilesIsSelectedToFalse(files());
     leftClickedFileOrFolder = file;
     rightClickedFileOrFolder = null;
-    leftClickedFileOrFolder.isSelected = true;
+    file.isSelected = true;
+    setFilesAndUpdate([...files()]);
   }
 
   function handleContextMenu(event: MouseEvent, file: File | null) {
     event.preventDefault();
     show(event);
     if (file === null) {
-      console.log('Right-clicked on empty space');
+      console.log("Right-clicked on empty space");
       rightClickedFileOrFolder = null;
       leftClickedFileOrFolder = null;
     } else {
@@ -112,111 +190,161 @@ export function LeftSideBar(props: LeftSideBarProps) {
       rightClickedFileOrFolder = file;
       rightClickedFileOrFolder.isSelected = true;
       leftClickedFileOrFolder = null;
-      setFiles([...files()]);
+      setFilesAndUpdate([...files()]);
     }
   }
 
-  function handleMenuClick(action: string) {
-    console.log('Clicked action:', action);
-    if (action === 'Rename' && rightClickedFileOrFolder === null) {
-      Swal.fire('Error', 'Please right-click on a file or folder in order to rename it.', 'error');
+  async function handleMenuClick(action: string) {
+    console.log("Clicked action:", action);
+    if (action === "Rename" && rightClickedFileOrFolder === null) {
+      Swal.fire(
+        "Error",
+        "Please right-click on a file or folder in order to rename it.",
+        "error"
+      );
       return;
-    } else if (action === 'Add folder' && rightClickedFileOrFolder === null) {
-      const newFolderName = prompt('Enter new folder name:');
+    } else if (action === "Add folder" && rightClickedFileOrFolder === null) {
+      const newFolderName = prompt("Enter new folder name:");
       if (newFolderName?.length == 0) {
-        Swal.fire('Error', 'Name cannot be empty.', 'error');
+        Swal.fire("Error", "Name cannot be empty.", "error");
         return;
       }
-      const existingFolder = findFileRecursive(files(), newFolderName || '');
+      const existingFolder = findFileRecursive(files(), newFolderName || "");
       if (existingFolder) {
-        Swal.fire('Error', `Name ${newFolderName} already exists.`, 'error');
+        Swal.fire("Error", `Name ${newFolderName} already exists.`, "error");
         return;
       }
       if (newFolderName !== null) {
-        setFiles([...files(), { name: newFolderName, isExpanded: false, files: [] }]);
+        const updatedFiles = [
+          ...files(),
+          { name: newFolderName, isExpanded: false, files: [] },
+        ];
+        setFilesAndUpdate(updatedFiles);
       }
-    } else if (action === 'Add file' && rightClickedFileOrFolder === null) {
-      const newFileName = prompt('Enter new file name:');
+    } else if (action === "Add file" && rightClickedFileOrFolder === null) {
+      const newFileName = prompt("Enter new file name:");
       if (newFileName?.length == 0) {
-        Swal.fire('Error', 'Name cannot be empty.', 'error');
+        Swal.fire("Error", "Name cannot be empty.", "error");
         return;
       }
-      const existingFile = findFileRecursive(files(), newFileName || '');
+      const existingFile = findFileRecursive(files(), newFileName || "");
       if (existingFile) {
-        Swal.fire('Error', `Name ${newFileName} already exists.`, 'error');
+        Swal.fire("Error", `Name ${newFileName} already exists.`, "error");
         return;
       }
       if (newFileName !== null) {
-        setFiles([...files(), { name: newFileName, isExpanded: false, content: '', isSelected: false }]);
+        const updatedFiles = [
+          ...files(),
+          {
+            name: newFileName,
+            isExpanded: false,
+            content: "",
+            isSelected: false,
+          },
+        ];
+        setFilesAndUpdate(updatedFiles);
       }
-    } else if (action === 'Save' && rightClickedFileOrFolder === null) {
-      Swal.fire('Error', 'Please right-click on a file in order to save its content.', 'error');
+    } else if (action === "Save" && rightClickedFileOrFolder === null) {
+      Swal.fire(
+        "Error",
+        "Please right-click on a file in order to save its content.",
+        "error"
+      );
       return;
-    } else if (action === 'Delete' && rightClickedFileOrFolder === null) {
-      Swal.fire('Error', 'Please right-click on a file or folder in order to delete it.', 'error');
+    } else if (action === "Delete" && rightClickedFileOrFolder === null) {
+      Swal.fire(
+        "Error",
+        "Please right-click on a file or folder in order to delete it.",
+        "error"
+      );
       return;
     }
 
-    if (action === 'Rename' && rightClickedFileOrFolder) {
-      const newName = prompt(`Enter new name for ${rightClickedFileOrFolder.files ? 'folder' : 'file'} <${rightClickedFileOrFolder.name}>:`);
+    if (action === "Rename" && rightClickedFileOrFolder) {
+      const newName = prompt(
+        `Enter new name for ${
+          rightClickedFileOrFolder.files ? "folder" : "file"
+        } <${rightClickedFileOrFolder.name}>:`
+      );
       if (newName?.length == 0) {
-        Swal.fire('Error', 'Name cannot be empty.', 'error');
+        Swal.fire("Error", "Name cannot be empty.", "error");
         return;
       }
-      const existingFileOrFolder = findFileRecursive(files(), newName || '');
+      const existingFileOrFolder = findFileRecursive(files(), newName || "");
       if (existingFileOrFolder) {
-        Swal.fire('Error', `Name ${newName} already exists.`, 'error');
+        Swal.fire("Error", `Name ${newName} already exists.`, "error");
         return;
       }
       if (newName !== null) {
         rightClickedFileOrFolder.name = newName;
-        setFiles([...files()]);
+        setFilesAndUpdate([...files()]);
       }
-    } else if (action === 'Add folder' && rightClickedFileOrFolder) {
-      const newFolderName = prompt('Enter new folder name:');
+    } else if (action === "Add folder" && rightClickedFileOrFolder) {
+      const newFolderName = prompt("Enter new folder name:");
       if (newFolderName?.length == 0) {
-        Swal.fire('Error', 'Name cannot be empty.', 'error');
+        Swal.fire("Error", "Name cannot be empty.", "error");
         return;
       }
-      const existingFolder = findFileRecursive(files(), newFolderName || '');
+      const existingFolder = findFileRecursive(files(), newFolderName || "");
       if (existingFolder) {
-        Swal.fire('Error', `Name ${newFolderName} already exists.`, 'error');
+        Swal.fire("Error", `Name ${newFolderName} already exists.`, "error");
         return;
       }
       if (newFolderName !== null) {
         rightClickedFileOrFolder.files = rightClickedFileOrFolder.files || [];
-        rightClickedFileOrFolder.files.push({ name: newFolderName, isExpanded: false, files: [] });
-        setFiles([...files()]);
+        rightClickedFileOrFolder.files.push({
+          name: newFolderName,
+          isExpanded: false,
+          files: [],
+        });
+        setFilesAndUpdate([...files()]);
       }
-    } else if (action === 'Add file' && rightClickedFileOrFolder) {
-      const newFileName = prompt('Enter new file name:');
+    } else if (action === "Add file" && rightClickedFileOrFolder) {
+      const newFileName = prompt("Enter new file name:");
       if (newFileName?.length == 0) {
-        Swal.fire('Error', 'Name cannot be empty.', 'error');
+        Swal.fire("Error", "Name cannot be empty.", "error");
         return;
       }
-      const existingFile = findFileRecursive(files(), newFileName || '');
+      const existingFile = findFileRecursive(files(), newFileName || "");
       if (existingFile) {
-        Swal.fire('Error', `Name ${newFileName} already exists.`, 'error');
+        Swal.fire("Error", `Name ${newFileName} already exists.`, "error");
         return;
       }
       if (newFileName !== null) {
         rightClickedFileOrFolder.files = rightClickedFileOrFolder.files || [];
-        rightClickedFileOrFolder.files.push({ name: newFileName, isExpanded: false, content: '', isSelected: false });
-        setFiles([...files()]);
+        rightClickedFileOrFolder.files.push({
+          name: newFileName,
+          isExpanded: false,
+          content: "",
+          isSelected: false,
+        });
+        setFilesAndUpdate([...files()]);
       }
-    } else if (action === 'Save' && rightClickedFileOrFolder) {
+    } else if (action === "Save" && rightClickedFileOrFolder) {
       if (!rightClickedFileOrFolder.isSelected) {
         if (!rightClickedFileOrFolder?.content) {
-          Swal.fire('Error', 'Please right-click on a file in order to save its content.', 'error');
+          Swal.fire(
+            "Error",
+            "Please right-click on a file in order to save its content.",
+            "error"
+          );
           return;
         } else if (!rightClickedFileOrFolder.isSelected) {
-          Swal.fire('Error', 'The file needs to be selected in order to save its content.', 'error');
+          Swal.fire(
+            "Error",
+            "The file needs to be selected in order to save its content.",
+            "error"
+          );
           return;
         }
       }
       rightClickedFileOrFolder.content = props.code;
-      Swal.fire('Success', `The content of file ${rightClickedFileOrFolder.name} has been successfully saved.`, 'success');
-    } else if (action === 'Delete' && rightClickedFileOrFolder) {
+      Swal.fire(
+        "Success",
+        `The content of file ${rightClickedFileOrFolder.name} has been successfully saved.`,
+        "success"
+      );
+    } else if (action === "Delete" && rightClickedFileOrFolder) {
       if (rightClickedFileOrFolder.files) {
         setFiles((currentFiles) => {
           const deleteFolderAndNested = (currentFile: File): File | null => {
@@ -226,16 +354,22 @@ export function LeftSideBar(props: LeftSideBarProps) {
             if (currentFile.files) {
               return {
                 ...currentFile,
-                files: currentFile.files.map(deleteFolderAndNested).filter((file) => file !== null) as File[]
+                files: currentFile.files
+                  .map(deleteFolderAndNested)
+                  .filter((file) => file !== null) as File[],
               };
             }
             return currentFile;
           };
 
-          return currentFiles.map(deleteFolderAndNested).filter((file) => file !== null) as File[];
+          const updatedFiles = currentFiles
+            .map(deleteFolderAndNested)
+            .filter((file) => file !== null) as File[];
+          setFilesAndUpdate(updatedFiles);
+          return updatedFiles;
         });
       } else if (rightClickedFileOrFolder.content !== undefined) {
-        console.log('Deleted file content: ', rightClickedFileOrFolder.content);
+        console.log("Deleted file content: ", rightClickedFileOrFolder.content);
         setFiles((currentFiles) => {
           const deleteFile = (currentFile: File): File | null => {
             if (currentFile === rightClickedFileOrFolder) {
@@ -243,37 +377,47 @@ export function LeftSideBar(props: LeftSideBarProps) {
             }
             return {
               ...currentFile,
-              files: currentFile.files?.map(deleteFile).filter((file) => file !== null) as File[]
-            }
+              files: currentFile.files
+                ?.map(deleteFile)
+                .filter((file) => file !== null) as File[],
+            };
           };
 
-          return currentFiles.map(deleteFile).filter((file) => file !== null) as File[];
+          const updatedFiles = currentFiles
+            .map(deleteFile)
+            .filter((file) => file !== null) as File[];
+          setFilesAndUpdate(updatedFiles);
+          return updatedFiles;
         });
       }
-      console.log(files());
     }
   }
 
   function renderFiles(files: File[]) {
     return (
-      <ul style={{ "list-style": 'none', "padding-left": '20px' }}>
-        {
-          files.map((file) => (
-            <li>
-              <div style={{ display: 'flex', "align-items": 'center' }}>
-                <span style={{ cursor: 'default' }}>
-                  {file.files ? (file.isExpanded ? '📂' : '📁') : '📄'}
-                </span>
-                <span
-                  onClick={() => {
-                    handleClick(file); toggleExpand(file);
-                  }} style={{ cursor: 'pointer', "font-weight": file.isSelected ? 'bold' : 'normal' }}>
-                  {file.name}
-                </span>
-              </div>
-              {file.isExpanded && file.files && renderFiles(file.files)}
-            </li>
-          ))}
+      <ul style={{ "list-style": "none", "padding-left": "20px" }}>
+        {files.map((file) => (
+          <li>
+            <div style={{ display: "flex", "align-items": "center" }}>
+              <span style={{ cursor: "default" }}>
+                {file.files ? (file.isExpanded ? "📂" : "📁") : "📄"}
+              </span>
+              <span
+                onClick={() => {
+                  handleClick(file);
+                  toggleExpand(file);
+                }}
+                style={{
+                  cursor: "pointer",
+                  "font-weight": file.isSelected ? "bold" : "normal",
+                }}
+              >
+                {file.name}
+              </span>
+            </div>
+            {file.isExpanded && file.files && renderFiles(file.files)}
+          </li>
+        ))}
       </ul>
     );
   }
@@ -294,11 +438,16 @@ export function LeftSideBar(props: LeftSideBarProps) {
   }
 
   return (
-    <div class="left-column" style={{ overflow: 'auto' }}
+    <div
+      class="left-column"
+      style={{ overflow: "auto" }}
       onContextMenu={(event) => {
         const target = event.target as HTMLElement;
         if (target.innerText) {
-          const rightClickedElement = findFileRecursive(files(), target.innerText);
+          const rightClickedElement = findFileRecursive(
+            files(),
+            target.innerText
+          );
           if (rightClickedElement) {
             handleContextMenu(event, rightClickedElement);
           } else {
@@ -311,12 +460,12 @@ export function LeftSideBar(props: LeftSideBarProps) {
     >
       {renderFiles(files())}
       <Menu id={MENU_ID} animation={_animation()} theme={_theme()}>
-        <Item onClick={() => handleMenuClick('Rename')}>✏️ Rename</Item>
-        <Item onClick={() => handleMenuClick('Save')}>💾 Save</Item>
-        <Item onClick={() => handleMenuClick('Delete')}>🗑️ Delete</Item>
+        <Item onClick={() => handleMenuClick("Rename")}>✏️ Rename</Item>
+        <Item onClick={() => handleMenuClick("Save")}>💾 Save</Item>
+        <Item onClick={() => handleMenuClick("Delete")}>🗑️ Delete</Item>
         <Submenu label="➕ Add">
-          <Item onClick={() => handleMenuClick('Add folder')}>📁 Folder</Item>
-          <Item onClick={() => handleMenuClick('Add file')}>📄 File</Item>
+          <Item onClick={() => handleMenuClick("Add folder")}>📁 Folder</Item>
+          <Item onClick={() => handleMenuClick("Add file")}>📄 File</Item>
         </Submenu>
       </Menu>
     </div>
