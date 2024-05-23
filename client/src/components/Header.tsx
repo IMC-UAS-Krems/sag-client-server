@@ -10,11 +10,19 @@ import logoLight from "@assets/logos/sagittarius-logo-bnc.webp";
 import logoDark from "@assets/logos/sagittarius-logo-blk.webp";
 
 import authStore from "@store/authStore";
+import { eden } from "@client/api";
 
 const Header: Component = () => {
   const navigate = useNavigate();
-  const handleLogout = () => {
+  const handleLogout = async () => {
     authStore.setState({ isAuthenticated: false, user: "" });
+    await eden.auth.logout.post({
+      $fetch: {
+        mode: "cors",
+        credentials: "include",
+        method: "POST",
+      },
+    });
     navigate("/sign-in");
   };
 
@@ -50,7 +58,8 @@ const Header: Component = () => {
           {authStore.state().isAuthenticated ? (
             <li>
               <a href="#" onClick={handleLogout}>
-                Logout {authStore.state().user.length != 0 ? (
+                Logout{" "}
+                {authStore.state().user.length != 0 ? (
                   <span>({authStore.state().user})</span>
                 ) : null}
               </a>

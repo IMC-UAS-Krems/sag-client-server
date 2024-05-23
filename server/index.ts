@@ -49,7 +49,7 @@ const app = new Elysia()
       stream: pretty({ colorize: true }),
     })
   )
-  .use(cookie())
+  //.use(cookie())
   .use(
     cors({
       credentials: true,
@@ -89,7 +89,7 @@ const app = new Elysia()
             organisation,
             project,
           },
-          setCookie,
+          cookie: { access_token },
         }): Promise<UserResult | undefined> => {
           try {
             log.info("Trying to create user");
@@ -189,12 +189,13 @@ const app = new Elysia()
 
             log.info(`Producing token: ${token}`);
 
-            setCookie("access_token", token, {
+            access_token.set({
               httpOnly: true,
               secure: true,
               sameSite: "none",
-              path: "/",
+              path: "/", // default
               maxAge: 60 * 60 * 24 * 2, // 2 days
+              value: token,
             });
 
             log.info(`User ${user.name} registered.`);
@@ -232,7 +233,7 @@ const app = new Elysia()
           log,
           set,
           body: { identifier, key },
-          setCookie,
+          cookie: { access_token },
         }): Promise<UserResult | undefined> => {
           const select = {
             id: true,
@@ -303,12 +304,13 @@ const app = new Elysia()
 
           log.info(`Producing token: ${token}`);
 
-          setCookie("access_token", token, {
+          access_token.set({
             httpOnly: true,
             secure: true,
             sameSite: "none",
-            path: "/",
+            path: "/", // default
             maxAge: 60 * 60 * 24 * 2, // 2 days
+            value: token,
           });
 
           log.info(`User ${user.name} logged in.`);
@@ -328,12 +330,20 @@ const app = new Elysia()
       )
       .post(
         "/logout",
-        async ({ log, set, body, cookie }) => {
-          cookie.access_token.remove();
+        async ({ log, set, cookie: { access_token } }) => {
+          console.log("cookie: ", cookie);
+          access_token.set({
+            httpOnly: true,
+            secure: true,
+            sameSite: "none",
+            path: "/", // default
+            value: "",
+            expires: new Date(0),
+          });
+
           set.status = 200;
         },
         {
-          body: t.Object({}),
           cookie: t.Cookie({
             access_token: t.String(),
           }),
@@ -353,10 +363,94 @@ const app = new Elysia()
         set.status = 200;
         return municipalities.map((m) => m.name);
       })
+      .get(
+        "/initialDocuments",
+        async ({ log, set, cookie: { access_token } }) => {
+          const id = decrypt(access_token.value) as string;
+          console.log("id: ", id);
+
+          const user = await prisma.user.findUnique({
+            where: {
+              id,
+            },
+            select: {
+              email: true,
+              id: true,
+            },
+          });
+
+          if (!user) {
+            set.status = 401; // Unauthorized
+            log.warn(`User not found: ${id}`);
+            return;
+          }
+          const documents = await prisma.user.findFirst({
+            select: {
+              initialDocuments: true,
+            },
+            where: {
+              id: user.id,
+            },
+          });
+          set.status = 200;
+          return documents.initialDocuments;
+        },
+        {
+          response: t.Array(t.Any()),
+          cookie: t.Cookie({
+            access_token: t.String(),
+          }),
+          detail: { tags: ["api"] },
+        }
+      )
+      .post(
+        "/initialDocuments",
+        async ({ log, set, cookie, body: { documents } }) => {
+          const id = decrypt(cookie.access_token.value) as string;
+          console.log("id: ", id);
+          // convert documents to JSON array
+
+          const user = await prisma.user.findUnique({
+            where: {
+              id,
+            },
+            select: {
+              email: true,
+              id: true,
+            },
+          });
+
+          if (!user) {
+            set.status = 401; // Unauthorized
+            log.warn(`User not found: ${id}`);
+            return;
+          }
+          const updated_documents = await prisma.user.update({
+            where: {
+              id: user.id,
+            },
+            data: {
+              initialDocuments: documents,
+            },
+          });
+          set.status = 200;
+          return updated_documents.initialDocuments;
+        },
+        {
+          body: t.Object({
+            documents: t.Array(t.Any()),
+          }),
+          response: t.Array(t.Any()),
+          cookie: t.Cookie({
+            access_token: t.String(),
+          }),
+          detail: { tags: ["api"] },
+        }
+      )
       .post(
         "/compile",
         async ({ log, set, body: { code }, cookie }) => {
-          const id = decrypt(cookie.access_token) as string;
+          const id = decrypt(cookie.access_token.value) as string;
           console.log("id: ", id);
 
           const user = await prisma.user.findUnique({
@@ -406,18 +500,16 @@ const app = new Elysia()
           body: t.Object({
             code: t.String(),
           }),
-          // WARNING: wasn't able to make it work (fails even when the cookie is present)
-          //
-          // cookie: t.Cookie({
-          //     access_token: t.String(),
-          // }),
+          cookie: t.Cookie({
+            access_token: t.String(),
+          }),
           detail: { tags: ["api"] },
         }
       )
       .post(
         "/test",
         async ({ log, set, body: { code }, cookie }) => {
-          const id = decrypt(cookie.access_token) as string;
+          const id = decrypt(cookie.access_token.value) as string;
           console.log("id: ", id);
 
           const user = await prisma.user.findUnique({
@@ -467,11 +559,9 @@ const app = new Elysia()
           body: t.Object({
             code: t.String(),
           }),
-          // WARNING: wasn't able to make it work (fails even when the cookie is present)
-          //
-          // cookie: t.Cookie({
-          //     access_token: t.String(),
-          // }),
+          cookie: t.Cookie({
+            access_token: t.String(),
+          }),
           detail: { tags: ["api"] },
         }
       )
