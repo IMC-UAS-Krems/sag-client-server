@@ -372,35 +372,32 @@ const app = new Elysia()
           if (!user) {
             set.status = 401; // Unauthorized
             log.warn(`User not found: ${id}`);
-            return;
+            return { status: "error", error: "User not found" };
           }
           console.log(user);
 
           // "https://sagittarius-compose-production.up.railway.app/deploy",
-          const compiled = await fetch(`${COMPILER_URL}/grafana`, {
+          const compiled = await fetch(`${COMPILER_URL}/compile`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
             },
             body: JSON.stringify({
               source: code,
+              user_id: user.id,
             }),
           });
+
           const data = await compiled.json();
 
-          if (!compiled.ok) {
-            set.status = compiled.status;
+          if (!compiled.ok || data.status == "error") {
             log.error(`${data.error}`);
-            set.status = 400;
-            return data.error;
+            return data;
           }
 
           set.status = 200;
           log.info(`Data ${data} compiled.`);
-          return {
-            compiled: data,
-            user_id: user.id,
-          };
+          return data;
         },
         {
           body: t.Object({
@@ -411,6 +408,76 @@ const app = new Elysia()
           // cookie: t.Cookie({
           //     access_token: t.String(),
           // }),
+          response: t.Union([
+            t.Object({ status: t.Literal("ok"), url: t.String() }),
+            t.Object({ status: t.Literal("error"), errors: t.Array(t.Any()) }),
+            t.Object({ status: t.Literal("error"), error: t.String() }),
+          ]),
+          detail: { tags: ["api"] },
+        }
+      )
+      .post(
+        "/check",
+        async ({ log, set, body: { code }, cookie }) => {
+          const id = decrypt(cookie.access_token) as string;
+          console.log("id: ", id);
+
+          const user = await prisma.user.findUnique({
+            where: {
+              id,
+            },
+            select: {
+              email: true,
+              id: true,
+            },
+          });
+
+          if (!user) {
+            set.status = 401; // Unauthorized
+            log.warn(`User not found: ${id}`);
+            return { status: "error", error: "User not found" };
+          }
+          console.log(user);
+
+          // "https://sagittarius-compose-production.up.railway.app/deploy",
+          const compiled = await fetch(`${COMPILER_URL}/check`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              source: code,
+              user_id: user.id,
+            }),
+          });
+
+          const data = await compiled.json();
+
+          if (!compiled.ok || data.status == "error") {
+            log.error(`${data.error}`);
+            return data;
+          }
+
+          set.status = 200;
+          log.info(`Data ${data} compiled.`);
+          return data;
+        },
+        {
+          body: t.Object({
+            code: t.String(),
+          }),
+          // WARNING: wasn't able to make it work (fails even when the cookie is present)
+          //
+          // cookie: t.Cookie({
+          //     access_token: t.String(),
+          // }),
+          response: t.Union([
+            t.Object({ status: t.Literal("ok") }),
+            t.Object({
+              status: t.Literal("error"),
+              errors: t.Array(t.Any()),
+            }),
+          ]),
           detail: { tags: ["api"] },
         }
       )
