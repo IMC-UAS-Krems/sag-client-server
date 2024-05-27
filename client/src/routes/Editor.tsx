@@ -52,7 +52,7 @@ const compile = async (code: string): Promise<CompileResult | undefined> => {
         setErrors([]);
 
         return {
-          error: compileResult.error?.value,
+          error: compileResult.data?.error,
           url: undefined,
         };
       }
@@ -316,4 +316,3 @@ export const Editor: Component = () => {
 };
 
 export default Editor;
-
