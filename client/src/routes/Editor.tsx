@@ -1,4 +1,4 @@
-import { Component, createSignal, Show, createEffect } from "solid-js";
+import { JSX, Component, createSignal, Show, createEffect } from "solid-js";
 import { linter, Diagnostic, lintGutter } from "@codemirror/lint";
 import {
   createCodeMirror,
@@ -116,7 +116,7 @@ const checkErrors = () => {
 export const Editor: Component = () => {
   const [code, setCode] = createSignal("");
   // const [t, { add, locale, dict }] = useI18n();
-  const [url, setUrl] = createSignal<string | undefined>(undefined);
+  const [url, setUrl] = createSignal<JSX.Element | undefined>(undefined);
 
   createEffect(() => {
     check(code());
@@ -288,11 +288,19 @@ export const Editor: Component = () => {
           } else {
             if (result.error) {
               setUrl(
-                `Error: ${result.error}\nPlease check your code and try again.`
+                <span>
+                  Error: {result.error}\nPlease check your code and try again.
+                </span>,
               );
             } else {
               setUrl(
-                `Success! Navigate to ${result.url} to visualize the dashboard.`
+                <span>
+                  Success! Navigate to{" "}
+                  <a href={result.url?.replaceAll('"', "")} target="_blank">
+                    {result.url}
+                  </a>{" "}
+                  to visualize the dashboard.
+                </span>,
               );
             }
 
