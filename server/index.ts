@@ -49,7 +49,6 @@ const app = new Elysia()
       stream: pretty({ colorize: true }),
     })
   )
-  .use(cookie())
   .use(
     cors({
       credentials: true,
@@ -89,7 +88,7 @@ const app = new Elysia()
             organisation,
             project,
           },
-          setCookie,
+          cookie: { access_token },
         }): Promise<UserResult | undefined> => {
           try {
             log.info("Trying to create user");
@@ -189,12 +188,13 @@ const app = new Elysia()
 
             log.info(`Producing token: ${token}`);
 
-            setCookie("access_token", token, {
+            access_token.set({
               httpOnly: true,
               secure: true,
               sameSite: "none",
-              path: "/",
+              path: "/", // default
               maxAge: 60 * 60 * 24 * 2, // 2 days
+              value: token,
             });
 
             log.info(`User ${user.name} registered.`);
@@ -232,7 +232,7 @@ const app = new Elysia()
           log,
           set,
           body: { identifier, key },
-          setCookie,
+          cookie: { access_token },
         }): Promise<UserResult | undefined> => {
           const select = {
             id: true,
@@ -303,12 +303,13 @@ const app = new Elysia()
 
           log.info(`Producing token: ${token}`);
 
-          setCookie("access_token", token, {
+          access_token.set({
             httpOnly: true,
             secure: true,
             sameSite: "none",
-            path: "/",
+            path: "/", // default
             maxAge: 60 * 60 * 24 * 2, // 2 days
+            value: token,
           });
 
           log.info(`User ${user.name} logged in.`);
@@ -328,12 +329,20 @@ const app = new Elysia()
       )
       .post(
         "/logout",
-        async ({ log, set, body, cookie }) => {
-          cookie.access_token.remove();
+        async ({ log, set, cookie: { access_token } }) => {
+          console.log("cookie: ", cookie);
+          access_token.set({
+            httpOnly: true,
+            secure: true,
+            sameSite: "none",
+            path: "/", // default
+            value: "",
+            expires: new Date(0),
+          });
+
           set.status = 200;
         },
         {
-          body: t.Object({}),
           cookie: t.Cookie({
             access_token: t.String(),
           }),
@@ -355,8 +364,8 @@ const app = new Elysia()
       })
       .get(
         "/initialDocuments",
-        async ({ log, set, cookie }) => {
-          const id = decrypt(cookie.access_token) as string;
+        async ({ log, set, cookie: { access_token } }) => {
+          const id = decrypt(access_token.value) as string;
           console.log("id: ", id);
 
           const user = await prisma.user.findUnique({
@@ -387,18 +396,16 @@ const app = new Elysia()
         },
         {
           response: t.Array(t.Any()),
-          // WARNING: wasn't able to make it work (fails even when the cookie is present)
-          //
-          // cookie: t.Cookie({
-          //     access_token: t.String(),
-          // }),
+          cookie: t.Cookie({
+            access_token: t.String(),
+          }),
           detail: { tags: ["api"] },
         }
       )
       .post(
         "/initialDocuments",
         async ({ log, set, cookie, body: { documents } }) => {
-          const id = decrypt(cookie.access_token) as string;
+          const id = decrypt(cookie.access_token.value) as string;
           console.log("id: ", id);
           // convert documents to JSON array
 
@@ -433,18 +440,16 @@ const app = new Elysia()
             documents: t.Array(t.Any()),
           }),
           response: t.Array(t.Any()),
-          // WARNING: wasn't able to make it work (fails even when the cookie is present)
-          //
-          // cookie: t.Cookie({
-          //     access_token: t.String(),
-          // }),
+          cookie: t.Cookie({
+            access_token: t.String(),
+          }),
           detail: { tags: ["api"] },
         }
       )
       .post(
         "/compile",
         async ({ log, set, body: { code }, cookie }) => {
-          const id = decrypt(cookie.access_token) as string;
+          const id = decrypt(cookie.access_token.value) as string;
           console.log("id: ", id);
 
           const user = await prisma.user.findUnique({
@@ -493,9 +498,9 @@ const app = new Elysia()
           }),
           // WARNING: wasn't able to make it work (fails even when the cookie is present)
           //
-          // cookie: t.Cookie({
-          //     access_token: t.String(),
-          // }),
+          cookie: t.Cookie({
+            access_token: t.String(),
+          }),
           response: t.Union([
             t.Object({ status: t.Literal("ok"), url: t.String() }),
             t.Object({ status: t.Literal("error"), errors: t.Array(t.Any()) }),
@@ -556,9 +561,9 @@ const app = new Elysia()
           }),
           // WARNING: wasn't able to make it work (fails even when the cookie is present)
           //
-          // cookie: t.Cookie({
-          //     access_token: t.String(),
-          // }),
+          cookie: t.Cookie({
+            access_token: t.String(),
+          }),
           response: t.Union([
             t.Object({ status: t.Literal("ok") }),
             t.Object({
@@ -572,7 +577,7 @@ const app = new Elysia()
       .post(
         "/test",
         async ({ log, set, body: { code }, cookie }) => {
-          const id = decrypt(cookie.access_token) as string;
+          const id = decrypt(cookie.access_token.value) as string;
           console.log("id: ", id);
 
           const user = await prisma.user.findUnique({
@@ -622,11 +627,9 @@ const app = new Elysia()
           body: t.Object({
             code: t.String(),
           }),
-          // WARNING: wasn't able to make it work (fails even when the cookie is present)
-          //
-          // cookie: t.Cookie({
-          //     access_token: t.String(),
-          // }),
+          cookie: t.Cookie({
+            access_token: t.String(),
+          }),
           detail: { tags: ["api"] },
         }
       )
