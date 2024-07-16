@@ -7,8 +7,7 @@ import {
   Submenu,
 } from "solid-contextmenu";
 import Swal from "sweetalert2";
-import "solid-contextmenu/dist/style.css";
-import { Button } from "@kobalte/core";
+import "../../../node_modules/solid-contextmenu/dist/style.css";
 import { eden } from "@client/api";
 
 interface File {
@@ -20,57 +19,6 @@ interface File {
 }
 
 const MENU_ID = "menu-id";
-
-const initialFiles: File[] = [
-  {
-    name: "Folder 1",
-    isExpanded: false,
-    files: [
-      {
-        name: "File 1.1",
-        isExpanded: false,
-        content: "Content of File 1.1",
-        isSelected: false,
-      },
-      {
-        name: "File 1.2",
-        isExpanded: false,
-        content: "Content of File 1.2",
-        isSelected: false,
-      },
-    ],
-  },
-  {
-    name: "Folder 2",
-    isExpanded: false,
-    files: [
-      {
-        name: "File 2.1",
-        isExpanded: false,
-        content: "Content of File 2.1",
-        isSelected: false,
-      },
-      {
-        name: "Subfolder 2.2",
-        isExpanded: false,
-        files: [
-          {
-            name: "File 2.2.1",
-            isExpanded: false,
-            content: "Content of File 2.2.1",
-            isSelected: false,
-          },
-          {
-            name: "File 2.2.2",
-            isExpanded: false,
-            content: "Content of File 2.2.2",
-            isSelected: false,
-          },
-        ],
-      },
-    ],
-  },
-];
 
 interface LeftSideBarProps {
   onFileClick: (content: string | undefined) => void;
@@ -111,7 +59,23 @@ export function LeftSideBar(props: LeftSideBarProps) {
 
   onMount(async () => {
     const initialFiles = await fetchFiles();
+    if (!Array.isArray(initialFiles)) {
+      return;
+    }
     setFiles(initialFiles);
+    initialFiles.forEach((file) => {
+      if (file.files) {
+        file.files.forEach((subfile) => {
+          if (subfile.isSelected && subfile.content !== undefined) {
+            props.onFileClick(subfile.content);
+          }
+        });
+      } else {
+        if (file.isSelected && file.content !== undefined) {
+          props.onFileClick(file.content);
+        }
+      }
+    });
   });
 
   async function setFilesAndUpdate(files: File[]) {
@@ -173,7 +137,7 @@ export function LeftSideBar(props: LeftSideBarProps) {
     setFilesIsSelectedToFalse(files());
     leftClickedFileOrFolder = file;
     rightClickedFileOrFolder = null;
-    file.isSelected = true;
+    leftClickedFileOrFolder.isSelected = true;
     setFilesAndUpdate([...files()]);
   }
 
@@ -194,7 +158,7 @@ export function LeftSideBar(props: LeftSideBarProps) {
     }
   }
 
-  async function handleMenuClick(action: string) {
+  function handleMenuClick(action: string) {
     console.log("Clicked action:", action);
     if (action === "Rename" && rightClickedFileOrFolder === null) {
       Swal.fire(
@@ -390,6 +354,7 @@ export function LeftSideBar(props: LeftSideBarProps) {
           return updatedFiles;
         });
       }
+      console.log(files());
     }
   }
 

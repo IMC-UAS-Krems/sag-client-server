@@ -101,6 +101,8 @@ CREATE UNIQUE INDEX "projects_id_key" ON "projects"("id");
 -- CreateIndex
 CREATE UNIQUE INDEX "projects_name_key" ON "projects"("name");
 
+ALTER TABLE "users" ADD COLUMN "initialDocuments" JSONB[] DEFAULT ARRAY[]::JSONB[];
+
 -- AddForeignKey
 ALTER TABLE "users" ADD CONSTRAINT "users_municipalityId_fkey" FOREIGN KEY ("municipalityId") REFERENCES "municipalities"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
