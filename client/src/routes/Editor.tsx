@@ -4,23 +4,16 @@ import {
   createCodeMirror,
   createEditorControlledValue,
 } from "solid-codemirror";
-import { type Transaction } from "@codemirror/state";
-import { EditorView, ViewUpdate, lineNumbers } from "@codemirror/view";
-import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
-import { tags } from "@lezer/highlight";
+import { EditorView, lineNumbers } from "@codemirror/view";
 import { eden } from "@client/api";
 import "../styles/Editor.css";
-// import { useI18n } from "@solid-primitives/i18n";
 import { Button } from "@kobalte/core";
 import { Alert } from "@kobalte/core";
-import cors from "@elysiajs/cors";
 import { errors, setErrors, Error } from "@store/index";
 import { RightSideBar } from "../components/RightSideBar";
-import { error } from "console";
-import { Codemirror } from "vue-codemirror";
 import { keymap } from "@codemirror/view";
+import { LeftSideBar } from "../components/LeftSideBar";
 
-const t = (s: string) => s;
 const DEPLOYER_URL =
   import.meta.env.VITE_DEPLOYER_URL || "http://localhost:9000";
 
@@ -44,6 +37,8 @@ const compile = async (code: string): Promise<CompileResult | undefined> => {
 
     if (compileResult.data?.status === "error" && code.trim() !== "") {
       if (compileResult.data?.hasOwnProperty("errors")) {
+        // FIX: these 2 `if` statements should be combined into one. On error the message is "Something went wrong. Please try again." because result is undefined. This is not a good user experience.
+        // moreover, there is no `data?.error` property
         const errors = compileResult.data?.errors as Error[];
 
         setErrors(errors);
@@ -117,6 +112,28 @@ export const Editor: Component = () => {
   const [code, setCode] = createSignal("");
   // const [t, { add, locale, dict }] = useI18n();
   const [url, setUrl] = createSignal<JSX.Element | undefined>(undefined);
+  const handleFileClick = (content: string | undefined) => {
+    if (content && content.length > 0) {
+      console.log("content: ", content);
+      setCode(content);
+      editorView().dispatch({
+        changes: {
+          from: 0,
+          to: editorView().state.doc.length,
+          insert: content,
+        },
+      });
+    } else if (content === "") {
+      setCode("");
+      editorView().dispatch({
+        changes: {
+          from: 0,
+          to: editorView().state.doc.length,
+          insert: "",
+        },
+      });
+    }
+  };
 
   createEffect(() => {
     check(code());
@@ -290,7 +307,7 @@ export const Editor: Component = () => {
               setUrl(
                 <span>
                   Error: {result.error}\nPlease check your code and try again.
-                </span>,
+                </span>
               );
             } else {
               setUrl(
@@ -300,7 +317,7 @@ export const Editor: Component = () => {
                     {result.url}
                   </a>{" "}
                   to visualize the dashboard.
-                </span>,
+                </span>
               );
             }
 
@@ -313,7 +330,7 @@ export const Editor: Component = () => {
         Compile
       </Button.Root>
       <div class="editor-container">
-        <div class="left-column">{t("Left")}</div>
+        <LeftSideBar onFileClick={handleFileClick} code={code()} />
         <div class="middle-column">
           <div ref={editorRef}></div>
         </div>
