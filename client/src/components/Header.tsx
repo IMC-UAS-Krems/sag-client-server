@@ -2,7 +2,6 @@ import { onMount, type Component } from "solid-js";
 import { A, useNavigate } from "@solidjs/router";
 import { Image } from "@kobalte/core";
 import { theme } from "@store/index";
-import { eden } from "@client/api";
 
 import styles from "@styles/Header.module.css";
 import ThemeToggle from "./ThemeToggle";
@@ -26,22 +25,6 @@ const Header: Component = () => {
     });
     navigate("/sign-in");
   };
-
-  onMount(() => {
-    eden.apiuserEmailBasedOnId.get({
-      $fetch: {
-        mode: "cors",
-        credentials: "include",
-        method: "GET",
-      },
-    }).then((response) => {
-      if (response.data) {
-        console.log(response);
-        authStore.setState({ isAuthenticated: true, user: response.data });
-      }
-    });
-  }
-  );
 
   return (
     <header class={styles.headerMainContianer}>
