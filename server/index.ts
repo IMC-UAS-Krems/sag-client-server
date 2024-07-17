@@ -8,7 +8,6 @@ import { logger } from "@bogeychan/elysia-logger";
 import pretty from "pino-pretty";
 import { panic } from "@utils/panic";
 import crypt from "ncrypt-js";
-import { cookie } from "@elysiajs/cookie";
 
 const { encrypt, decrypt } = new crypt(
   Bun.env.JWT_SECRET ?? panic("JWT_SECRET environment variable not set")
