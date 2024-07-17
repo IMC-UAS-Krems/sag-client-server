@@ -19,10 +19,10 @@ services:
       - db
     restart: "no"
     volumes:
-      - ${PWD}/prisma/utils/init_database.js:/app/init_database.js
-      - ${PWD}/prisma/utils/init_database.sh:/app/init_database.sh
-      - ${PWD}/prisma/schema.prisma:/app/prisma/schema.prisma
-      - ${PWD}prisma/migrations:/app/prisma/migrations
+      - ./prisma/utils/init_database.js:/app/init_database.js
+      - ./prisma/utils/init_database.sh:/app/init_database.sh
+      - ./prisma/schema.prisma:/app/prisma/schema.prisma
+      - ./migrations:/app/prisma/migrations
 
     command: ["sh", "-c", "/app/init_database.sh"]
     working_dir: /app
