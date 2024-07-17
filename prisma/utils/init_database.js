@@ -32,6 +32,46 @@ async function seedData() {
         },
         organisation: undefined,
         project: undefined,
+        initialDocuments: [
+          {
+            name: "Folder 1",
+            files: [
+              {
+                name: "File 1",
+                content: "content 12",
+                isExpanded: true,
+                isSelected: false,
+              },
+            ],
+            isExpanded: true,
+            isSelected: false,
+          },
+          {
+            name: "File 2",
+            content: "test",
+            isExpanded: false,
+            isSelected: true,
+          },
+          {
+            name: "File 3",
+            content: "File 3",
+            isExpanded: true,
+            isSelected: false,
+          },
+          {
+            name: "File 4",
+            files: [
+              {
+                name: "testfile",
+                content: "",
+                isExpanded: true,
+                isSelected: false,
+              },
+            ],
+            isExpanded: true,
+            isSelected: false,
+          },
+        ],
       },
     });
   } catch (error) {
