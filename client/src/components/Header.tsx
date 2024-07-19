@@ -1,21 +1,19 @@
-import { onMount, type Component } from "solid-js";
+import { onMount, type Component, createSignal } from "solid-js";
 import { A, useNavigate } from "@solidjs/router";
 import { Image } from "@kobalte/core";
 import { theme } from "@store/index";
-
 import styles from "@styles/Header.module.css";
 import ThemeToggle from "./ThemeToggle";
-
 import logoLight from "@assets/logos/sagittarius-logo-bnc.webp";
 import logoDark from "@assets/logos/sagittarius-logo-blk.webp";
-
-import authStore from "@store/authStore";
 import { eden } from "@client/api";
 
 const Header: Component = () => {
   const navigate = useNavigate();
+  const [isAuthenticated, setIsAuthenticated] = createSignal(false);
+  const [user, setUser] = createSignal("");
+
   const handleLogout = async () => {
-    authStore.setState({ isAuthenticated: false, user: "" });
     await eden.auth.logout.post({
       $fetch: {
         mode: "cors",
@@ -23,8 +21,36 @@ const Header: Component = () => {
         method: "POST",
       },
     });
+    setIsAuthenticated(false);
+    setUser("");
     navigate("/sign-in");
   };
+
+  const checkIfUserIsAuthenticated = async () => {
+    try {
+      const response = await eden.check_if_cookie_from_request_contains_access_token.get({
+        $fetch: {
+          mode: "cors",
+          credentials: "include",
+          method: "GET",
+        },
+      });
+      console.log(response);
+      if (response.data) {
+        setIsAuthenticated(true);
+        setUser(response.data);
+      } else {
+        setIsAuthenticated(false);
+        setUser("");
+      }
+    } catch (error) {
+      console.error("Error checking authentication status", error);
+    }
+  };
+
+  onMount(() => {
+    checkIfUserIsAuthenticated();
+  });
 
   return (
     <header class={styles.headerMainContianer}>
@@ -41,11 +67,6 @@ const Header: Component = () => {
 
       <nav>
         <ul>
-          {/* <li>
-            {authStore.state().user.length != 0 ? (
-              <span>{authStore.state().user}</span>
-            ) : null}
-          </li> */}
           <li>
             <A href="/home">Home</A>
           </li>
@@ -55,12 +76,12 @@ const Header: Component = () => {
           <li>
             <A href="/about">About Us</A>
           </li>
-          {authStore.state().isAuthenticated ? (
+          {isAuthenticated() ? (
             <li>
               <a href="#" onClick={handleLogout}>
                 Logout{" "}
-                {authStore.state().user.length != 0 ? (
-                  <span>({authStore.state().user})</span>
+                {user() ? (
+                  <span>({user()})</span>
                 ) : null}
               </a>
             </li>
