@@ -633,6 +633,31 @@ const app = new Elysia()
         }
       )
   )
+  /*
+  create “GET” endpoint that checks if cookie from request contains access_token, decrypt the token, get user id from it and return an email or status if that id exist in the database
+  */
+  .get("/check", async ({ log, set, cookie: { access_token } }) => {
+    const id = decrypt(access_token.value) as string;
+    console.log("id: ", id);
+
+    const user = await prisma.user.findUnique({
+      where: {
+        id,
+      },
+      select: {
+        email: true,
+        id: true,
+      },
+    });
+
+    if (!user) {
+      set.status = 401; // Unauthorized
+      log.warn(`User not found: ${id}`);
+      return { status: "error", error: "User not found" };
+    }
+    set.status = 200;
+    return user.email;
+  })
   .get("/status", async ({ set }) => {
     const statuses = [
       "Single",
