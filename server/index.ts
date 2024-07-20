@@ -364,7 +364,6 @@ const app = new Elysia()
         "/initialDocuments",
         async ({ log, set, cookie: { access_token } }) => {
           const id = decrypt(access_token.value) as string;
-          console.log("id: ", id);
 
           const user = await prisma.user.findUnique({
             where: {
@@ -404,7 +403,6 @@ const app = new Elysia()
         "/initialDocuments",
         async ({ log, set, cookie, body: { documents } }) => {
           const id = decrypt(cookie.access_token.value) as string;
-          console.log("id: ", id);
           // convert documents to JSON array
 
           const user = await prisma.user.findUnique({
@@ -448,7 +446,6 @@ const app = new Elysia()
         "/compile",
         async ({ log, set, body: { code }, cookie }) => {
           const id = decrypt(cookie.access_token.value) as string;
-          console.log("id: ", id);
 
           const user = await prisma.user.findUnique({
             where: {
@@ -465,7 +462,6 @@ const app = new Elysia()
             log.warn(`User not found: ${id}`);
             return { status: "error", error: "User not found" };
           }
-          console.log(user);
 
           // "https://sagittarius-compose-production.up.railway.app/deploy",
           const compiled = await fetch(`${COMPILER_URL}/compile`, {
@@ -494,8 +490,6 @@ const app = new Elysia()
           body: t.Object({
             code: t.String(),
           }),
-          // WARNING: wasn't able to make it work (fails even when the cookie is present)
-          //
           cookie: t.Cookie({
             access_token: t.String(),
           }),
@@ -511,7 +505,6 @@ const app = new Elysia()
         "/check",
         async ({ log, set, body: { code }, cookie }) => {
           const id = decrypt(cookie.access_token) as string;
-          console.log("id: ", id);
 
           const user = await prisma.user.findUnique({
             where: {
@@ -528,7 +521,6 @@ const app = new Elysia()
             log.warn(`User not found: ${id}`);
             return { status: "error", error: "User not found" };
           }
-          console.log(user);
 
           // "https://sagittarius-compose-production.up.railway.app/deploy",
           const compiled = await fetch(`${COMPILER_URL}/check`, {
@@ -557,8 +549,6 @@ const app = new Elysia()
           body: t.Object({
             code: t.String(),
           }),
-          // WARNING: wasn't able to make it work (fails even when the cookie is present)
-          //
           cookie: t.Cookie({
             access_token: t.String(),
           }),
@@ -576,7 +566,6 @@ const app = new Elysia()
         "/test",
         async ({ log, set, body: { code }, cookie }) => {
           const id = decrypt(cookie.access_token.value) as string;
-          console.log("id: ", id);
 
           const user = await prisma.user.findUnique({
             where: {
@@ -593,7 +582,6 @@ const app = new Elysia()
             log.warn(`User not found: ${id}`);
             return;
           }
-          console.log(user);
 
           // "https://sagittarius-compose-production.up.railway.app/deploy",
           const compiled = await fetch(`${COMPILER_URL}/test`, {
@@ -633,8 +621,11 @@ const app = new Elysia()
       )
   )
   .get("/check_if_cookie_from_request_contains_access_token", async ({ log, set, cookie: { access_token } }) => {
+    if (!access_token.value){
+        set.status = 401;
+        return { status: "error", error: "Access token not found"}
+    }
     const id = decrypt(access_token.value) as string;
-    console.log("id: ", id);
 
     const user = await prisma.user.findUnique({
       where: {
