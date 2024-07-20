@@ -1,4 +1,4 @@
-import { onMount, type Component, createSignal, createEffect } from "solid-js";
+import { onMount, type Component } from "solid-js";
 import { A, useNavigate } from "@solidjs/router";
 import { Image } from "@kobalte/core";
 import { theme } from "@store/index";
@@ -11,9 +11,6 @@ import authStore from "@store/authStore";
 
 const Header: Component = () => {
   const navigate = useNavigate();
-  const [isAuthenticated, setIsAuthenticated] = createSignal(false);
-  const [user, setUser] = createSignal("");
-
   const handleLogout = async () => {
     await eden.auth.logout.post({
       $fetch: {
@@ -23,8 +20,6 @@ const Header: Component = () => {
       },
     });
     authStore.setState({ isAuthenticated: false, user: "" });
-    setIsAuthenticated(false);
-    setUser("");
     navigate("/sign-in");
   };
 
@@ -37,14 +32,14 @@ const Header: Component = () => {
           method: "GET",
         },
       });
+      console.log("response");
       console.log(response);
-      if (response.data) {
-        setIsAuthenticated(true);
-        setUser(response.data);
+      console.log(typeof response.data);
+      if (response.status === 200 && response.data) {
         authStore.setState({ isAuthenticated: true, user: response.data });
+        console.log("here");
+        console.log(authStore.state());
       } else {
-        setIsAuthenticated(false);
-        setUser("");
         authStore.setState({ isAuthenticated: false, user: "" });
       }
     } catch (error) {
@@ -80,10 +75,10 @@ const Header: Component = () => {
           <li>
             <A href="/about">About Us</A>
           </li>
-          {authStore.state().isAuthenticated ? (
+          {authStore.state().user ? (
             <li>
               <a href="#" onClick={handleLogout}>
-                Logout ({user()})
+                Logout ({authStore.state().user})
               </a>
             </li>
           ) : (
