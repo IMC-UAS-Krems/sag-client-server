@@ -101,7 +101,7 @@ const Register: Component = () => {
       return;
     }
 
-    authStore.setState({ isAuthenticated: true, user: formUsername });
+    authStore.setState({ isAuthenticated: true, user: formEmail });
 
     navigate("/editor", { replace: true });
 
@@ -206,6 +206,12 @@ const Login: Component = () => {
     authStore.setState({ isAuthenticated: true, user: formUsername });
 
     navigate("/editor", { replace: true });
+
+    Swal.fire({
+      title: "Success",
+      text: `Login successful.`,
+      icon: "success",
+    });
   };
 
   return (
