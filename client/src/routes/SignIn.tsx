@@ -11,7 +11,7 @@ import Swal from "sweetalert2";
 import authStore from "@store/authStore";
 
 import { useNavigate } from "@solidjs/router";
-
+import { setUser } from "@client/store";
 
 const FormField: Component<{
   getter: Accessor<string | undefined>;
@@ -100,7 +100,6 @@ const Register: Component = () => {
       console.log(registered.error);
       return;
     }
-
 
     authStore.setState({ isAuthenticated: true, user: formUsername });
 
