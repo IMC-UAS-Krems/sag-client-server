@@ -1,4 +1,4 @@
-import { onMount, type Component, createSignal } from "solid-js";
+import { onMount, type Component, createSignal, createEffect } from "solid-js";
 import { A, useNavigate } from "@solidjs/router";
 import { Image } from "@kobalte/core";
 import { theme } from "@store/index";
@@ -7,6 +7,7 @@ import ThemeToggle from "./ThemeToggle";
 import logoLight from "@assets/logos/sagittarius-logo-bnc.webp";
 import logoDark from "@assets/logos/sagittarius-logo-blk.webp";
 import { eden } from "@client/api";
+import authStore from "@store/authStore";
 
 const Header: Component = () => {
   const navigate = useNavigate();
@@ -21,6 +22,7 @@ const Header: Component = () => {
         method: "POST",
       },
     });
+    authStore.setState({ isAuthenticated: false, user: "" });
     setIsAuthenticated(false);
     setUser("");
     navigate("/sign-in");
@@ -39,9 +41,11 @@ const Header: Component = () => {
       if (response.data) {
         setIsAuthenticated(true);
         setUser(response.data);
+        authStore.setState({ isAuthenticated: true, user: response.data });
       } else {
         setIsAuthenticated(false);
         setUser("");
+        authStore.setState({ isAuthenticated: false, user: "" });
       }
     } catch (error) {
       console.error("Error checking authentication status", error);
@@ -76,13 +80,10 @@ const Header: Component = () => {
           <li>
             <A href="/about">About Us</A>
           </li>
-          {isAuthenticated() ? (
+          {authStore.state().isAuthenticated ? (
             <li>
               <a href="#" onClick={handleLogout}>
-                Logout{" "}
-                {user() ? (
-                  <span>({user()})</span>
-                ) : null}
+                Logout ({user()})
               </a>
             </li>
           ) : (
