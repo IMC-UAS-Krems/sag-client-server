@@ -14,7 +14,7 @@ services:
       - ./volumes/db/data:/var/lib/postgresql/data:Z
 
   db-setup:
-    image: node:20-buster
+    image: node:20
     depends_on:
       - db
     restart: "no"

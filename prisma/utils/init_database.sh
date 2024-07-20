@@ -1,6 +1,16 @@
 #!/usr/bin/env bash
-npm install prisma @prisma/client
-# npx prisma db push --force-reset # reset database
+echo '{
+  "name": "db-init",
+  "version": "1.0.0",
+  "license": "MIT",
+  "dependencies": {
+    "prisma": "^4.8.1",
+    "@prisma/client": "^4.8.1"
+  },
+  "prisma": {
+    "seed": "node ./init_database.js"
+  }
+}' > package.json
+
+yarn install
 npx prisma migrate reset --force
-npx prisma generate
-node ./init_database.js
