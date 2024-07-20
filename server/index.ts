@@ -329,7 +329,6 @@ const app = new Elysia()
       .post(
         "/logout",
         async ({ log, set, cookie: { access_token } }) => {
-          console.log("cookie: ", cookie);
           access_token.set({
             httpOnly: true,
             secure: true,
@@ -633,10 +632,7 @@ const app = new Elysia()
         }
       )
   )
-  /*
-  create “GET” endpoint that checks if cookie from request contains access_token, decrypt the token, get user id from it and return an email or status if that id exist in the database
-  */
-  .get("/check", async ({ log, set, cookie: { access_token } }) => {
+  .get("/check_if_cookie_from_request_contains_access_token", async ({ log, set, cookie: { access_token } }) => {
     const id = decrypt(access_token.value) as string;
     console.log("id: ", id);
 
