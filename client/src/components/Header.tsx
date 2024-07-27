@@ -1,4 +1,4 @@
-import { onMount, type Component } from "solid-js";
+import { onMount, type Component, JSX } from "solid-js";
 import { A, useNavigate } from "@solidjs/router";
 import { Image } from "@kobalte/core";
 import { theme } from "@store/index";
@@ -9,7 +9,7 @@ import logoDark from "@assets/logos/sagittarius-logo-blk.webp";
 import { eden } from "@client/api";
 import authStore from "@store/authStore";
 
-const Header: Component = () => {
+const Header: Component<{ children: JSX.Element }> = (props) => {
   const navigate = useNavigate();
   const handleLogout = async () => {
     await eden.auth.logout.post({
@@ -52,46 +52,43 @@ const Header: Component = () => {
   });
 
   return (
-    <header class={styles.headerMainContianer}>
-      <Image.Root fallbackDelay={600} class={styles.img}>
-        <Image.Img
-          class={styles.imgImg}
-          src={theme() === "light" ? logoDark : logoLight}
-          alt="Sagittarius Logo"
-        />
-        <Image.Fallback class={styles.imgFallback}>
-          Sagittarius Logo
-        </Image.Fallback>
-      </Image.Root>
+    <>
+      <header class={styles.headerMainContianer}>
+        <Image.Root fallbackDelay={600} class={styles.img}>
+          <Image.Img class={styles.imgImg} src={theme() === "light" ? logoDark : logoLight} alt="Sagittarius Logo" />
+          <Image.Fallback class={styles.imgFallback}>Sagittarius Logo</Image.Fallback>
+        </Image.Root>
 
-      <nav>
-        <ul>
-          <li>
-            <A href="/home">Home</A>
-          </li>
-          <li>
-            <A href="/editor">Editor</A>
-          </li>
-          <li>
-            <A href="/about">About Us</A>
-          </li>
-          {authStore.state().user ? (
+        <nav>
+          <ul>
             <li>
-              <a href="#" onClick={handleLogout}>
-                Logout ({authStore.state().user})
-              </a>
+              <A href="/home">Home</A>
             </li>
-          ) : (
             <li>
-              <A href="/sign-in">Sign In</A>
+              <A href="/editor">Editor</A>
             </li>
-          )}
-          <li>
-            <ThemeToggle />
-          </li>
-        </ul>
-      </nav>
-    </header>
+            <li>
+              <A href="/about">About Us</A>
+            </li>
+            {authStore.state().user ? (
+              <li>
+                <a href="#" onClick={handleLogout}>
+                  Logout ({authStore.state().user})
+                </a>
+              </li>
+            ) : (
+              <li>
+                <A href="/sign-in">Sign In</A>
+              </li>
+            )}
+            <li>
+              <ThemeToggle />
+            </li>
+          </ul>
+        </nav>
+      </header>
+      {props.children}
+    </>
   );
 };
 

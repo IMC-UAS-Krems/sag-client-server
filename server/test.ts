@@ -1,9 +1,7 @@
 import crypt from "ncrypt-js";
 import { panic } from "@utils/panic";
 
-const { encrypt, decrypt } = new crypt(
-  Bun.env.JWT_SECRET ?? panic("JWT_SECRET environment variable not set")
-);
+const { encrypt, decrypt } = new crypt(Bun.env.JWT_SECRET ?? panic("JWT_SECRET environment variable not set"));
 
 const obj = {
   cashRules: true,

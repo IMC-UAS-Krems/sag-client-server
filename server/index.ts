@@ -1,17 +1,14 @@
 import { Elysia, t } from "elysia";
 import { swagger } from "@elysiajs/swagger";
-import { jwt } from "@elysiajs/jwt";
 import { cors } from "@elysiajs/cors";
 import { prisma } from "@∆";
-import { User, Prisma, ConsumerLevel, ProducerLevel } from "@prisma/client";
+import { Prisma, ConsumerLevel, ProducerLevel } from "@prisma/client";
 import { logger } from "@bogeychan/elysia-logger";
 import pretty from "pino-pretty";
 import { panic } from "@utils/panic";
 import crypt from "ncrypt-js";
 
-const { encrypt, decrypt } = new crypt(
-  Bun.env.JWT_SECRET ?? panic("JWT_SECRET environment variable not set")
-);
+const { encrypt, decrypt } = new crypt(Bun.env.JWT_SECRET ?? panic("JWT_SECRET environment variable not set"));
 const COMPILER_URL = Bun.env.COMPILER_URL || "http://localhost:8080";
 
 // TODO: @elysiajs/cookie not needed, can be reverted to original
@@ -29,16 +26,12 @@ type UserResult = {
   } | null;
   project: {
     name: string;
+    documents: {
+      content: string;
+    }[];
   } | null;
   writePrivilege: ProducerLevel;
   readPrivilege: ConsumerLevel;
-  documents: {
-    id: string;
-    name: string;
-    version: number;
-    createdAt: Date;
-    updatedAt: Date | null;
-  }[];
 };
 
 const app = new Elysia()
@@ -46,7 +39,7 @@ const app = new Elysia()
     logger({
       level: "info",
       stream: pretty({ colorize: true }),
-    })
+    }),
   )
   .use(
     cors({
@@ -54,7 +47,7 @@ const app = new Elysia()
       // methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
       allowedHeaders: ["Content-Type", "*"],
       origin: true,
-    })
+    }),
   )
   .use(
     swagger({
@@ -69,7 +62,7 @@ const app = new Elysia()
         },
         tags: [{ name: "auth" }, { name: "admin" }, { name: "api" }],
       },
-    })
+    }),
   )
   .group("/auth", (app) =>
     app
@@ -78,19 +71,41 @@ const app = new Elysia()
         async ({
           log,
           set,
-          body: {
-            name,
-            email,
-            username,
-            key,
-            municipality,
-            organisation,
-            project,
-          },
+          body: { name, email, username, key, municipality, organisation, project },
           cookie: { access_token },
         }): Promise<UserResult | undefined> => {
           try {
             log.info("Trying to create user");
+            const select = {
+              id: true,
+              name: true,
+              email: true,
+              username: true,
+              password: true,
+              readPrivilege: true,
+              writePrivilege: true,
+              municipality: {
+                select: {
+                  name: true,
+                },
+              },
+              organisation: {
+                select: {
+                  name: true,
+                },
+              },
+              project: {
+                select: {
+                  name: true,
+                  documents: {
+                    select: {
+                      content: true,
+                    },
+                  },
+                },
+              },
+            };
+
             const { id, ...user } = await prisma.user.create({
               data: {
                 name,
@@ -146,38 +161,7 @@ const app = new Elysia()
                       }
                     : undefined,
               },
-              select: {
-                id: true,
-                name: true,
-                email: true,
-                username: true,
-                readPrivilege: true,
-                writePrivilege: true,
-                documents: {
-                  select: {
-                    id: true,
-                    name: true,
-                    version: true,
-                    createdAt: true,
-                    updatedAt: true,
-                  },
-                },
-                municipality: {
-                  select: {
-                    name: true,
-                  },
-                },
-                organisation: {
-                  select: {
-                    name: true,
-                  },
-                },
-                project: {
-                  select: {
-                    name: true,
-                  },
-                },
-              },
+              select: select,
             });
 
             log.info("Trying to create user done");
@@ -223,16 +207,11 @@ const app = new Elysia()
             access_token: t.Optional(t.String()),
           }),
           detail: { tags: ["auth"] },
-        }
+        },
       )
       .post(
         "/login",
-        async ({
-          log,
-          set,
-          body: { identifier, key },
-          cookie: { access_token },
-        }): Promise<UserResult | undefined> => {
+        async ({ log, set, body: { identifier, key }, cookie: { access_token } }): Promise<UserResult | undefined> => {
           const select = {
             id: true,
             name: true,
@@ -241,15 +220,6 @@ const app = new Elysia()
             password: true,
             readPrivilege: true,
             writePrivilege: true,
-            documents: {
-              select: {
-                id: true,
-                name: true,
-                version: true,
-                createdAt: true,
-                updatedAt: true,
-              },
-            },
             municipality: {
               select: {
                 name: true,
@@ -263,6 +233,11 @@ const app = new Elysia()
             project: {
               select: {
                 name: true,
+                documents: {
+                  select: {
+                    content: true,
+                  },
+                },
               },
             },
           };
@@ -324,7 +299,7 @@ const app = new Elysia()
             access_token: t.Optional(t.String()),
           }),
           detail: { tags: ["auth"] },
-        }
+        },
       )
       .post(
         "/logout",
@@ -345,8 +320,8 @@ const app = new Elysia()
             access_token: t.String(),
           }),
           detail: { tags: ["auth"] },
-        }
-      )
+        },
+      ),
   )
   .group("/admin", (app) => app)
   .group("/api", (app) =>
@@ -361,7 +336,7 @@ const app = new Elysia()
         return municipalities.map((m) => m.name);
       })
       .get(
-        "/initialDocuments",
+        "/files",
         async ({ log, set, cookie: { access_token } }) => {
           const id = decrypt(access_token.value) as string;
 
@@ -397,7 +372,7 @@ const app = new Elysia()
             access_token: t.String(),
           }),
           detail: { tags: ["api"] },
-        }
+        },
       )
       .post(
         "/initialDocuments",
@@ -440,7 +415,7 @@ const app = new Elysia()
             access_token: t.String(),
           }),
           detail: { tags: ["api"] },
-        }
+        },
       )
       .post(
         "/compile",
@@ -499,7 +474,7 @@ const app = new Elysia()
             t.Object({ status: t.Literal("error"), error: t.String() }),
           ]),
           detail: { tags: ["api"] },
-        }
+        },
       )
       .post(
         "/check",
@@ -560,7 +535,7 @@ const app = new Elysia()
             }),
           ]),
           detail: { tags: ["api"] },
-        }
+        },
       )
       .post(
         "/test",
@@ -617,13 +592,13 @@ const app = new Elysia()
             access_token: t.String(),
           }),
           detail: { tags: ["api"] },
-        }
-      )
+        },
+      ),
   )
   .get("/check_if_cookie_from_request_contains_access_token", async ({ log, set, cookie: { access_token } }) => {
-    if (!access_token.value){
-        set.status = 401;
-        return { status: "error", error: "Access token not found"}
+    if (!access_token.value) {
+      set.status = 401;
+      return { status: "error", error: "Access token not found" };
     }
     const id = decrypt(access_token.value) as string;
 
@@ -646,23 +621,15 @@ const app = new Elysia()
     return user.email;
   })
   .get("/status", async ({ set }) => {
-    const statuses = [
-      "Single",
-      "In a relationship",
-      "Married",
-      "In love",
-      "It's complicated",
-    ];
+    const statuses = ["Single", "In a relationship", "Married", "In love", "It's complicated"];
     set.status = 200;
     return statuses[Math.floor(Math.random() * statuses.length)];
   })
-  .get("/", async ({ set }) => {
-    set.redirect = "/status";
+  .get("/", async ({ set, redirect }) => {
+    return redirect("/status");
   })
   .listen({ port: "9512", hostname: "0.0.0.0" });
 
 export type Router = typeof app;
 
-console.log(
-  `🦊 Elysia is running at ${app.server?.hostname}:${app.server?.port}`
-);
+console.log(`🦊 Elysia is running at ${app.server?.hostname}:${app.server?.port}`);

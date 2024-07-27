@@ -1,5 +1,4 @@
 import { type Component, createSignal, createEffect } from "solid-js";
-// import { useI18n } from "@solid-primitives/i18n";
 import { TextField, Button } from "@kobalte/core";
 import { eden } from "@client/api";
 import type { Accessor, Setter } from "solid-js";
@@ -12,6 +11,7 @@ import authStore from "@store/authStore";
 
 import { useNavigate } from "@solidjs/router";
 import { setUser } from "@client/store";
+import Header from "@client/components/Header";
 
 const FormField: Component<{
   getter: Accessor<string | undefined>;
@@ -21,13 +21,8 @@ const FormField: Component<{
 }> = ({ getter, setter, labelText, password }) => {
   return (
     <TextField.Root class={styles.textField} value={getter()} onChange={setter}>
-      <TextField.Label class={styles.textFieldLabel}>
-        {labelText}
-      </TextField.Label>
-      <TextField.Input
-        class={styles.textFieldInput}
-        type={password ? "password" : "text"}
-      />
+      <TextField.Label class={styles.textFieldLabel}>{labelText}</TextField.Label>
+      <TextField.Input class={styles.textFieldInput} type={password ? "password" : "text"} />
     </TextField.Root>
   );
 };
@@ -39,12 +34,8 @@ const Register: Component = () => {
   const [email, setEmail] = createSignal<string | undefined>(undefined);
   const [username, setUsername] = createSignal<string | undefined>(undefined);
   const [password, setPassword] = createSignal<string | undefined>(undefined);
-  const [municipality, setMunicipality] = createSignal<string | undefined>(
-    undefined
-  );
-  const [organisation, setOrganisation] = createSignal<string | undefined>(
-    undefined
-  );
+  const [municipality, setMunicipality] = createSignal<string | undefined>(undefined);
+  const [organisation, setOrganisation] = createSignal<string | undefined>(undefined);
   const [municipalities, setMunicipalities] = createSignal<string[]>([]);
 
   const navigate = useNavigate();
@@ -93,7 +84,7 @@ const Register: Component = () => {
         mode: "cors",
         credentials: "include",
         method: "POST",
-      }
+      },
     });
 
     if (!registered.data || registered.error) {
@@ -116,30 +107,15 @@ const Register: Component = () => {
 
   return (
     <>
-      <div
-        style={{ padding: "50px 0 50px 0", "margin-bottom": "30px" }}
-        class={styles.signinCardContainer}
-      >
+      <div style={{ padding: "50px 0 50px 0", "margin-bottom": "30px" }} class={styles.signinCardContainer}>
         <form class={styles.signinFormContainer}>
           <FormField getter={name} setter={setName} labelText="Name" />
           <FormField getter={email} setter={setEmail} labelText="Email" />
-          <FormField
-            getter={username}
-            setter={setUsername}
-            labelText="Username"
-          />
-          <FormField
-            getter={password}
-            setter={setPassword}
-            labelText="Password"
-            password={true}
-          />
+          <FormField getter={username} setter={setUsername} labelText="Username" />
+          <FormField getter={password} setter={setPassword} labelText="Password" password={true} />
           <div class={styles.textField}>
             <label class={styles.textFieldLabel}>Municipality</label>
-            <select
-              class={styles.textFieldInput}
-              onChange={(e) => setMunicipality(e.currentTarget.value)}
-            >
+            <select class={styles.textFieldInput} onChange={(e) => setMunicipality(e.currentTarget.value)}>
               {municipalities().map((municipality) => (
                 <option key={municipality} value={municipality}>
                   {municipality}
@@ -147,11 +123,7 @@ const Register: Component = () => {
               ))}
             </select>
           </div>
-          <FormField
-            getter={organisation}
-            setter={setOrganisation}
-            labelText="Organisation"
-          />
+          <FormField getter={organisation} setter={setOrganisation} labelText="Organisation" />
         </form>
         <Button.Root onClick={submit}>Submit</Button.Root>
       </div>
@@ -188,7 +160,7 @@ const Login: Component = () => {
         mode: "cors",
         credentials: "include",
         method: "POST",
-      }
+      },
     });
 
     if (!logged.data || logged.error) {
@@ -218,17 +190,8 @@ const Login: Component = () => {
     <>
       <div class={styles.signinCardContainer}>
         <form class={styles.signinFormContainer}>
-          <FormField
-            getter={username}
-            setter={setUsername}
-            labelText="Username"
-          />
-          <FormField
-            getter={password}
-            setter={setPassword}
-            labelText="Password"
-            password={true}
-          />
+          <FormField getter={username} setter={setUsername} labelText="Username" />
+          <FormField getter={password} setter={setPassword} labelText="Password" password={true} />
         </form>
         <Button.Root onClick={submit}>Submit</Button.Root>
       </div>
@@ -241,23 +204,25 @@ const SignIn: Component = () => {
   // const [t, { add, locale, dict }] = useI18n();
 
   return (
-    <main class={styles.signinMainContainer}>
-      {mode() === "login" ? <Login /> : <Register />}
-      <nav class={styles.submenuContainer}>
-        <Button.Root
-          onClick={() => setMode("login")}
-          class={mode() === "login" ? styles.activeButton : styles.navButton}
-        >
-          Login
-        </Button.Root>
-        <Button.Root
-          onClick={() => setMode("register")}
-          class={mode() === "register" ? styles.activeButton : styles.navButton}
-        >
-          Register
-        </Button.Root>
-      </nav>
-    </main>
+    <Header>
+      <main class={styles.signinMainContainer}>
+        {mode() === "login" ? <Login /> : <Register />}
+        <nav class={styles.submenuContainer}>
+          <Button.Root
+            onClick={() => setMode("login")}
+            class={mode() === "login" ? styles.activeButton : styles.navButton}
+          >
+            Login
+          </Button.Root>
+          <Button.Root
+            onClick={() => setMode("register")}
+            class={mode() === "register" ? styles.activeButton : styles.navButton}
+          >
+            Register
+          </Button.Root>
+        </nav>
+      </main>
+    </Header>
   );
 };
 

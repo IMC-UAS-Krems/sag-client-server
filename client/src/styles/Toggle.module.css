@@ -1,7 +1,7 @@
 .toggleContainer {
   --icon-size: 1.3em;
-  --transition-time: .8s;
-  --transition-delay: .6s;
+  --transition-time: 0.8s;
+  --transition-delay: 0.6s;
 
   width: 30px;
   height: 30px;
@@ -27,7 +27,7 @@
   transition: var(--transition-time) ease;
 }
 
-.toggleContainer input:checked~.sun {
+.toggleContainer input:checked ~ .sun {
   transition-delay: var(--transition-delay);
   transform: scale(1) rotate(360deg);
 }
@@ -40,7 +40,7 @@
   transition-delay: var(--transition-delay);
 }
 
-.toggleContainer input:checked~.moon {
+.toggleContainer input:checked ~ .moon {
   transition-delay: 0s;
   transform: rotate(360deg) scale(0);
 }
@@ -60,10 +60,10 @@
   transition: var(--transition-time);
 }
 
-.toggleContainer input[value~="light"]~.toggle {
+.toggleContainer input[value~="light"] ~ .toggle {
   background-color: #f8f8f8;
 }
 
-.toggleContainer input[value~="dark"]~.toggle {
+.toggleContainer input[value~="dark"] ~ .toggle {
   background-color: #2b2b2b;
 }

@@ -1,12 +1,14 @@
+import Header from "@client/components/Header";
 import { Component } from "solid-js";
-// import { useI18n } from "@solid-primitives/i18n";
 
 const t = (s: string) => s;
 
 const About: Component = () => {
-  // const [t, { add, locale, dict }] = useI18n();
-
-  return <main>{`${t("About")} ${t("page")}`}</main>;
+  return (
+    <Header>
+      <main>{`${t("About")} ${t("page")}`}</main>
+    </Header>
+  );
 };
 
 export default About;

@@ -1,9 +1,6 @@
 import { JSX, Component, createSignal, Show, createEffect } from "solid-js";
 import { linter, Diagnostic, lintGutter } from "@codemirror/lint";
-import {
-  createCodeMirror,
-  createEditorControlledValue,
-} from "solid-codemirror";
+import { createCodeMirror, createEditorControlledValue } from "solid-codemirror";
 import { EditorView, lineNumbers } from "@codemirror/view";
 import { eden } from "@client/api";
 import "../styles/Editor.css";
@@ -13,9 +10,9 @@ import { errors, setErrors, Error } from "@store/index";
 import { RightSideBar } from "../components/RightSideBar";
 import { keymap } from "@codemirror/view";
 import { LeftSideBar } from "../components/LeftSideBar";
+import Header from "@client/components/Header";
 
-const DEPLOYER_URL =
-  import.meta.env.VITE_DEPLOYER_URL || "http://localhost:9000";
+const DEPLOYER_URL = import.meta.env.VITE_DEPLOYER_URL || "http://localhost:9000";
 
 type CompileResult = {
   error: string | undefined;
@@ -289,54 +286,52 @@ export const Editor: Component = () => {
   createExtension(customKeyBehaviour);
 
   return (
-    <main>
-      <Show when={url() !== undefined}>
-        <Alert.Root class="alert">{url()}</Alert.Root>
-      </Show>
-      <Button.Root
-        class="compile"
-        onClick={async () => {
-          setUrl("Compiling...");
+    <Header>
+      <main>
+        <Show when={url() !== undefined}>
+          <Alert.Root class="alert">{url()}</Alert.Root>
+        </Show>
+        <Button.Root
+          class="compile"
+          onClick={async () => {
+            setUrl("Compiling...");
 
-          const result = await compile(code());
+            const result = await compile(code());
 
-          if (result === undefined) {
-            setUrl("Something went wrong. Please try again.");
-          } else {
-            if (result.error) {
-              setUrl(
-                <span>
-                  Error: {result.error}\nPlease check your code and try again.
-                </span>
-              );
+            if (result === undefined) {
+              setUrl("Something went wrong. Please try again.");
             } else {
-              setUrl(
-                <span>
-                  Success! Navigate to{" "}
-                  <a href={result.url?.replaceAll('"', "")} target="_blank">
-                    {result.url}
-                  </a>{" "}
-                  to visualize the dashboard.
-                </span>
-              );
-            }
+              if (result.error) {
+                setUrl(<span>Error: {result.error}\nPlease check your code and try again.</span>);
+              } else {
+                setUrl(
+                  <span>
+                    Success! Navigate to{" "}
+                    <a href={result.url?.replaceAll('"', "")} target="_blank">
+                      {result.url}
+                    </a>{" "}
+                    to visualize the dashboard.
+                  </span>,
+                );
+              }
 
-            setTimeout(() => {
-              setUrl(undefined);
-            }, 10000);
-          }
-        }}
-      >
-        Compile
-      </Button.Root>
-      <div class="editor-container">
-        <LeftSideBar onFileClick={handleFileClick} code={code()} />
-        <div class="middle-column">
-          <div ref={editorRef}></div>
+              setTimeout(() => {
+                setUrl(undefined);
+              }, 10000);
+            }
+          }}
+        >
+          Compile
+        </Button.Root>
+        <div class="editor-container">
+          <LeftSideBar onFileClick={handleFileClick} code={code()} />
+          <div class="middle-column">
+            <div ref={editorRef}></div>
+          </div>
+          <RightSideBar />
         </div>
-        <RightSideBar />
-      </div>
-    </main>
+      </main>
+    </Header>
   );
 };
 
