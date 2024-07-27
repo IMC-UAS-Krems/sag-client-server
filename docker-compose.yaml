@@ -1,4 +1,4 @@
-version: '3'
+# version: '3'
 
 name: sagittarius-web
 services:
@@ -12,6 +12,12 @@ services:
       - 5432:5432
     volumes:
       - ./volumes/db/data:/var/lib/postgresql/data:Z
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
 
   db-setup:
     image: node:20
@@ -19,7 +25,7 @@ services:
       - db
     restart: "no"
     volumes:
-      - ./prisma/utils/init_database.js:/app/init_database.js
+      - ./prisma/utils/init_database.ts:/app/init_database.ts
       - ./prisma/utils/init_database.sh:/app/init_database.sh
       - ./prisma/schema.prisma:/app/prisma/schema.prisma
       - ./prisma/migrations:/app/prisma/migrations
@@ -28,6 +34,13 @@ services:
     working_dir: /app
     environment:
       DATABASE_URL: ${DATABASE_URL}
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
 
   server:
     container_name: sagittarius-server
@@ -44,6 +57,12 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       DATABASE_URL: ${DATABASE_URL}
       COMPILER_URL: ${COMPILER_URL}
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
 
   client:
     container_name: sagittarius-client
@@ -60,3 +79,9 @@ services:
       - ${WEB_CLIENT_PORT}:8100
     environment:
       VITE_SERVER_URL: ${SERVER_URL}
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
