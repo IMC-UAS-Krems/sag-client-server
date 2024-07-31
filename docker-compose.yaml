@@ -25,7 +25,7 @@ services:
       - db
     restart: "no"
     volumes:
-      - ./prisma/utils/init_database.ts:/app/init_database.ts
+      - ./prisma/utils/init_database.js:/app/init_database.js
       - ./prisma/utils/init_database.sh:/app/init_database.sh
       - ./prisma/schema.prisma:/app/prisma/schema.prisma
       - ./prisma/migrations:/app/prisma/migrations
