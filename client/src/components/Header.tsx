@@ -25,7 +25,7 @@ const Header: Component<{ children: JSX.Element }> = (props) => {
 
   const checkIfUserIsAuthenticated = async () => {
     try {
-      const response = await eden.check_if_cookie_from_request_contains_access_token.get({
+      const response = await eden.auth["check-if-logged-in"].get({
         $fetch: {
           mode: "cors",
           credentials: "include",
