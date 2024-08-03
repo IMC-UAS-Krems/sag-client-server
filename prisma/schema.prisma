@@ -1,58 +1,65 @@
 generator client {
     provider        = "prisma-client-js"
+    previewFeatures = ["postgresqlExtensions"]
     binaryTargets   = ["native", "debian-openssl-1.1.x"]
 }
 
 datasource db {
-    provider = "postgresql"
-    url      = env("DATABASE_URL")
+    provider   = "postgresql"
+    url        = env("DATABASE_URL")
+    extensions = [ltree]
 }
 
-// Enums
-
-enum ConsumerLevel {
+enum PrivilegeLevel {
     NO_ACCESS
     LOW_ACCESS
     MID_ACCESS
     HIGH_ACCESS
 }
 
-enum ProducerLevel {
-    NO_ACCESS
-    LOW_ACCESS
-    MID_ACCESS
-    HIGH_ACCESS
+enum DocumentType {
+    FILE
+    FOLDER
+}
+
+enum UserRole {
+    USER
+    ADMIN
+}
+
+enum UserType {
+    DEFAULT // Default user type, can only see organization data
+    SUPERUSER_MUNICIPALITY // Can see data from all organizations in the municipality
+    SUPERUSER_GLOBAL // Can see data from all organizations in all municipalities
 }
 
 // Models
-
 model User {
     id String @id @unique @default(cuid())
 
     // Personal Data
     name     String
-    username String @unique
-    email    String @unique
+    username String   @unique
+    email    String   @unique
     password String
+    userRole UserRole @default(USER)
+    userType UserType @default(DEFAULT)
 
     // Permissions
-    writePrivilege ProducerLevel @default(NO_ACCESS)
-    readPrivilege  ConsumerLevel @default(NO_ACCESS)
-
-    // Work specific
+    writePrivilege PrivilegeLevel @default(LOW_ACCESS)
+    readPrivilege  PrivilegeLevel @default(LOW_ACCESS)
 
     // Worker municipality
-    municipality     Municipality? @relation(fields: [municipalityId], references: [id])
-    municipalityId   String?
-    // Worker organisation
-    organisation     Organization? @relation(fields: [orgId], references: [id])
-    orgId            String?
-    // Worker projects
-    project          Project?      @relation(fields: [projectId], references: [id])
-    projectId        String?
+    organization   Organization @relation(fields: [organizationId], references: [id])
+    organizationId String
+
+    municipality   Municipality @relation(fields: [municipalityId], references: [id])
+    municipalityId String
+
+    projects Project[]
+
     // Documents created by user
-    documents        Document[]
-    initialDocuments Json[]        @default([])
+    documents Document[]
 
     // Meta
     registered DateTime  @default(now())
@@ -66,43 +73,59 @@ model Document {
 
     // Document Data
     name    String
-    content String
+    content String @db.Text
     version Int    @default(1)
 
     // Document attributions
     // Author data
-    author    User    @relation(fields: [authorId], references: [id])
-    authorId  String
+    author   User   @relation(fields: [authorId], references: [id])
+    authorId String
+
     // Project data
     project   Project @relation(fields: [projectId], references: [id])
     projectId String
 
-    // Meta
-    createdAt DateTime  @default(now())
-    updatedAt DateTime?
+    // Path to document
+    path Unsupported("ltree")
 
+    // Meta
+    createdAt    DateTime     @default(now())
+    updatedAt    DateTime?
+    documentType DocumentType @default(FILE)
+
+    @@unique([projectId, path])
     @@map("documents")
 }
 
-model Municipality {
+model Project {
     id String @id @unique @default(cuid())
 
-    // Municipality data
-    name          String         @unique
-    organisations Organization[]
-    user          User[]
+    // Project data
+    name           String
+    organization   Organization @relation(fields: [organizationId], references: [id])
+    organizationId String
+
+    // Project Content
+    documents Document[]
+    users     User[]
+
+    // Minimum permission level to read and write
+    minWritePrivilege PrivilegeLevel @default(LOW_ACCESS)
+    minReadPrivilege  PrivilegeLevel @default(LOW_ACCESS)
 
     // Meta
     createdAt DateTime  @default(now())
     updatedAt DateTime? @updatedAt
 
-    @@map("municipalities")
+    @@unique([name, organizationId])
+    @@map("projects")
 }
 
 model Organization {
     id String @id @unique @default(cuid())
 
-    name           String       @unique
+    name String @unique
+
     municipality   Municipality @relation(fields: [municipalityId], references: [id])
     municipalityId String
 
@@ -118,25 +141,17 @@ model Organization {
     @@map("organisations")
 }
 
-model Project {
+model Municipality {
     id String @id @unique @default(cuid())
 
-    // Project data
-    name         String       @unique
-    organisation Organization @relation(fields: [orgId], references: [id])
-    orgId        String
-
-    // Project Content
-    documents Document[]
-    user      User[]
-
-    // Minimum permission level to read and write
-    minWritePrivilege ProducerLevel @default(HIGH_ACCESS)
-    minReadPrivilege  ConsumerLevel @default(HIGH_ACCESS)
+    // Municipality data
+    name          String         @unique
+    organizations Organization[]
 
     // Meta
     createdAt DateTime  @default(now())
     updatedAt DateTime? @updatedAt
+    User      User[]
 
-    @@map("projects")
+    @@map("municipalities")
 }
