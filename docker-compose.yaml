@@ -21,18 +21,9 @@ services:
     # command: ["postgres", "-c", "log_statement=all"]
 
   db-setup:
-    image: node:20
-    depends_on:
-      - db
-    restart: "no"
-    volumes:
-      - ./prisma/utils/init_database.ts:/app/init_database.ts
-      - ./prisma/utils/init_database.sh:/app/init_database.sh
-      - ./prisma/schema.prisma:/app/prisma/schema.prisma
-      - ./prisma/migrations:/app/prisma/migrations
-
-    command: ["sh", "-c", "/app/init_database.sh"]
-    working_dir: /app
+    build:
+      context: ./prisma/
+      dockerfile: utils/Dockerfile.db_setup
     environment:
       DATABASE_URL: ${DATABASE_URL}
     deploy:

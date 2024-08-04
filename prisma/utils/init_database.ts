@@ -1,4 +1,4 @@
-import { PrismaClient, Prisma } from "@prisma/client";
+import { PrismaClient, Prisma, UserType } from "@prisma/client";
 import { createId } from "@paralleldrive/cuid2";
 
 const prisma = new PrismaClient();
@@ -96,6 +96,7 @@ try {
       email: "email@example6.com",
       username: "email@example6.com",
       password: "password123",
+      userType: UserType.SUPERUSER_GLOBAL,
       organization: {
         connect: { name: "Imc" },
       },
@@ -214,7 +215,6 @@ try {
         VALUES (${createId()}, 'File 1', 'text\ntext', (SELECT id from users WHERE users.name = 'Mike'),
         (SELECT id FROM projects WHERE projects.name = 'Project 2'
         AND projects."organizationId" = (SELECT id FROM organisations WHERE organisations.name = 'FHSTP')), 'File-1');`;
-
 } catch (error) {
   console.error("Error seeding data:", error);
 } finally {
