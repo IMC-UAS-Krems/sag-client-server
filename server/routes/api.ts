@@ -1,13 +1,14 @@
 import { Elysia, t } from "elysia";
 import { prisma } from "@server/prisma";
-import { decrypt } from "@server/routes/auth";
+import { authMiddleware } from "@server/middleware";
+import { decrypt } from "./auth";
 
 const COMPILER_URL = Bun.env.COMPILER_URL || "http://localhost:8080";
 
 export const api = new Elysia({ prefix: "/api" })
   .get(
     "/municipalities",
-    async ({ set }) => {
+    async ({ log, set }) => {
       const municipalities = await prisma.municipality.findMany({
         select: {
           name: true,
@@ -18,180 +19,117 @@ export const api = new Elysia({ prefix: "/api" })
     },
     { detail: { tags: ["api"] } },
   )
-  .post(
-    "/compile",
-    async ({ log, set, body: { code }, cookie }) => {
-      const id = decrypt(cookie.access_token.value) as string;
+  .guard({ beforeHandle: authMiddleware }, (app) =>
+    app
+      .post(
+        "/compile",
+        async ({ log, set, body: { code }, userId }) => {
+          const compiled = await fetch(`${COMPILER_URL}/compile`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              source: code,
+              user_id: userId,
+            }),
+          });
 
-      const user = await prisma.user.findUnique({
-        where: {
-          id,
+          const data = await compiled.json();
+
+          if (!compiled.ok || data.status == "error") {
+            log.error(`${data.error}`);
+            return data;
+          }
+
+          set.status = 200;
+          log.info(`Data ${data} compiled.`);
+          return data;
         },
-        select: {
-          email: true,
-          id: true,
+        {
+          body: t.Object({
+            code: t.String(),
+          }),
+          response: t.Union([
+            t.Object({ status: t.Literal("ok"), url: t.String() }),
+            t.Object({ status: t.Literal("error"), errors: t.Array(t.Any()) }),
+            t.Object({ status: t.Literal("error"), error: t.String() }),
+          ]),
+          detail: { tags: ["api"] },
         },
-      });
+      )
+      .post(
+        "/check",
+        async ({ log, set, userId, body: { code } }) => {
+          const compiled = await fetch(`${COMPILER_URL}/check`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              source: code,
+              user_id: userId,
+            }),
+          });
 
-      if (!user) {
-        set.status = 401; // Unauthorized
-        log.warn(`User not found: ${id}`);
-        return { status: "error", error: "User not found" };
-      }
+          const data = await compiled.json();
 
-      // "https://sagittarius-compose-production.up.railway.app/deploy",
-      const compiled = await fetch(`${COMPILER_URL}/compile`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+          if (!compiled.ok || data.status == "error") {
+            log.error(`${data.error}`);
+            return data;
+          }
+
+          set.status = 200;
+          log.info(`Data ${data} compiled.`);
+          return data;
         },
-        body: JSON.stringify({
-          source: code,
-          user_id: user.id,
-        }),
-      });
-
-      const data = await compiled.json();
-
-      if (!compiled.ok || data.status == "error") {
-        log.error(`${data.error}`);
-        return data;
-      }
-
-      set.status = 200;
-      log.info(`Data ${data} compiled.`);
-      return data;
-    },
-    {
-      body: t.Object({
-        code: t.String(),
-      }),
-      cookie: t.Cookie({
-        access_token: t.String(),
-      }),
-      response: t.Union([
-        t.Object({ status: t.Literal("ok"), url: t.String() }),
-        t.Object({ status: t.Literal("error"), errors: t.Array(t.Any()) }),
-        t.Object({ status: t.Literal("error"), error: t.String() }),
-      ]),
-      detail: { tags: ["api"] },
-    },
-  )
-  .post(
-    "/check",
-    async ({ log, set, body: { code }, cookie }) => {
-      const id = decrypt(cookie.access_token.value) as string;
-
-      const user = await prisma.user.findUnique({
-        where: {
-          id,
+        {
+          body: t.Object({
+            code: t.String(),
+          }),
+          response: t.Union([
+            t.Object({ status: t.Literal("ok") }),
+            t.Object({
+              status: t.Literal("error"),
+              errors: t.Array(t.Any()),
+            }),
+          ]),
+          detail: { tags: ["api"] },
         },
-        select: {
-          email: true,
-          id: true,
+      )
+      .post(
+        "/test",
+        async ({ log, set, body: { code }, userId }) => {
+          const compiled = await fetch(`${COMPILER_URL}/test`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              source: code,
+            }),
+          });
+          const data = await compiled.json();
+
+          if (!compiled.ok) {
+            set.status = compiled.status;
+            log.error(`${data.error}`);
+            set.status = 400;
+            return data.error;
+          }
+
+          set.status = 200;
+          log.info(`Data ${data} compiled.`);
+          return {
+            compiled: data,
+            user_id: userId,
+          };
         },
-      });
-
-      if (!user) {
-        set.status = 401; // Unauthorized
-        log.warn(`User not found: ${id}`);
-        return { status: "error", error: "User not found" };
-      }
-
-      // "https://sagittarius-compose-production.up.railway.app/deploy",
-      const compiled = await fetch(`${COMPILER_URL}/check`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+        {
+          body: t.Object({
+            code: t.String(),
+          }),
+          detail: { tags: ["api"] },
         },
-        body: JSON.stringify({
-          source: code,
-          user_id: user.id,
-        }),
-      });
-
-      const data = await compiled.json();
-
-      if (!compiled.ok || data.status == "error") {
-        log.error(`${data.error}`);
-        return data;
-      }
-
-      set.status = 200;
-      log.info(`Data ${data} compiled.`);
-      return data;
-    },
-    {
-      body: t.Object({
-        code: t.String(),
-      }),
-      cookie: t.Cookie({
-        access_token: t.String(),
-      }),
-      response: t.Union([
-        t.Object({ status: t.Literal("ok") }),
-        t.Object({
-          status: t.Literal("error"),
-          errors: t.Array(t.Any()),
-        }),
-      ]),
-      detail: { tags: ["api"] },
-    },
-  )
-  .post(
-    "/test",
-    async ({ log, set, body: { code }, cookie }) => {
-      const id = decrypt(cookie.access_token.value) as string;
-
-      const user = await prisma.user.findUnique({
-        where: {
-          id,
-        },
-        select: {
-          email: true,
-          id: true,
-        },
-      });
-
-      if (!user) {
-        set.status = 401; // Unauthorized
-        log.warn(`User not found: ${id}`);
-        return;
-      }
-
-      // "https://sagittarius-compose-production.up.railway.app/deploy",
-      const compiled = await fetch(`${COMPILER_URL}/test`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          source: code,
-        }),
-      });
-      const data = await compiled.json();
-
-      if (!compiled.ok) {
-        set.status = compiled.status;
-        log.error(`${data.error}`);
-        set.status = 400;
-        return data.error;
-      }
-
-      set.status = 200;
-      log.info(`Data ${data} compiled.`);
-      return {
-        compiled: data,
-        user_id: user.id,
-      };
-    },
-    {
-      body: t.Object({
-        code: t.String(),
-      }),
-      cookie: t.Cookie({
-        access_token: t.String(),
-      }),
-      detail: { tags: ["api"] },
-    },
+      ),
   );

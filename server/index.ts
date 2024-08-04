@@ -3,9 +3,10 @@ import { swagger } from "@elysiajs/swagger";
 import { cors } from "@elysiajs/cors";
 import { logger } from "@bogeychan/elysia-logger";
 import pretty from "pino-pretty";
-import { auth } from "@server/routes/auth";
+import { auth, decrypt } from "@server/routes/auth";
 import { api } from "@server/routes/api";
 import { admin } from "@server/routes/admin";
+import { sql } from "@server/sql";
 
 // TODO: @elysiajs/cookie not needed, can be reverted to original
 // TODO: check cors settings for production
@@ -40,9 +41,16 @@ const app = new Elysia()
       },
     }),
   )
+  .resolve(({ cookie: { access_token } }) => {
+    if (access_token.value == null) {
+      return { userId: null };
+    }
+    const id = decrypt(access_token.value) as string;
+    return { userId: id };
+  })
+  .use(api)
   .use(auth)
   .use(admin)
-  .use(api)
   .get("/status", async ({ set }) => {
     const statuses = ["Single", "In a relationship", "Married", "In love", "It's complicated"];
     set.status = 200;

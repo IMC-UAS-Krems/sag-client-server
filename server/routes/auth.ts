@@ -3,6 +3,7 @@ import crypt from "ncrypt-js";
 import { panic } from "@utils/panic";
 import { UserDocument, sql } from "@server/sql";
 import { Prisma } from "@prisma/client";
+import { authMiddleware } from "@server/middleware";
 
 export const { encrypt, decrypt } = new crypt(Bun.env.JWT_SECRET ?? panic("JWT_SECRET environment variable not set"));
 export type ReturnUser = Omit<UserDocument, "password" | "id">;
@@ -146,26 +147,19 @@ export const auth = new Elysia({ prefix: "/auth" })
   )
   .get(
     "/check-if-logged-in",
-    async ({ log, set, cookie: { access_token } }) => {
-      if (!access_token.value) {
-        set.status = 401;
-        return { status: "error", error: "Access token not found" };
-      }
-      const id = decrypt(access_token.value) as string;
-
-      const user = await sql.selectUser(id);
-      if (!user) {
-        set.status = 401; // Unauthorized
-        log.warn(`User not found: ${id}`);
-        return { status: "error", error: "User not found" };
-      }
+    async ({ log, set, userId }) => {
+      const user = await sql.selectUser(userId);
       set.status = 200;
+      if (user == null) {
+        set.status = 401;
+      }
       return user.email;
     },
     {
       cookie: t.Cookie({
         access_token: t.Optional(t.String()),
       }),
+      beforeHandle: authMiddleware,
       detail: {
         tags: ["auth"],
         description: "Check if the cookie from the request contains an access token and returns the user's email",
