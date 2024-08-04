@@ -24,7 +24,8 @@ bun run format
 
 ## Development
 
-_\[!] IMPORTANT: Run before committing, or the entire commit history will be poisoned_
+> [!NOTE]
+> Preferably run eveything inside docker
 
 To start the development server run:
 
@@ -32,12 +33,18 @@ To start the development server run:
 bun run serve
 ```
 
-A server will be started on http://localhost:3000/.
+A server will be started on http://localhost:3000/
 
 To start the web client run:
 
 ```bash
 bun run dev
 ```
-
 Open http://localhost:4000/ with your browser to see the result.
+
+
+To start eveything inside Docker
+```bash
+bun run docker
+```
+The client will be started on http://localhost, and the server will be avaiable on http://localhost:9512 (by default)

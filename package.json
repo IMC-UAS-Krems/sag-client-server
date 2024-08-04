@@ -8,7 +8,8 @@
     "dev": "vite client --port 4000",
     "build": "vite build client --outDir ../dist",
     "serve": "bun run --watch server/index.ts",
-    "format": "bunx prettier client/ --write && bunx prettier server/ --write"
+    "format": "bunx prettier client/ --write && bunx prettier server/ --write",
+    "docker": "docker compose down && docker compose up --build"
   },
   "dependencies": {
     "@bogeychan/elysia-logger": "^0.1.1",
@@ -67,6 +68,5 @@
   "prettier": {
     "tabWidth": 2,
     "printWidth": 120
-
   }
 }
