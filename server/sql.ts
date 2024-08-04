@@ -2,7 +2,7 @@ import { createId } from "@paralleldrive/cuid2";
 import { prisma } from "@∆";
 import { Organization, Project, User, Municipality, UserType, DocumentType } from "@prisma/client";
 
-type Document = {
+export type Document = {
   municipalityName: string;
   orgName: string;
   projectName: string;

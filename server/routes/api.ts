@@ -1,7 +1,7 @@
 import { Elysia, t } from "elysia";
 import { prisma } from "@server/prisma";
 import { authMiddleware } from "@server/middleware";
-import { decrypt } from "./auth";
+import { sql, Document } from "@server/sql";
 
 const COMPILER_URL = Bun.env.COMPILER_URL || "http://localhost:8080";
 
@@ -96,6 +96,15 @@ export const api = new Elysia({ prefix: "/api" })
           ]),
           detail: { tags: ["api"] },
         },
+      )
+      .get(
+        "/documents",
+        async ({ log, set, userId }): Promise<Document[]> => {
+          const documents = sql.getDocuments(userId);
+          set.status = 200;
+          return documents;
+        },
+        { detail: { tags: ["api"] } },
       )
       .post(
         "/test",
