@@ -1,19 +1,23 @@
 .editor-container {
   display: flex;
-  height: 86vh; /* Set the editor container to occupy full viewport height */
+  height: 86vh;
+  /* Set the editor container to occupy full viewport height */
 }
 
 .left-column,
 .right-column {
-  flex: 1; /* Allow all columns to take up equal space */
+  flex: 1;
+  /* Allow all columns to take up equal space */
   padding: 10px;
   border: 1px solid #ccc;
   /*overflow: hidden; /* Hide any content that overflows */
 }
 
 .middle-column {
-  flex: 2; /* Let the middle column take up twice the space of other columns */
-  overflow-y: scroll; /* Add vertical scroll bar */
+  flex: 2;
+  /* Let the middle column take up twice the space of other columns */
+  overflow-y: scroll;
+  /* Add vertical scroll bar */
 }
 
 /* Optional: Add some styles to make the columns visually distinct */
@@ -27,7 +31,7 @@
 
 .right-column {
   background-color: #f9f9f9;
-  margin: 0
+  margin: 0;
 }
 
 .compile {
@@ -43,7 +47,7 @@
   text-decoration: none;
   align-items: center;
   transition: 0.2s;
-  width: 150px;
+  width: fit-content;
 }
 
 .compile:hover {
@@ -57,4 +61,10 @@
   background-color: hsl(204 100% 97%);
   color: hsl(201 96% 32%);
   font-size: 16px;
+}
+
+.underline {
+  text-decoration-line: underline;
+  text-decoration-style: solid;
+  text-decoration-color: red;
 }

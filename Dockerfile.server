@@ -1,18 +1,20 @@
-FROM node:20-buster as builder
+FROM node:20-slim AS builder
 
 WORKDIR /app
 
-RUN apt update
-RUN apt install curl unzip -y
+RUN apt-get update
+RUN apt-get install curl unzip -y
 
 RUN curl https://bun.sh/install | bash
 
 COPY package.json .
-# COPY bun.lockb .
+COPY bun.lockb .
 COPY tsconfig.json .
-COPY prisma prisma
+COPY prisma/schema.prisma prisma/schema.prisma
+COPY prisma/migrations prisma/migrations
 
-RUN /root/.bun/bin/bun install
+
+RUN /root/.bun/bin/bun install --frozen-lockfile --production
 RUN npx prisma generate
 
 # ? -------------------------
@@ -23,7 +25,7 @@ WORKDIR /app
 ENV DATABASE_URL $DATABASE_URL
 ENV JWT_SECRET $JWT_SECRET
 
-COPY --from=builder /root/.bun/bin/bun bun
+# COPY --from=builder /root/.bun/bin/bun bun
 # COPY --from=builder /root/.bun/bin/bunx bunx
 COPY --from=builder /app/node_modules node_modules
 
@@ -34,6 +36,6 @@ COPY tsconfig.json .
 COPY utils utils
 
 ENV ENV production
-CMD ["./bun", "server/index.ts"]
+CMD ["bun", "server/index.ts"]
 
 EXPOSE 9512

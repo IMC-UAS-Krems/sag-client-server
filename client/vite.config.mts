@@ -24,6 +24,6 @@ For more info see https://github.com/thetarnav/solid-devtools/tree/main/packages
   },
   optimizeDeps: {
     include: ["@codemirror/view"],
-    exclude: ['@codemirror/state'],
+    exclude: ["@codemirror/state"],
   },
 });

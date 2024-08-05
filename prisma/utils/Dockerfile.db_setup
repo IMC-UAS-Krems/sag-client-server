@@ -1,0 +1,32 @@
+FROM node:20-slim
+
+WORKDIR /app
+
+RUN apt-get update -y && apt-get install -y openssl
+
+RUN echo '{ \n\
+  "name": "db-init", \n\
+  "version": "1.0.0", \n\
+  "license": "MIT", \n\
+  "dependencies": { \n\
+    "prisma": "^5.6.0", \n\
+    "@prisma/client": "^5.6.0", \n\
+    "@paralleldrive/cuid2": "^2.2.2", \n\
+    "typescript": "^5.5.4", \n\
+    "bun-types": "latest", \n\
+    "bun": "latest" \n\
+  }, \n\
+  "prisma": { \n\
+    "seed": "./init_database" \n\
+  } \n\
+}' > package.json
+
+COPY ./utils/init_database.ts /app/init_database.ts
+COPY ./schema.prisma /app/prisma/schema.prisma
+COPY ./migrations /app/prisma/migrations
+
+
+RUN yarn install --no-lockfile
+RUN npx bun build ./init_database.ts --compile --outfile init_database
+
+CMD ["bash", "-c", "npx prisma migrate reset --force"]

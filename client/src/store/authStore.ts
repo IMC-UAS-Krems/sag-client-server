@@ -13,7 +13,7 @@ const createAuthStore = () => {
 
   return {
     state,
-    setState
+    setState,
   };
 };
 

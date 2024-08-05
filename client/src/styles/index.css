@@ -3,7 +3,6 @@
 @tailwind utilities;
 
 :root {
-
   --body-text-linear: clamp(1.125rem, 1.0523rem + 0.3231vw, 1.44rem);
 
   --body-2-text-linear: clamp(1rem, 0.9538rem + 0.2051vw, 1.2rem);
@@ -20,13 +19,13 @@
 }
 
 .lightMode {
-  --background-color: #F0F0F0;
+  --background-color: #f0f0f0;
 
   --primary-text: #000000;
-  --secondary-text: #006A67;
+  --secondary-text: #006a67;
 
-  --primary-color: #C7D5EF;
-  --secondary-color: #E0E0E0;
+  --primary-color: #c7d5ef;
+  --secondary-color: #e0e0e0;
 
   --card-color: linear-gradient(to top, #cfd9df 0%, #e2ebf0 100%);
 }
@@ -34,10 +33,10 @@
 .darkMode {
   --background-color: #292929;
 
-  --primary-text: #FFFFFF;
-  --secondary-text: #6A679E;
+  --primary-text: #ffffff;
+  --secondary-text: #6a679e;
 
-  --primary-color: #5D54A4;
+  --primary-color: #5d54a4;
   --secondary-color: #121212;
 
   --card-color: linear-gradient(270deg, var(--primary-color), var(--secondary-text));
@@ -55,6 +54,5 @@ body {
 }
 
 code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
+  font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New", monospace;
 }
