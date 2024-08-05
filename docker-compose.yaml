@@ -62,7 +62,6 @@ services:
       context: .
       args:
         - VITE_SERVER_URL=${SERVER_URL}
-        - VITE_DEPLOYER_URL=${DEPLOYER_URL}
     depends_on:
       db-setup:
         condition:
