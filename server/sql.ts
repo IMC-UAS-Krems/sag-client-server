@@ -98,65 +98,6 @@ export async function createUser(
   return user as UserDocument;
 }
 
-// Create user by admin
-export async function adminCreateUser(
-  userId: string,
-  username: string,
-  password: string,
-  name: string,
-  email: string,
-  userRole: UserRole = UserRole.USER,): Promise<UserDocument> {
-    // Get admin details
-    const user = await prisma.user.findUnique({
-      where: {
-        id: userId,
-      },
-      include: {
-        organization: true,
-        municipality: true,
-      },
-    });
-
-    if (!user) {
-      throw new Error(`User/Admin ${userId} does not exist`);
-    }
-    // Check if user is an admin
-    if (user.userRole !== UserRole.ADMIN) {
-      throw new Error(`User ${userId} is not an admin`);
-    }
-    if (!user.organization || !user.municipality) {
-      throw new Error(`Admin ${userId} is not associated with an organization or municipality`);
-    }
-
-    const organisationName = user.organization.name;
-    const municipalityName = user.municipality.name;
-
-    // create new user with org and municipality of admin
-    const newUser = await prisma.user.create({
-      data: {
-        username,
-        password,
-        name,
-        email,
-        userRole,
-        organization: {
-          connect: { name: organisationName },
-        },
-        municipality: {
-          connect: { name: municipalityName },
-        },
-      },
-    });
-
-    if (!newUser) {
-      throw new Error(`User ${username} could not be created`);
-    }
-
-    (newUser as UserDocument).documents = await getDocuments(newUser.id);
-
-    return newUser as UserDocument;
-  }
-
 export async function selectUser(
   userId?: string,
   email?: string,
