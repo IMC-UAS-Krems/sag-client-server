@@ -136,6 +136,61 @@ export async function selectUser(
   return user;
 }
 
+export async function getAllUsers(): Promise<UserDocument[]> {
+  const users = await prisma.user.findMany();
+  return users as UserDocument[];
+}
+
+export async function updateUser(
+  userId: string,
+  username: string,
+  password: string,
+  name: string,
+  email: string,
+  organizationName: string,
+  municipalityName: string,
+  userRole: UserRole,
+): Promise<UserDocument> {
+  const user = await prisma.user.update({
+    where: {
+      id: userId,
+    },
+    data: {
+      username,
+      password,
+      name,
+      email,
+      userRole,
+      organization: {
+        connect: { name: organizationName },
+      },
+      municipality: {
+        connect: { name: municipalityName },
+      },
+    },
+  });
+  if (user === null) {
+    throw new Error(`User ${userId} does not exist`);
+  }
+  (user as UserDocument).documents = await getDocuments(user.id);
+  return user as UserDocument;
+}
+
+export async function deleteUser(userId: string): Promise<User> {
+  const user = await prisma.user.delete({
+    where: {
+      id: userId,
+    },
+  });
+  if (user === null) {
+    throw new Error(`User ${userId} does not exist`);
+  }
+  return user;
+}
+
+//TODO add func to log out a user
+
+
 export async function createDocument(
   name: string,
   content: string,

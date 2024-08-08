@@ -4,6 +4,27 @@ import { sql } from "@server/sql";
 import { Prisma } from "@prisma/client";
 import { P } from "@kobalte/core/dist/index-f15c7ba5";
 
+interface CreateUserRequestBody {
+  username: string;
+  password: string;
+  name: string;
+  email: string;
+  organisation: string;
+  municipality: string;
+  userRole: UserRole;
+}
+
+interface CreateUserResponse {
+  id: string;
+  username: string;
+  name: string;
+  email: string;
+  organisation: string;
+  municipality: string;
+  userRole: UserRole;
+  registered: Date;
+}
+
 export const admin = new Elysia({ prefix: "/admin" })
   .get(
     "/users",
