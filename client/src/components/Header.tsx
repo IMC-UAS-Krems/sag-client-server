@@ -64,12 +64,19 @@ const Header: Component<{ children: JSX.Element }> = (props) => {
             <li>
               <A href="/home">Home</A>
             </li>
+            {/* TODO: The editor should not be displayed when admin is using the page */}
             <li>
               <A href="/editor">Editor</A>
             </li>
             <li>
               <A href="/about">About Us</A>
             </li>
+            {/* TODO: This should actually check whether the user status is Admin, status should probably be stored in Store */}
+            {authStore.state().user === "email@example6.com" && (
+              <li>
+                <A href="/users">Users</A>
+              </li>
+            )}
             {authStore.state().user ? (
               <li>
                 <a href="#" onClick={handleLogout}>
