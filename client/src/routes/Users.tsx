@@ -1,6 +1,7 @@
 import Header from "@client/components/Header";
 import { Component, createSignal, onMount } from "solid-js";
 import { Menu, Item, useContextMenu, animation, Submenu, Separator } from "solid-contextmenu";
+import { eden } from "@client/api";
 import Swal from "sweetalert2";
 
 import "../../../node_modules/solid-contextmenu/dist/style.css";
@@ -10,6 +11,31 @@ const MENU_ID = "menu-id";
 
 // TODO: If user is not an admin, they should not be able to access this page
 const Users: Component = () => {
+
+  // User data
+  const [users, setUsers] = createSignal([]);
+  const [loading, setLoading] = createSignal(true);
+  const [error, setError] = createSignal(null);
+
+  onMount(async () => {
+    try {
+      const fetchedUsers = await eden.admin.users.get({
+        $fetch: {
+          mode: "cors",
+          credentials: "include",
+          method: "GET",
+        },
+      });
+      setUsers(fetchedUsers.data);
+      console.log("Fetch:", fetchedUsers);
+      console.log("Fetched users:", fetchedUsers.data);
+    } catch (error) {
+      setError("Failed to fetch users");
+      console.error("Failed to fetch users:", error);
+    } finally {
+      setLoading(false);
+    }
+  });
 
   async function handleCreateUser() {
     // console.log("Create user");
@@ -81,7 +107,7 @@ const Users: Component = () => {
     }
   }
 
-  async function handleDeleteUser() {
+  async function handleDeleteUser(userId: string) {
     console.log("Deleting user");
     Swal.fire({
       title: "Are you sure?",
@@ -91,9 +117,28 @@ const Users: Component = () => {
       confirmButtonColor: "#3085d6",
       cancelButtonColor: "#d33",
       confirmButtonText: "Yes, delete it!"
-    }).then((result) => {
+    }).then(async (result) => { // Added async here
       if (result.isConfirmed) {
-        Swal.fire("Deleted!", "The user has been deleted.", "success");
+        const deletedUser = await eden.admin.users.delete({
+          userId: userId,
+          $fetch: {
+            mode: "cors",
+            credentials: "include",
+            method: "DELETE",
+          },
+        });
+        if (!deletedUser.data || deletedUser.error) {
+          console.log("Failed to delete user:", deletedUser.error);
+          Swal.fire({
+            title: "Error",
+            text: "Couldn't delete the user",
+            icon: "error",
+          });
+          return;
+        } else {
+          Swal.fire("Deleted!", "The user has been deleted.", "success");
+          setUsers((prev) => prev.filter((user) => user.id !== userId));
+        }
       }
     });
   }
@@ -119,48 +164,33 @@ const Users: Component = () => {
             </tr>
           </thead>
           <tbody>
-            <tr>
-              <td>johndoe</td>
-              <td>John Doe</td>
-              <td>johndoe@example.com</td>
-              <td>Springfield</td>
-              <td>Company A</td>
-              <td>🟢</td>
-              <td
-                onContextMenu={(e) => {
-                  show(e, { props: 1 });
-                }}
-              >
-                ...
-                <Menu id={MENU_ID} animation={_animation()} theme={_theme()}>
-                  <Item onClick={() => handleEditUser()}>✏️ Edit</Item>
-                  <Item onClick={() => handleDeleteUser()}>🗑️ Delete</Item>
-                  <Separator />
-                  <Item>🚶 Log out</Item>
-                </Menu>
-              </td>
-            </tr>
-            <tr>
-              <td>janedoe</td>
-              <td>Jane Doe</td>
-              <td>janedoe@example.com</td>
-              <td>Shelbyville</td>
-              <td>Company B</td>
-              <td>🔴</td>
-              <td
-                onContextMenu={(e) => {
-                  show(e, { props: 1 });
-                }}
-              >
-                ...
-                <Menu id={MENU_ID} animation={_animation()} theme={_theme()}>
-                  <Item onClick={() => handleEditUser()}>✏️ Edit</Item>
-                  <Item onClick={() => handleDeleteUser()}>🗑️ Delete</Item>
-                  <Separator />
-                  <Item disabled>🚶 Log out</Item>
-                </Menu>
-              </td>
-            </tr>
+            {users().map((user) => (
+              <tr key={user.id}>
+                <td>{user.username}</td>
+                <td>{user.name}</td>
+                <td>{user.email}</td>
+                <td>{user.municipalityId}</td>
+                <td>{user.organizationId}</td>
+                {/* <td>{user.loggedIn ? '🟢' : '🔴'}</td> */}
+                <td>🔴</td>
+                <td
+                  onContextMenu={(e) => {
+                    show(e, { props: user.id });
+                  }}
+                >
+                  ...
+                  <Menu id={MENU_ID} animation={_animation()} theme={_theme()}>
+                    <Item onClick={() => handleEditUser()}>✏️ Edit</Item>
+                    <Item onClick={() => handleDeleteUser(user.id)}>🗑️ Delete</Item>
+                    {/* <Item onClick={() => handleEditUser(user.id)}>✏️ Edit</Item>
+                    <Item onClick={() => handleDeleteUser(user.id)}>🗑️ Delete</Item> */}
+                    <Separator />
+                    <Item disabled>🚶 Log out</Item>
+                    {/* <Item disabled={!user.loggedIn}>🚶 Log out</Item> */}
+                  </Menu>
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </main>

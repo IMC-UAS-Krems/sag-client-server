@@ -1,6 +1,7 @@
 import { createId } from "@paralleldrive/cuid2";
 import { prisma } from "@∆";
 import { Organization, Project, User, Municipality, UserType, DocumentType, UserRole } from "@prisma/client";
+import { log } from "console";
 
 export type Document = {
   municipalityName: string;
@@ -177,6 +178,13 @@ export async function updateUser(
 }
 
 export async function deleteUser(userId: string): Promise<User> {
+  // TODO: This could probably be done with a cascade delete - needed due to foreign constraints
+  await prisma.document.deleteMany({
+    where: {
+      authorId: userId,
+    },
+  });
+
   const user = await prisma.user.delete({
     where: {
       id: userId,
@@ -188,7 +196,7 @@ export async function deleteUser(userId: string): Promise<User> {
   return user;
 }
 
-//TODO add func to log out a user
+//TODO: add func to log out a user
 
 
 export async function createDocument(
