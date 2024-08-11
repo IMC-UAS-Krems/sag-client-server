@@ -24,7 +24,6 @@ interface UpdateUserRequestBody {
   userRole?: UserRole;
 }
 
-
 interface DeleteUserRequestBody {
   userId: string;
 }
@@ -91,37 +90,48 @@ export const admin = new Elysia({ prefix: "/admin" })
     {
       beforeHandle: authMiddleware,
       detail: { tags: ["admin"] },
+      body: t.Object({
+        username: t.String(),
+        password: t.String(),
+        name: t.String(),
+        email: t.String({ format: "email" }),
+        organisation: t.String(),
+        municipality: t.String(),
+        userRole: t.Enum(UserRole),
+      }),
     },
   )
 
   .post(
     "/update-user",
-    async ({log, set, body}: {log: any; set: any; body: UpdateUserRequestBody}) => {
-      try{
+    async ({ log, set, body }: { log: any; set: any; body: UpdateUserRequestBody }) => {
+      try {
         log.info("Trying to update user");
         const user = await sql.updateUser(
-          body.userId, 
-          body.username, 
-          body.password, 
-          body.name, 
-          body.email, 
-          body.organisation, 
-          body.municipality, 
-          body.userRole);
+          body.userId,
+          body.username,
+          body.password,
+          body.name,
+          body.email,
+          body.organisation,
+          body.municipality,
+          body.userRole,
+        );
         if (!user) {
           throw new Error("User not fount during update");
         }
         set.status = 200;
         return user;
-      }catch(error){
+      } catch (error) {
         log.error(error);
         set.status = 500;
-        return {error: "Failed to update user"};
-      }},
-      {
-        beforeHandle: authMiddleware,
-        detail: { tags: ["admin"] },
-        body: t.Object({
+        return { error: "Failed to update user" };
+      }
+    },
+    {
+      beforeHandle: authMiddleware,
+      detail: { tags: ["admin"] },
+      body: t.Object({
         userId: t.String(),
         username: t.Optional(t.String()),
         password: t.Optional(t.String()),
@@ -130,7 +140,62 @@ export const admin = new Elysia({ prefix: "/admin" })
         organisation: t.Optional(t.String()),
         municipality: t.Optional(t.String()),
         userRole: t.Optional(t.Enum(UserRole)),
+      }),
+    },
+  )
+
+  // TODO: Maybe add additional table in the db to track user sessions ?
+  .post(
+    "/logout-user",
+    async ({ log, set, body: { userId }, cookie: { access_token } }) => {
+      try {
+        log.info(`Admin attempting to log out user with ID: ${userId}`);
+
+        const user = await sql.selectUser(userId);
+
+        // Ensure that only admins can access this endpoint
+        if (!access_token) {
+          set.status = 401;
+          return { status: "error", message: "Unauthorized" };
+        }
+
+        if (user.userRole !== UserRole.ADMIN) {
+          set.status = 403;
+          return { status: "error", message: "Forbidden for non admins" };
+        }
+
+        if (!user) {
+          set.status = 404;
+          return { status: "error", message: "User not found." };
+        }
+
+        access_token.set({
+          httpOnly: true,
+          secure: true,
+          sameSite: "none",
+          path: "/",
+          value: "",
+          expires: new Date(0), // Set the cookie to expire immediately
+        });
+
+        set.status = 200;
+        return { status: "success", message: "User logged out successfully." };
+      } catch (error) {
+        log.error(error);
+        set.status = 500;
+        return { status: "error", message: "Failed to log out user." };
       }
-    ),
-  },
-);
+    },
+    {
+      beforeHandle: authMiddleware, 
+      
+      detail: { tags: ["admin"] },
+      body: t.Object({
+        userId: t.String(),
+      }),
+      cookie: t.Cookie({
+        access_token: t.String(),
+      }),
+    },
+  );
+
