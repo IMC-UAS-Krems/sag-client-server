@@ -144,13 +144,13 @@ export async function getAllUsers(): Promise<UserDocument[]> {
 
 export async function updateUser(
   userId: string,
-  username: string,
-  password: string,
-  name: string,
-  email: string,
-  organizationName: string,
-  municipalityName: string,
-  userRole: UserRole,
+  username?: string,
+  password?: string,
+  name?: string,
+  email?: string,
+  organizationName?: string,
+  municipalityName?: string,
+  userRole?: UserRole,
 ): Promise<UserDocument> {
   const user = await prisma.user.update({
     where: {
