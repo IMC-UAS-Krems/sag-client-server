@@ -151,6 +151,8 @@ export async function updateUser(
   organizationName?: string,
   municipalityName?: string,
   userRole?: UserRole,
+  lastLoginTime?: Date,
+  needsToBeLoggedOut?: boolean,
 ): Promise<UserDocument> {
   const user = await prisma.user.update({
     where: {
@@ -168,6 +170,8 @@ export async function updateUser(
       municipality: {
         connect: { name: municipalityName },
       },
+      lastLoginTime,
+      needsToBeLoggedOut,
     },
   });
   if (user === null) {
@@ -175,6 +179,10 @@ export async function updateUser(
   }
   (user as UserDocument).documents = await getDocuments(user.id);
   return user as UserDocument;
+}
+
+interface UserUpdateInput {
+  lastLoginTime?: Date;
 }
 
 export async function deleteUser(userId: string): Promise<User> {

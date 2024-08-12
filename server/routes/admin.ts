@@ -147,7 +147,17 @@ export const admin = new Elysia({ prefix: "/admin" })
   // TODO: Maybe add additional table in the db to track user sessions ?
   .post(
     "/logout-user",
-    async ({ log, set, body: { userId }, cookie: { access_token } }) => {
+    async ({
+      log,
+      set,
+      body: { userId },
+      cookie,
+    }: {
+      log: any;
+      set: any;
+      body: { userId: string };
+      cookie: { access_token: any };
+    }) => {
       try {
         log.info(`Admin attempting to log out user with ID: ${userId}`);
 
@@ -164,18 +174,33 @@ export const admin = new Elysia({ prefix: "/admin" })
           return { status: "error", message: "Forbidden for non admins" };
         }
 
+        
+
         if (!user) {
           set.status = 404;
           return { status: "error", message: "User not found." };
         }
 
-        access_token.set({
+        await sql.updateUser(
+          userId,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          true,
+        );
+
+        cookie.access_token.set({
           httpOnly: true,
           secure: true,
           sameSite: "none",
           path: "/",
           value: "",
-          expires: new Date(0), // Set the cookie to expire immediately
+          expires: new Date(0), // st the cookie to expire immediately to log out the user
         });
 
         set.status = 200;
@@ -187,8 +212,8 @@ export const admin = new Elysia({ prefix: "/admin" })
       }
     },
     {
-      beforeHandle: authMiddleware, 
-      
+      beforeHandle: authMiddleware,
+
       detail: { tags: ["admin"] },
       body: t.Object({
         userId: t.String(),

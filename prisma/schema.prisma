@@ -65,6 +65,10 @@ model User {
     registered DateTime  @default(now())
     updatedAt  DateTime? @updatedAt
 
+    // Tracking user tokens
+    lastLoginTime DateTime @default(now())
+    eedsToBeLoggedOut Boolean @default(false)
+
     @@map("users")
 }
 
