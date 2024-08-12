@@ -106,13 +106,13 @@ export async function selectUser(
     throw new Error("At least one of userId, email, or username must be provided");
   }
   let user: User | null = null;
-  if (userId !== undefined) {
+  if (userId != undefined) {
     user = await prisma.user.findUnique({
       where: {
         id: userId,
       },
     });
-  } else if (email !== undefined) {
+  } else if (email != undefined) {
     user = await prisma.user.findUnique({
       where: {
         email,
@@ -142,9 +142,11 @@ export async function createDocument(
   organizationName: string,
   municipalityName: string,
   path: string,
+  documentType: DocumentType,
 ) {
+  const docType = documentType === "FOLDER" ? "FOLDER" : "FILE";
   return await prisma.$executeRaw`
-        INSERT INTO documents (id, name, content, "authorId", "projectId", path)
+        INSERT INTO documents (id, name, content, "authorId", "projectId", path, "documentType")
         VALUES (${createId()}, ${name}, ${content}, ${authorId},
           (SELECT id FROM projects WHERE projects.name = ${projectName}
           AND projects."organizationId" =
@@ -152,7 +154,7 @@ export async function createDocument(
               INNER JOIN users ON users."organizationId" = organisations.id
               INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
               WHERE organisations.name = ${organizationName} AND municipalities.name = ${municipalityName})),
-          ${path});
+          ${path}, ${docType}::"DocumentType")
         `;
 }
 
@@ -209,6 +211,58 @@ export async function getDocuments(userId: string): Promise<Document[]> {
             "documentPath";`;
     }
   }
+}
+
+export async function getContent(
+  municipalityName: string,
+  orgName: string,
+  projectName: string,
+  documentPath: string,
+): Promise<string> {
+  return await prisma.$queryRaw`
+        SELECT documents.content
+        FROM documents
+        INNER JOIN projects ON projects.id = documents."projectId"
+        INNER JOIN organisations ON organisations.id = projects."organizationId"
+        INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
+        WHERE municipalities.name = ${municipalityName} AND organisations.name = ${orgName} AND projects.name = ${projectName}
+        AND documents.path = text2ltree(${documentPath}) AND documents."documentType" = 'FILE'::"DocumentType"
+        `;
+}
+
+export async function updateContent(
+  municipalityName: string,
+  orgName: string,
+  projectName: string,
+  documentPath: string,
+  content: string,
+) {
+  return await prisma.$executeRaw`
+        UPDATE documents
+        SET content = ${content}
+        FROM projects
+        INNER JOIN organisations ON organisations.id = projects."organizationId"
+        INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
+        WHERE municipalities.name = ${municipalityName} AND organisations.name = ${orgName} AND projects.name = ${projectName}
+        AND documents.path = text2ltree(${documentPath}) AND documents."projectId" = projects.id
+        AND documents."documentType" = 'FILE'::"DocumentType"
+        `;
+}
+
+export async function deleteDocument(
+  municipalityName: string,
+  orgName: string,
+  projectName: string,
+  documentPath: string,
+) {
+  return await prisma.$executeRaw`
+        DELETE  FROM documents
+        USING projects
+        INNER JOIN organisations ON organisations.id = projects."organizationId"
+        INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
+        WHERE municipalities.name = ${municipalityName} AND organisations.name = ${orgName} AND projects.name = ${projectName}
+        AND documents.path <@ text2ltree(${documentPath}) AND documents."projectId" = projects.id
+        `;
 }
 
 export * as sql from "./sql";
