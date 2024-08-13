@@ -67,7 +67,7 @@ model User {
 
     // Tracking user tokens
     lastLoginTime DateTime @default(now())
-    eedsToBeLoggedOut Boolean @default(false)
+    needsToBeLoggedOut Boolean @default(false)
 
     @@map("users")
 }
