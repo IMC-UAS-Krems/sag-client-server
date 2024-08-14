@@ -7,7 +7,10 @@ interface CustomContext extends Context {
   userId: string | null;
 }
 
-export const authMiddleware = async ({ set, userId }: CustomContext): Promise<{ status: string; error: string; } | undefined> => {
+export const authMiddleware = async ({
+  set,
+  userId,
+}: CustomContext): Promise<{ status: string; error: string } | undefined> => {
   if (!userId) {
     set.status = 401;
     return { status: "error", error: "Unauthorized" };

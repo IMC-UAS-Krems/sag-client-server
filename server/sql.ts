@@ -144,32 +144,38 @@ export async function getAllUsers(): Promise<UserDocument[]> {
 
 export async function updateUser(
   userId: string,
-  username?: string,
-  password?: string,
-  name?: string,
-  email?: string,
-  organizationName?: string,
-  municipalityName?: string,
-  userRole?: UserRole,
-  lastLoginTime?: Date,
-  needsToBeLoggedOut?: boolean,
+  {
+    username,
+    password,
+    name,
+    email,
+    userRole,
+    organisation,
+    municipality,
+    lastLoginTime,
+    needsToBeLoggedOut,
+  }: {
+    username?: string;
+    password?: string;
+    name?: string;
+    email?: string;
+    userRole?: UserRole;
+    organisation?: string;
+    municipality?: string;
+    lastLoginTime?: Date;
+    needsToBeLoggedOut?: boolean;
+  }
 ): Promise<UserDocument> {
   const user = await prisma.user.update({
-    where: {
-      id: userId,
-    },
+    where: { id: userId },
     data: {
       username,
       password,
       name,
       email,
       userRole,
-      organization: {
-        connect: { name: organizationName },
-      },
-      municipality: {
-        connect: { name: municipalityName },
-      },
+      organization: organisation ? { connect: { name: organisation } } : undefined,
+      municipality: municipality ? { connect: { name: municipality } } : undefined,
       lastLoginTime,
       needsToBeLoggedOut,
     },
@@ -205,7 +211,6 @@ export async function deleteUser(userId: string): Promise<User> {
 }
 
 //TODO: add func to log out a user
-
 
 export async function createDocument(
   name: string,

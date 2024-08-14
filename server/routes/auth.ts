@@ -149,6 +149,7 @@ export const auth = new Elysia({ prefix: "/auth" })
     "/check-if-logged-in",
     async ({ log, set, userId }) => {
       const user = await sql.selectUser(userId);
+      console.log("user");
       set.status = 200;
       if (user == null) {
         set.status = 401;

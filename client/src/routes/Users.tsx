@@ -11,7 +11,6 @@ const MENU_ID = "menu-id";
 
 // TODO: If user is not an admin, they should not be able to access this page
 const Users: Component = () => {
-
   // User data
   const [users, setUsers] = createSignal([]);
   const [loading, setLoading] = createSignal(true);
@@ -63,9 +62,9 @@ const Users: Component = () => {
           document.getElementById("swal-input3").value,
           document.getElementById("swal-input4").value,
           document.getElementById("swal-input5").value,
-          document.getElementById("swal-input6").value
+          document.getElementById("swal-input6").value,
         ];
-      }
+      },
     });
     if (formValues) {
       Swal.fire(JSON.stringify(formValues));
@@ -98,9 +97,9 @@ const Users: Component = () => {
           document.getElementById("swal-input3").value,
           document.getElementById("swal-input4").value,
           document.getElementById("swal-input5").value,
-          document.getElementById("swal-input6").value
+          document.getElementById("swal-input6").value,
         ];
-      }
+      },
     });
     if (formValues) {
       Swal.fire(JSON.stringify(formValues));
@@ -116,8 +115,9 @@ const Users: Component = () => {
       showCancelButton: true,
       confirmButtonColor: "#3085d6",
       cancelButtonColor: "#d33",
-      confirmButtonText: "Yes, delete it!"
-    }).then(async (result) => { // Added async here
+      confirmButtonText: "Yes, delete it!",
+    }).then(async (result) => {
+      // Added async here
       if (result.isConfirmed) {
         const deletedUser = await eden.admin.users.delete({
           userId: userId,

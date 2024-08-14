@@ -174,8 +174,6 @@ export const admin = new Elysia({ prefix: "/admin" })
           return { status: "error", message: "Forbidden for non admins" };
         }
 
-        
-
         if (!user) {
           set.status = 404;
           return { status: "error", message: "User not found." };
@@ -223,4 +221,3 @@ export const admin = new Elysia({ prefix: "/admin" })
       }),
     },
   );
-
