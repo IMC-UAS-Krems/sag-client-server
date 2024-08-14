@@ -138,9 +138,20 @@ export async function selectUser(
 }
 
 export async function getAllUsers(): Promise<UserDocument[]> {
-  const users = await prisma.user.findMany();
-  return users as UserDocument[];
+  const users = await prisma.user.findMany({
+    include: {
+      municipality: true, 
+      organization: true, 
+    },
+  });
+
+  return users.map((user) => ({
+    ...user,
+    municipalityName: user.municipality?.name, 
+    organizationName: user.organization?.name, 
+  }));
 }
+
 
 export async function updateUser(
   userId: string,

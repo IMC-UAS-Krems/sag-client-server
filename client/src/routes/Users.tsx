@@ -169,8 +169,8 @@ const Users: Component = () => {
                 <td>{user.username}</td>
                 <td>{user.name}</td>
                 <td>{user.email}</td>
-                <td>{user.municipalityId}</td>
-                <td>{user.organizationId}</td>
+                <td>{user.municipalityName}</td>
+                <td>{user.organizationName}</td>
                 {/* <td>{user.loggedIn ? '🟢' : '🔴'}</td> */}
                 <td>🔴</td>
                 <td
