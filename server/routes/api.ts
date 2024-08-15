@@ -3,6 +3,7 @@ import { Elysia, t } from "elysia";
 import { prisma } from "@server/prisma";
 import { authMiddleware } from "@server/middleware";
 import { sql, Document } from "@server/sql";
+import { DocumentType } from "@prisma/client";
 
 const COMPILER_URL = Bun.env.COMPILER_URL || "http://localhost:8080";
 
@@ -177,6 +178,85 @@ export const api = new Elysia({ prefix: "/api" })
     },
   )
 
+  .post(
+    "/document",
+    async ({
+      log,
+      set,
+      body: { name, projectName, organizationName, municipalityName, path, documentType },
+      userId,
+    }) => {
+      const result = await sql.createDocument(
+        name,
+        userId,
+        projectName,
+        organizationName,
+        municipalityName,
+        path,
+        DocumentType[documentType.toUpperCase()],
+      );
+      if (result === null || result < 1) {
+        set.status = 400;
+        return "Could not create document";
+      }
+      set.status = 200;
+      return "Document created";
+    },
+    {
+      body: t.Object({
+        name: t.String(),
+        projectName: t.String(),
+        organizationName: t.String(),
+        municipalityName: t.String(),
+        path: t.String(),
+        documentType: t.Union([t.Literal("file"), t.Literal("folder")]),
+      }),
+      detail: { tags: ["api"], description: "Create a new document" },
+    },
+  )
+  .post(
+    "/document_content",
+    async ({ log, set, body: { projectName, organizationName, municipalityName, path, content }, userId }) => {
+      const result = await sql.updateContent(userId, municipalityName, organizationName, projectName, path, content);
+      if (result === null || result < 1) {
+        set.status = 400;
+        return "Could not save document";
+      }
+      set.status = 200;
+      return "Document saved";
+    },
+    {
+      body: t.Object({
+        projectName: t.String(),
+        organizationName: t.String(),
+        municipalityName: t.String(),
+        path: t.String(),
+        content: t.String(),
+      }),
+      detail: { tags: ["api"], description: "Update document's content" },
+    },
+  )
+  .delete(
+    "/document",
+    async ({ log, set, body: { projectName, organizationName, municipalityName, path }, userId }) => {
+      const result = await sql.deleteDocument(userId, municipalityName, organizationName, projectName, path);
+      if (result === null || result < 1) {
+        set.status = 400;
+        return "Could not delete document";
+      }
+      set.status = 200;
+      return "Document deleted";
+    },
+    {
+      body: t.Object({
+        projectName: t.String(),
+        organizationName: t.String(),
+        municipalityName: t.String(),
+        path: t.String(),
+      }),
+      detail: { tags: ["api"], description: "Delete document" },
+    },
+  )
   .post(
     "/test",
     async ({ log, set, body: { code }, userId }) => {
