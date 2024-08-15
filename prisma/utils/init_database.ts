@@ -144,77 +144,77 @@ try {
   await prisma.$executeRaw`INSERT INTO documents (id, name, content, "authorId", "projectId", path)
         VALUES (${createId()}, 'File 1', 'text\ntext', (SELECT id from users WHERE users.name = 'default'),
         (SELECT id FROM projects WHERE projects.name = 'Project 1'
-        AND projects."organizationId" = (SELECT id FROM organisations WHERE organisations.name = 'Imc')), 'File-1');`;
+        AND projects."organizationId" = (SELECT id FROM organisations WHERE organisations.name = 'Imc')), 'file-1');`;
 
   await prisma.$executeRaw`INSERT INTO documents (id, name, content, "authorId", "projectId", path)
         VALUES (${createId()}, 'File 2', 'text\ntext', (SELECT id from users WHERE users.name = 'default'),
         (SELECT id FROM projects WHERE projects.name = 'Project 1'
-        AND projects."organizationId" = (SELECT id FROM organisations WHERE organisations.name = 'Imc')), 'File-2');`;
+        and projects."organizationId" = (select id from organisations WHERE organisations.name = 'Imc')), 'file-2');`;
 
   await prisma.$executeRaw`INSERT INTO documents (id, name, content, "authorId", "projectId", path, "documentType")
         VALUES (${createId()}, 'Folder 1', 'text\ntext', (SELECT id from users WHERE users.name = 'default'),
         (SELECT id FROM projects WHERE projects.name = 'Project 1'
-        AND projects."organizationId" = (SELECT id FROM organisations WHERE organisations.name = 'Imc')), 'Folder-1', 'FOLDER'::"DocumentType");`;
+        AND projects."organizationId" = (SELECT id FROM organisations WHERE organisations.name = 'Imc')), 'folder-1', 'FOLDER'::"DocumentType");`;
 
   await prisma.$executeRaw`INSERT INTO documents (id, name, content, "authorId", "projectId", path)
         VALUES (${createId()}, 'File 1', 'text\ntext', (SELECT id from users WHERE users.name = 'default'),
         (SELECT id FROM projects WHERE projects.name = 'Project 1'
-        AND projects."organizationId" = (SELECT id FROM organisations WHERE organisations.name = 'Imc')), 'Folder-1.File-1');`;
+        AND projects."organizationId" = (SELECT id FROM organisations WHERE organisations.name = 'Imc')), 'folder-1.file-1');`;
 
   await prisma.$executeRaw`INSERT INTO documents (id, name, content, "authorId", "projectId", path)
         VALUES (${createId()}, 'File 1', 'text\ntext', (SELECT id from users WHERE users.name = 'default'),
         (SELECT id FROM projects WHERE projects.name = 'Project 2'
-        AND projects."organizationId" = (SELECT id FROM organisations WHERE organisations.name = 'Imc')), 'File-1');`;
+        AND projects."organizationId" = (SELECT id FROM organisations WHERE organisations.name = 'Imc')), 'file-1');`;
 
   await prisma.$executeRaw`INSERT INTO documents (id, name, content, "authorId", "projectId", path)
         VALUES (${createId()}, 'File 1', 'text\ntext', (SELECT id from users WHERE users.name = 'test'),
         (SELECT id FROM projects WHERE projects.name = 'Project 1'
-        AND projects."organizationId" = (SELECT id FROM organisations WHERE organisations.name = 'Sagittarius')), 'File-1');`;
+        AND projects."organizationId" = (SELECT id FROM organisations WHERE organisations.name = 'Sagittarius')), 'file-1');`;
 
   await prisma.$executeRaw`INSERT INTO documents (id, name, content, "authorId", "projectId", path)
         VALUES (${createId()}, 'File 2', 'text\ntext', (SELECT id from users WHERE users.name = 'test'),
         (SELECT id FROM projects WHERE projects.name = 'Project 1'
-        AND projects."organizationId" = (SELECT id FROM organisations WHERE organisations.name = 'Sagittarius')), 'File-2');`;
+        AND projects."organizationId" = (SELECT id FROM organisations WHERE organisations.name = 'Sagittarius')), 'file-2');`;
 
   await prisma.$executeRaw`INSERT INTO documents (id, name, content, "authorId", "projectId", path, "documentType")
         VALUES (${createId()}, 'Folder 1', 'text\ntext', (SELECT id from users WHERE users.name = 'test'),
         (SELECT id FROM projects WHERE projects.name = 'Project 1'
-        AND projects."organizationId" = (SELECT id FROM organisations WHERE organisations.name = 'Sagittarius')), 'Folder-1', 'FOLDER'::"DocumentType");`;
+        AND projects."organizationId" = (SELECT id FROM organisations WHERE organisations.name = 'Sagittarius')), 'folder-1', 'FOLDER'::"DocumentType");`;
 
   await prisma.$executeRaw`INSERT INTO documents (id, name, content, "authorId", "projectId", path)
         VALUES (${createId()}, 'File 1', 'text\ntext', (SELECT id from users WHERE users.name = 'test'),
         (SELECT id FROM projects WHERE projects.name = 'Project 1'
-        AND projects."organizationId" = (SELECT id FROM organisations WHERE organisations.name = 'Sagittarius')), 'Folder-1.File-1');`;
+        AND projects."organizationId" = (SELECT id FROM organisations WHERE organisations.name = 'Sagittarius')), 'folder-1.file-1');`;
 
   await prisma.$executeRaw`INSERT INTO documents (id, name, content, "authorId", "projectId", path)
         VALUES (${createId()}, 'File 1', 'text\ntext', (SELECT id from users WHERE users.name = 'test'),
         (SELECT id FROM projects WHERE projects.name = 'Project 2'
-        AND projects."organizationId" = (SELECT id FROM organisations WHERE organisations.name = 'Sagittarius')), 'File-1');`;
+        AND projects."organizationId" = (SELECT id FROM organisations WHERE organisations.name = 'Sagittarius')), 'file-1');`;
 
   await prisma.$executeRaw`INSERT INTO documents (id, name, content, "authorId", "projectId", path)
         VALUES (${createId()}, 'File 1', 'text\ntext', (SELECT id from users WHERE users.name = 'Mike'),
         (SELECT id FROM projects WHERE projects.name = 'Project 1'
-        AND projects."organizationId" = (SELECT id FROM organisations WHERE organisations.name = 'FHSTP')), 'File-1');`;
+        AND projects."organizationId" = (SELECT id FROM organisations WHERE organisations.name = 'FHSTP')), 'file-1');`;
 
   await prisma.$executeRaw`INSERT INTO documents (id, name, content, "authorId", "projectId", path)
         VALUES (${createId()}, 'File 2', 'text\ntext', (SELECT id from users WHERE users.name = 'Mike'),
         (SELECT id FROM projects WHERE projects.name = 'Project 1'
-        AND projects."organizationId" = (SELECT id FROM organisations WHERE organisations.name = 'FHSTP')), 'File-2');`;
+        AND projects."organizationId" = (SELECT id FROM organisations WHERE organisations.name = 'FHSTP')), 'file-2');`;
 
   await prisma.$executeRaw`INSERT INTO documents (id, name, content, "authorId", "projectId", path, "documentType")
         VALUES (${createId()}, 'Folder 1', 'text\ntext', (SELECT id from users WHERE users.name = 'Mike'),
         (SELECT id FROM projects WHERE projects.name = 'Project 1'
-        AND projects."organizationId" = (SELECT id FROM organisations WHERE organisations.name = 'FHSTP')), 'Folder-1', 'FOLDER'::"DocumentType");`;
+        AND projects."organizationId" = (SELECT id FROM organisations WHERE organisations.name = 'FHSTP')), 'folder-1', 'FOLDER'::"DocumentType");`;
 
   await prisma.$executeRaw`INSERT INTO documents (id, name, content, "authorId", "projectId", path)
         VALUES (${createId()}, 'File 1', 'text\ntext', (SELECT id from users WHERE users.name = 'Mike'),
         (SELECT id FROM projects WHERE projects.name = 'Project 1'
-        AND projects."organizationId" = (SELECT id FROM organisations WHERE organisations.name = 'FHSTP')), 'Folder-1.File-1');`;
+        AND projects."organizationId" = (SELECT id FROM organisations WHERE organisations.name = 'FHSTP')), 'folder-1.file-1');`;
 
   await prisma.$executeRaw`INSERT INTO documents (id, name, content, "authorId", "projectId", path)
         VALUES (${createId()}, 'File 1', 'text\ntext', (SELECT id from users WHERE users.name = 'Mike'),
         (SELECT id FROM projects WHERE projects.name = 'Project 2'
-        AND projects."organizationId" = (SELECT id FROM organisations WHERE organisations.name = 'FHSTP')), 'File-1');`;
+        AND projects."organizationId" = (SELECT id FROM organisations WHERE organisations.name = 'FHSTP')), 'file-1');`;
 } catch (error) {
   console.error("Error seeding data:", error);
 } finally {
