@@ -211,6 +211,7 @@ export const api = new Elysia({ prefix: "/api" })
         path: t.String(),
         documentType: t.Union([t.Literal("file"), t.Literal("folder")]),
       }),
+      beforeHandle: authMiddleware,
       detail: { tags: ["api"], description: "Create a new document" },
     },
   )
@@ -233,7 +234,30 @@ export const api = new Elysia({ prefix: "/api" })
         path: t.String(),
         content: t.String(),
       }),
+      beforeHandle: authMiddleware,
       detail: { tags: ["api"], description: "Update document's content" },
+    },
+  )
+  .get(
+    "/document_content",
+    async ({ log, set, query: { projectName, organizationName, municipalityName, path }, userId }) => {
+      const document = await sql.getContent(userId, municipalityName, organizationName, projectName, path);
+      if (document === null || document.length < 1) {
+        set.status = 400;
+        return "Document not found";
+      }
+      set.status = 200;
+      return document[0].content;
+    },
+    {
+      query: t.Object({
+        projectName: t.String(),
+        organizationName: t.String(),
+        municipalityName: t.String(),
+        path: t.String(),
+      }),
+      beforeHandle: authMiddleware,
+      detail: { tags: ["api"], description: "Get document's content" },
     },
   )
   .delete(
@@ -254,6 +278,7 @@ export const api = new Elysia({ prefix: "/api" })
         municipalityName: t.String(),
         path: t.String(),
       }),
+      beforeHandle: authMiddleware,
       detail: { tags: ["api"], description: "Delete document" },
     },
   )

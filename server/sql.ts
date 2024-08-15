@@ -427,19 +427,23 @@ export async function getDocuments(userId: string): Promise<Document[]> {
 }
 
 export async function getContent(
+  userId: string,
   municipalityName: string,
   orgName: string,
   projectName: string,
   documentPath: string,
-): Promise<string> {
-  return await prisma.$queryRaw<string>`
+): Promise<{ content: string }[]> {
+  return await prisma.$queryRaw<{ content: string }[]>`
         SELECT documents.content
         FROM documents
         INNER JOIN projects ON projects.id = documents."projectId"
+        INNER JOIN users ON users."organizationId" = projects."organizationId"
         INNER JOIN organisations ON organisations.id = projects."organizationId"
         INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
         WHERE municipalities.name = ${municipalityName} AND organisations.name = ${orgName} AND projects.name = ${projectName}
         AND documents.path = text2ltree(${documentPath}) AND documents."documentType" = 'FILE'::"DocumentType"
+        AND users.id = ${userId}
+        LIMIT 1
         `;
 }
 
