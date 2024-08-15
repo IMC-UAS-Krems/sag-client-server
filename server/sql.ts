@@ -5,6 +5,7 @@ import { UserRole } from "@utils/roles";
 import { UserDetails } from "@server/types";
 
 export type Document = {
+  name: string;
   municipalityName: string;
   orgName: string;
   projectName: string;
@@ -347,7 +348,6 @@ export async function deleteUser(userId: string): Promise<void> {
 
 export async function createDocument(
   name: string,
-  content: string,
   authorId: string,
   projectName: string,
   organizationName: string,
@@ -355,17 +355,19 @@ export async function createDocument(
   path: string,
   documentType: DocumentType,
 ) {
+  path =
+    path.length == 0 ? name.toLowerCase().replaceAll(" ", "-") : `${path}.${name.toLowerCase().replaceAll(" ", "-")}`;
   const docType = documentType === "FOLDER" ? "FOLDER" : "FILE";
   return await prisma.$executeRaw`
         INSERT INTO documents (id, name, content, "authorId", "projectId", path, "documentType")
-        VALUES (${createId()}, ${name}, ${content}, ${authorId},
+        VALUES (${createId()}, ${name}, '', ${authorId},
           (SELECT id FROM projects WHERE projects.name = ${projectName}
           AND projects."organizationId" =
             (SELECT organisations.id FROM organisations
               INNER JOIN users ON users."organizationId" = organisations.id
               INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
               WHERE organisations.name = ${organizationName} AND municipalities.name = ${municipalityName})),
-          ${path}, ${docType}::"DocumentType")
+          text2ltree(${path}), ${docType}::"DocumentType")
         `;
 }
 
@@ -384,7 +386,7 @@ export async function getDocuments(userId: string): Promise<Document[]> {
   switch (user.userType) {
     case UserType.DEFAULT: {
       return await prisma.$queryRaw<Document[]>`
-            SELECT  municipalities.name as "municipalityName", organisations.name as "orgName", projects.name as "projectName",
+            SELECT documents.name,  municipalities.name as "municipalityName", organisations.name as "orgName", projects.name as "projectName",
               documents."documentType", documents.path::text as "documentPath"
             FROM users
             INNER JOIN organisations ON organisations.id = users."organizationId"
@@ -397,7 +399,7 @@ export async function getDocuments(userId: string): Promise<Document[]> {
     }
     case UserType.SUPERUSER_MUNICIPALITY: {
       return await prisma.$queryRaw<Document[]>`
-            SELECT municipalities.name as "municipalityName", organisations.name as "orgName", projects.name as "projectName", documents."documentType",
+            SELECT documents.name, municipalities.name as "municipalityName", organisations.name as "orgName", projects.name as "projectName", documents."documentType",
               documents.path::text as "documentPath"
             FROM users
             INNER JOIN organisations ON organisations."municipalityId" = users."municipalityId"
@@ -410,7 +412,7 @@ export async function getDocuments(userId: string): Promise<Document[]> {
     }
     case UserType.SUPERUSER_GLOBAL: {
       return await prisma.$queryRaw<Document[]>`
-            SELECT  municipalities.name as "municipalityName", organisations.name AS "orgName", projects.name AS "projectName", documents."documentType",
+            SELECT documents.name, municipalities.name as "municipalityName", organisations.name AS "orgName", projects.name AS "projectName", documents."documentType",
               documents.path::text AS "documentPath"
             FROM users
             CROSS JOIN organisations
@@ -430,7 +432,7 @@ export async function getContent(
   projectName: string,
   documentPath: string,
 ): Promise<string> {
-  return await prisma.$queryRaw`
+  return await prisma.$queryRaw<string>`
         SELECT documents.content
         FROM documents
         INNER JOIN projects ON projects.id = documents."projectId"
@@ -442,6 +444,7 @@ export async function getContent(
 }
 
 export async function updateContent(
+  authorId: string,
   municipalityName: string,
   orgName: string,
   projectName: string,
@@ -450,7 +453,7 @@ export async function updateContent(
 ) {
   return await prisma.$executeRaw`
         UPDATE documents
-        SET content = ${content}
+        SET content = ${content}, "authorId" = ${authorId}
         FROM projects
         INNER JOIN organisations ON organisations.id = projects."organizationId"
         INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
@@ -461,6 +464,7 @@ export async function updateContent(
 }
 
 export async function deleteDocument(
+  userId: string,
   municipalityName: string,
   orgName: string,
   projectName: string,
@@ -469,10 +473,12 @@ export async function deleteDocument(
   return await prisma.$executeRaw`
         DELETE  FROM documents
         USING projects
+        INNER JOIN users ON users."organizationId" = projects."organizationId"
         INNER JOIN organisations ON organisations.id = projects."organizationId"
         INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
         WHERE municipalities.name = ${municipalityName} AND organisations.name = ${orgName} AND projects.name = ${projectName}
         AND documents.path <@ text2ltree(${documentPath}) AND documents."projectId" = projects.id
+        AND users.id = ${userId}
         `;
 }
 
