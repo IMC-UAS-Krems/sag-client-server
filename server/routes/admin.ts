@@ -144,13 +144,15 @@ export const admin = new Elysia({ prefix: "/admin" })
         log.info("Trying to update user");
         const user = await sql.updateUser(
           body.userId,
-          body.username,
-          body.password,
-          body.name,
-          body.email,
-          body.organisation,
-          body.municipality,
-          body.userRole,
+          {
+            username: body.username,
+            password: body.password,
+            name: body.name,
+            email: body.email,
+            organisation: body.organisation,
+            municipality: body.municipality,
+            userRole: body.userRole,
+          }
         );
         if (!user) {
           throw new Error("User not found during update");

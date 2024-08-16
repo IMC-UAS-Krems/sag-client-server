@@ -123,15 +123,11 @@ const UsersEdit: Component = () => {
   });
 
   const validateForm = () => {
+    // TODO: Make a check such that at least something is changed
     const newErrors: { [key: string]: string } = {};
-    if (!name()) newErrors.name = "Name is required";
-    if (!email()) newErrors.email = "Email is required";
-    else if (!/\S+@\S+\.\S+/.test(email()!)) newErrors.email = "Email is invalid";
-    if (!username()) newErrors.username = "Username is required";
-    if (!password()) newErrors.password = "Password is required";
-    if (!municipality()) newErrors.municipality = "Municipality is required";
-    if (!organisation()) newErrors.organisation = "Organisation is required";
-    if (!userRole()) newErrors.userRole = "User role is required";
+    if (email() && !/\S+@\S+\.\S+/.test(email()!)) {
+      newErrors.email = "Email is invalid";
+    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -147,22 +143,27 @@ const UsersEdit: Component = () => {
       return;
     }
 
-    const formName = name() ?? "";
-    const formEmail = email() ?? "";
-    const formUsername = username() ?? "";
-    const formPassword = password() ?? "";
-    const formMunicipality = municipality() ?? "";
-    const formOrganisation = organisation() ?? "";
-    const formUserRole = userRole() ?? UserRole.USER;
+    // Creating the request body - only sending the fields that have been changed
+    const formName = name();
+    const formEmail = email();
+    const formUsername = username();
+    const formPassword = password();
+    const formMunicipality = municipality();
+    const formOrganisation = organisation();
+    const formUserRole = userRole();
 
-    const registered = await eden.admin["create-user"].post({
-      username: formUsername,
-      password: formPassword,
-      name: formName,
-      email: formEmail,
-      organisation: formOrganisation,
-      municipality: formMunicipality,
-      userRole: formUserRole,
+    const requestBody: any = { userId: userId };
+
+    if (formName) requestBody.name = formName;
+    if (formEmail) requestBody.email = formEmail;
+    if (formUsername) requestBody.username = formUsername;
+    if (formPassword) requestBody.password = formPassword;
+    if (formMunicipality) requestBody.municipality = formMunicipality;
+    if (formOrganisation) requestBody.organisation = formOrganisation;
+    if (formUserRole) requestBody.userRole = formUserRole;
+
+    const updated = await eden.admin["update-user"].post({
+      ...requestBody,
       $fetch: {
         mode: "cors",
         credentials: "include",
@@ -171,11 +172,11 @@ const UsersEdit: Component = () => {
     });
 
     // TODO: Handle error
-    if (!registered.data || registered.error) {
-      console.log(registered.error);
+    if (!updated.data || updated.error) {
+      console.log(updated.error);
       Swal.fire({
         title: "Error",
-        text: `Error creating user.`,
+        text: `Error updating user.`,
         icon: "error",
       });
       return;
@@ -185,11 +186,11 @@ const UsersEdit: Component = () => {
 
     Swal.fire({
       title: "Success",
-      text: `User created successfully.`,
+      text: `User updated successfully.`,
       icon: "success",
     });
 
-    console.log(`Registration successful.`);
+    console.log(`User update successful.`);
   };
 
   return (
@@ -201,7 +202,9 @@ const UsersEdit: Component = () => {
             <div class={styles.loader}></div>
           ) : userFetchError() ? (
             <div>
-              <p class={styles.errorText}>{userFetchError()} for user with id: {userId}</p>
+              <p class={styles.errorText}>
+                {userFetchError()} for user with id: {userId}
+              </p>
               <div class={styles.signinButtons}>
                 <Button.Root onClick={() => navigate("/users", { replace: true })}>Go Back</Button.Root>
               </div>
