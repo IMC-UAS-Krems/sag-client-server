@@ -47,7 +47,6 @@ const UsersCreate: Component = () => {
 
   const navigate = useNavigate();
 
-  //fetch all organisations on component load
   const fetchMunicipalities = async () => {
     try {
       const response = await eden.api.municipalities.get();
@@ -64,6 +63,9 @@ const UsersCreate: Component = () => {
       const response = await eden.api.organizationsByMunicipality.post({ municipalityName });
       if (response.data) {
         setOrganisations(response.data);
+        if (organisation()) {
+          setOrganisation(undefined);
+        }
       }
     } catch (error) {
       console.error("Error fetching organizations:", error);
@@ -79,8 +81,6 @@ const UsersCreate: Component = () => {
       fetchOrganisationsByMunicipality(municipality()!);
     }
   });
-
-
 
   const validateForm = () => {
     const newErrors: { [key: string]: string } = {};
@@ -130,12 +130,11 @@ const UsersCreate: Component = () => {
       },
     });
 
-    // TODO: Handle error
     if (!registered.data || registered.error) {
       console.log(registered.error);
       Swal.fire({
         title: "Error",
-        text: `Error creating user.`,
+        text: `Error creating user: ${registered.error}`,
         icon: "error",
       });
       return;
@@ -180,8 +179,8 @@ const UsersCreate: Component = () => {
             {errors().municipality && <p class={styles.errorText}>{errors().municipality}</p>}
             <div class={styles.textField}>
               <label class={styles.textFieldLabel}>Organisation</label>
-              <select class={styles.textFieldInput} onChange={(e) => setOrganisation(e.currentTarget.value)}>
-                <option value="none" selected disabled hidden>
+              <select class={styles.textFieldInput} value={organisation() ?? ""} onChange={(e) => setOrganisation(e.currentTarget.value)}>
+                <option value="" disabled hidden>
                   Select an Option
                 </option>
                 {organisations().length > 0 ? (

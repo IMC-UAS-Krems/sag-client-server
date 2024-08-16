@@ -41,6 +41,7 @@ const UsersEdit: Component = () => {
   const [password, setPassword] = createSignal<string | undefined>(undefined);
   const [municipality, setMunicipality] = createSignal<string | undefined>(undefined);
   const [organisation, setOrganisation] = createSignal<string | undefined>(undefined);
+  const [organisations, setOrganisations] = createSignal<string[]>([]);
   const [municipalities, setMunicipalities] = createSignal<string[]>([]);
   const [userRole, setUserRole] = createSignal<UserRole | undefined>(undefined);
   const [errors, setErrors] = createSignal<{ [key: string]: string }>({});
@@ -117,13 +118,37 @@ const UsersEdit: Component = () => {
     }
   };
 
+  const fetchOrganisationsByMunicipality = async (municipalityName: string) => {
+    try {
+      const response = await eden.api.organizationsByMunicipality.post({ municipalityName });
+      if (response.data) {
+        setOrganisations(response.data);
+        if (organisation()) {
+          setOrganisation(undefined);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching organizations:", error);
+    }
+  };
+
   createEffect(() => {
     fetchUserData();
     fetchMunicipalities();
   });
 
+  createEffect(() => {
+    if (municipality()) {
+      fetchOrganisationsByMunicipality(municipality()!);
+    }
+  });
+
   const validateForm = () => {
     // TODO: Make a check such that at least something is changed
+    if (!name() && !email() && !username() && !password() && !municipality() && !organisation() && !userRole()) {
+      return "No changes made";
+    }
+
     const newErrors: { [key: string]: string } = {};
     if (email() && !/\S+@\S+\.\S+/.test(email()!)) {
       newErrors.email = "Email is invalid";
@@ -134,7 +159,15 @@ const UsersEdit: Component = () => {
   };
 
   const submit = async () => {
-    if (!validateForm()) {
+    const formValidate = validateForm();
+    if (formValidate === "No changes made") {
+      Swal.fire({
+        title: "Error",
+        text: "No changes made.",
+        icon: "error",
+      });
+      return;
+    } else if (!formValidate) {
       Swal.fire({
         title: "Error",
         text: "Please fix the errors in the form.",
@@ -233,12 +266,27 @@ const UsersEdit: Component = () => {
                   </select>
                 </div>
                 {errors().municipality && <p class={styles.errorText}>{errors().municipality}</p>}
-                <FormField
+                {/* TODO: Preselect the Organisation */}
+
+                {/* <FormField
                   getter={organisation}
                   setter={setOrganisation}
                   labelText="Organisation"
                   oldValue={oldOrganisation()}
-                />
+                /> */}
+                <div class={styles.textField}>
+                  <label class={styles.textFieldLabel}>Organisation</label>
+                  <select class={styles.textFieldInput} value={organisation() ?? ""} onChange={(e) => setOrganisation(e.currentTarget.value)}>
+                    <option value="" disabled hidden>
+                      Select an Option
+                    </option>
+                    {organisations().length > 0 ? (
+                      organisations().map((organisation) => <option value={organisation}>{organisation}</option>)
+                    ) : (
+                      <option disabled>No organizations available</option>
+                    )}
+                  </select>
+                </div>
                 {errors().organisation && <p class={styles.errorText}>{errors().organisation}</p>}
                 {/* TODO: Preselect the userRole */}
                 <div class={styles.textField}>

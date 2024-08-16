@@ -27,6 +27,7 @@ const FormField: Component<{
   );
 };
 
+// TODO: Update such that it utilizes the same improvements as createUser, updateUser
 const Register: Component = () => {
   // const [t, { add, locale, dict }] = useI18n();
 
