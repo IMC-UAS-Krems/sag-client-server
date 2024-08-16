@@ -28,6 +28,10 @@ interface DeleteUserRequestBody {
   userId: string;
 }
 
+// interface GetUserRequestBody {
+//   userId: string;
+// }
+
 export const admin = new Elysia({ prefix: "/admin" })
   .get(
     "/users",
@@ -65,6 +69,9 @@ export const admin = new Elysia({ prefix: "/admin" })
     {
       beforeHandle: authMiddleware,
       detail: { tags: ["admin"] },
+      body: t.Object({
+        userId: t.String(),
+      }),
     },
   )
 
@@ -102,6 +109,34 @@ export const admin = new Elysia({ prefix: "/admin" })
     },
   )
 
+  .get(
+    "/update-user",
+    async ({ log, set, query }: { log: any; set: any; query: { userId: string } }) => {
+      try {
+        log.info("Trying to get user details for user");
+        const { userId } = query;
+        const user = await sql.selectUser(userId);
+        if (!user) {
+          throw new Error("User not found");
+        } else {
+          set.status = 200;
+          return user;
+        }
+      } catch (error) {
+        log.error(error);
+        set.status = 500;
+        return { error: "Failed to get user" };
+      }
+    },
+    {
+      beforeHandle: authMiddleware,
+      detail: { tags: ["admin"] },
+      query: t.Object({
+        userId: t.String(),
+      }),
+    },
+  )
+
   .post(
     "/update-user",
     async ({ log, set, body }: { log: any; set: any; body: UpdateUserRequestBody }) => {
@@ -118,7 +153,7 @@ export const admin = new Elysia({ prefix: "/admin" })
           body.userRole,
         );
         if (!user) {
-          throw new Error("User not fount during update");
+          throw new Error("User not found during update");
         }
         set.status = 200;
         return user;
