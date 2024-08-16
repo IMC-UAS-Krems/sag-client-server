@@ -19,6 +19,41 @@ export const api = new Elysia({ prefix: "/api" })
     },
     { detail: { tags: ["api"] } },
   )
+
+  .get(
+    "/organizations",
+    async ({ log, set }) => {
+      const organizations = await prisma.organization.findMany({
+        select: {
+          name: true,
+        },
+      });
+      set.status = 200;
+      return organizations.map((o) => o.name);
+    },
+    { detail: { tags: ["api"] } },
+  )
+
+  .post(
+    "/organizationsByMunicipality",
+    async ({ body: { municipalityName }, set }) => {
+      try {
+        const organizations = await prisma.organization.findMany({
+          where: {
+            municipality: {
+              name: municipalityName,
+            },
+          },
+        });
+        set.status = 200;
+        return organizations.map((o) => o.name);
+      } catch (error) {
+        set.status = 500;
+        return { error: "Failed to fetch organizations" };
+      }
+    },
+    { detail: { tags: ["api"] } },
+  )
   .post(
     "/compile",
     async ({ log, set, body: { code }, userId }) => {

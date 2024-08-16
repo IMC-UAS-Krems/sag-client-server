@@ -41,11 +41,13 @@ const UsersCreate: Component = () => {
   const [municipality, setMunicipality] = createSignal<string | undefined>(undefined);
   const [organisation, setOrganisation] = createSignal<string | undefined>(undefined);
   const [municipalities, setMunicipalities] = createSignal<string[]>([]);
+  const [organisations, setOrganisations] = createSignal<string[]>([]);
   const [userRole, setUserRole] = createSignal<UserRole | undefined>(undefined);
   const [errors, setErrors] = createSignal<{ [key: string]: string }>({});
 
   const navigate = useNavigate();
 
+  //fetch all organisations on component load
   const fetchMunicipalities = async () => {
     try {
       const response = await eden.api.municipalities.get();
@@ -57,9 +59,28 @@ const UsersCreate: Component = () => {
     }
   };
 
+  const fetchOrganisationsByMunicipality = async (municipalityName: string) => {
+    try {
+      const response = await eden.api.organizationsByMunicipality.post({ municipalityName });
+      if (response.data) {
+        setOrganisations(response.data);
+      }
+    } catch (error) {
+      console.error("Error fetching organizations:", error);
+    }
+  };
+
   createEffect(() => {
     fetchMunicipalities();
   });
+
+  createEffect(() => {
+    if (municipality()) {
+      fetchOrganisationsByMunicipality(municipality()!);
+    }
+  });
+
+
 
   const validateForm = () => {
     const newErrors: { [key: string]: string } = {};
@@ -148,19 +169,35 @@ const UsersCreate: Component = () => {
             <div class={styles.textField}>
               <label class={styles.textFieldLabel}>Municipality</label>
               <select class={styles.textFieldInput} onChange={(e) => setMunicipality(e.currentTarget.value)}>
-                <option value="none" selected disabled hidden>Select an Option</option>
+                <option value="none" selected disabled hidden>
+                  Select an Option
+                </option>
                 {municipalities().map((municipality) => (
                   <option value={municipality}>{municipality}</option>
                 ))}
               </select>
             </div>
             {errors().municipality && <p class={styles.errorText}>{errors().municipality}</p>}
-            <FormField getter={organisation} setter={setOrganisation} labelText="Organisation" />
+            <div class={styles.textField}>
+              <label class={styles.textFieldLabel}>Organisation</label>
+              <select class={styles.textFieldInput} onChange={(e) => setOrganisation(e.currentTarget.value)}>
+                <option value="none" selected disabled hidden>
+                  Select an Option
+                </option>
+                {organisations().length > 0 ? (
+                  organisations().map((organisation) => <option value={organisation}>{organisation}</option>)
+                ) : (
+                  <option disabled>No organizations available</option>
+                )}
+              </select>
+            </div>
             {errors().organisation && <p class={styles.errorText}>{errors().organisation}</p>}
             <div class={styles.textField}>
               <label class={styles.textFieldLabel}>User Role</label>
               <select class={styles.textFieldInput} onChange={(e) => setUserRole(e.currentTarget.value as UserRole)}>
-                <option value="" selected disabled hidden>Select an Option</option>
+                <option value="" selected disabled hidden>
+                  Select an Option
+                </option>
                 <option value={UserRole.USER}>User</option>
                 <option value={UserRole.ADMIN}>Admin</option>
               </select>
