@@ -67,36 +67,38 @@ export async function createProject(name: string, organizationName: string): Pro
   });
 }
 
-export async function createUser(
-  username: string,
-  password: string,
-  name: string,
-  email: string,
-  organizationName: string,
-  municipalityName: string,
-  userRole: UserRole = UserRole.USER,
-): Promise<UserDocument> {
-  const user = await prisma.user.create({
-    data: {
-      username,
-      password,
-      name,
-      email,
-      userRole,
-      organization: {
-        connect: { name: organizationName },
+export async function createUser(data: {
+  username: string;
+  password: string;
+  name: string;
+  email: string;
+  organizationName: string;
+  municipalityName: string;
+  userRole: "USER" | "ADMIN";
+}){
+  try {
+    const user = await prisma.user.create({
+      data: {
+        username: data.username,
+        password: data.password,
+        name: data.name,
+        email: data.email,
+        userRole: data.userRole,
+        organization: {
+          connect: { name: data.organizationName },
+        },
+        municipality: {
+          connect: { name: data.municipalityName },
+        },
       },
-      municipality: {
-        connect: { name: municipalityName },
-      },
-    },
-  });
-  if (user === null) {
-    throw new Error(`User ${username} could not be created`);
-  }
+    });
 
-  (user as UserDocument).documents = await getDocuments(user.id);
-  return user as UserDocument;
+    console.log(`User ${user.username} created successfully`);
+    return user;
+  } catch (error) {
+    console.error("Error creating user:", error);
+    throw new Error(`User ${data.username} could not be created`);
+  }
 }
 
 export async function selectUser(
@@ -160,9 +162,9 @@ export async function updateUser(
     password,
     name,
     email,
-    userRole,
-    organisation,
+    organization,
     municipality,
+    userRole,
     lastLoginTime,
     needsToBeLoggedOut,
   }: {
@@ -170,12 +172,12 @@ export async function updateUser(
     password?: string;
     name?: string;
     email?: string;
-    userRole?: UserRole;
-    organisation?: string;
+    organization?: string;
     municipality?: string;
+    userRole?: UserRole;
     lastLoginTime?: Date;
     needsToBeLoggedOut?: boolean;
-  }
+  },
 ): Promise<UserDocument> {
   const user = await prisma.user.update({
     where: { id: userId },
@@ -184,9 +186,9 @@ export async function updateUser(
       password,
       name,
       email,
-      userRole,
-      organization: organisation ? { connect: { name: organisation } } : undefined,
+      organization: organization ? { connect: { name: organization } } : undefined,
       municipality: municipality ? { connect: { name: municipality } } : undefined,
+      userRole,
       lastLoginTime,
       needsToBeLoggedOut,
     },

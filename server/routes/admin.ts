@@ -8,8 +8,8 @@ interface CreateUserRequestBody {
   password: string;
   name: string;
   email: string;
-  organisation: string;
-  municipality: string;
+  organizationName: string;
+  municipalityName: string;
   userRole: UserRole;
 }
 
@@ -19,7 +19,7 @@ interface UpdateUserRequestBody {
   password?: string;
   name?: string;
   email?: string;
-  organisation?: string;
+  organization?: string;
   municipality?: string;
   userRole?: UserRole;
 }
@@ -75,24 +75,36 @@ export const admin = new Elysia({ prefix: "/admin" })
     },
   )
 
-  .post(
-    "/create-user",
-    async ({
-      log,
-      set,
-      body: { username, password, name, email, organisation, municipality, userRole },
-    }: {
-      log: any;
-      set: any;
-      body: CreateUserRequestBody;
-    }) => {
-      const user = await sql.createUser(username, password, name, email, organisation, municipality, userRole);
 
-      if (!user) {
-        throw new Error("User could not be created");
+  .post(
+    "/createUser",
+    async ({ log, set, body }) => {
+      try {
+        console.log("Received request to create user with body:", body);
+
+        const { username, password, name, email, organizationName, municipalityName, userRole } = body;
+        if (!username || !password || !name || !email || !organizationName || !municipalityName || !userRole) {
+          set.status = 422;
+          return { error: "All fields are required" };
+        }
+
+        const user = await sql.createUser({
+          username,
+          password,
+          name,
+          email,
+          userRole,
+          organizationName,
+          municipalityName,
+        });
+
+        set.status = 201;
+        return { message: "User created successfully", user };
+      } catch (error) {
+        console.error("Error in POST /admin/createUser:", error);
+        set.status = 500;
+        return { error: "Internal Server Error" };
       }
-      set.status = 201;
-      return user;
     },
     {
       beforeHandle: authMiddleware,
@@ -102,13 +114,12 @@ export const admin = new Elysia({ prefix: "/admin" })
         password: t.String(),
         name: t.String(),
         email: t.String({ format: "email" }),
-        organisation: t.String(),
-        municipality: t.String(),
         userRole: t.Enum(UserRole),
+        organizationName: t.String(),
+        municipalityName: t.String(),
       }),
     },
   )
-
   .get(
     "/update-user",
     async ({ log, set, query }: { log: any; set: any; query: { userId: string } }) => {
@@ -142,18 +153,15 @@ export const admin = new Elysia({ prefix: "/admin" })
     async ({ log, set, body }: { log: any; set: any; body: UpdateUserRequestBody }) => {
       try {
         log.info("Trying to update user");
-        const user = await sql.updateUser(
-          body.userId,
-          {
-            username: body.username,
-            password: body.password,
-            name: body.name,
-            email: body.email,
-            organisation: body.organisation,
-            municipality: body.municipality,
-            userRole: body.userRole,
-          }
-        );
+        const user = await sql.updateUser(body.userId, {
+          username: body.username,
+          password: body.password,
+          name: body.name,
+          email: body.email,
+          organization: body.organization,
+          municipality: body.municipality,
+          userRole: body.userRole,
+        });
         if (!user) {
           throw new Error("User not found during update");
         }
@@ -174,14 +182,13 @@ export const admin = new Elysia({ prefix: "/admin" })
         password: t.Optional(t.String()),
         name: t.Optional(t.String()),
         email: t.Optional(t.String({ format: "email" })),
-        organisation: t.Optional(t.String()),
+        organization: t.Optional(t.String()),
         municipality: t.Optional(t.String()),
         userRole: t.Optional(t.Enum(UserRole)),
       }),
     },
   )
 
-  // TODO: Maybe add additional table in the db to track user sessions ?
   .post(
     "/logout-user",
     async ({

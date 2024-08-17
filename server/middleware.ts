@@ -1,40 +1,46 @@
 import { sql } from "./sql";
 import { Context } from "elysia";
 
-// custom context to deal with middleware
 interface CustomContext extends Context {
   set: any;
-  userId: string | null;
+  userId?: string;
+  user?: any;
 }
 
-export const authMiddleware = async ({
-  set,
-  userId,
-}: CustomContext): Promise<{ status: string; error: string } | undefined> => {
+export const authMiddleware = async ({ set, userId }: CustomContext): Promise<void> => {
+  // Check if userId is provided
   if (!userId) {
     set.status = 401;
-    return { status: "error", error: "Unauthorized" };
+    set.body = { error: "Unauthorized: No user ID provided" };
+    return;
   }
 
-  const user = await sql.selectUser(userId);
-  if (!user) {
-    set.status = 401;
-    return { status: "error", error: "Unauthorized" };
+  try {
+    // Fetch user from database
+    const user = await sql.selectUser(userId);
+    if (!user) {
+      set.status = 401;
+      set.body = { error: "Unauthorized: User not found" };
+      return;
+    }
+
+    // Check session expiration
+    const now = new Date();
+    const sessionDuration = 60 * 60 * 24 * 2 * 1000; // 2 days
+    if (now.getTime() - user.lastLoginTime.getTime() > sessionDuration || user.needsToBeLoggedOut) {
+      set.status = 401;
+      set.body = { error: "Session expired, please log in again" };
+      return;
+    }
+
+    // Update last login time
+    await sql.updateUser(user.id, { lastLoginTime: now });
+
+    // Attach user to context
+    (set as any).user = user;
+  } catch (error) {
+    console.error("Error in authMiddleware:", error);
+    set.status = 500;
+    set.body = { error: "Internal Server Error" };
   }
-
-  // Check if user must be logged out
-  const now = new Date();
-  //! Session duration 2 days
-  const sessionDuration = 60 * 60 * 24 * 2 * 1000;
-
-  if (now.getTime() - user.lastLoginTime.getTime() > sessionDuration || user.eedsToBeLoggedOut) {
-    set.status = 401;
-    return { status: "error", error: "Session expired, login again" };
-  }
-  // update last login time
-  await sql.updateUser(user.id, { lastLoginTime: now });
-
-  (set as any).user = user;
-
-  return;
 };

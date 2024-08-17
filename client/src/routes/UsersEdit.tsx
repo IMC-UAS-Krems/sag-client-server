@@ -40,8 +40,8 @@ const UsersEdit: Component = () => {
   const [username, setUsername] = createSignal<string | undefined>(undefined);
   const [password, setPassword] = createSignal<string | undefined>(undefined);
   const [municipality, setMunicipality] = createSignal<string | undefined>(undefined);
-  const [organisation, setOrganisation] = createSignal<string | undefined>(undefined);
-  const [organisations, setOrganisations] = createSignal<string[]>([]);
+  const [organization, setOrganization] = createSignal<string | undefined>(undefined);
+  const [organizations, setOrganizations] = createSignal<string[]>([]);
   const [municipalities, setMunicipalities] = createSignal<string[]>([]);
   const [userRole, setUserRole] = createSignal<UserRole | undefined>(undefined);
   const [errors, setErrors] = createSignal<{ [key: string]: string }>({});
@@ -56,7 +56,7 @@ const UsersEdit: Component = () => {
   const [oldUsername, setOldUsername] = createSignal<string | undefined>(undefined);
   // const [oldPassword, setOldPassword] = createSignal<string | undefined>(undefined);
   const [oldMunicipality, setOldMunicipality] = createSignal<string | undefined>(undefined);
-  const [oldOrganisation, setOldOrganisation] = createSignal<string | undefined>(undefined);
+  const [oldOrganization, setOldOrganization] = createSignal<string | undefined>(undefined);
   const [oldUserRole, setOldUserRole] = createSignal<UserRole | undefined>(undefined);
   //   const [userFetchError, setUserFetchErrors] = createSignal<{ [key: string]: string }>({});
   const [userFetchError, setUserFetchErrors] = createSignal<string | null>(null);
@@ -96,7 +96,7 @@ const UsersEdit: Component = () => {
         setOldUsername(oldUserData.data.username);
         // TODO: Municipality and Organisation are IDs, change API such that names are also returned
         setOldMunicipality(oldUserData.data.municipalityId);
-        setOldOrganisation(oldUserData.data.organizationId);
+        setOldOrganization(oldUserData.data.organizationId);
         setOldUserRole(oldUserData.data.userRole);
         setLoading(false);
       }
@@ -118,13 +118,13 @@ const UsersEdit: Component = () => {
     }
   };
 
-  const fetchOrganisationsByMunicipality = async (municipalityName: string) => {
+  const fetchOrganizationsByMunicipality = async (municipalityName: string) => {
     try {
       const response = await eden.api.organizationsByMunicipality.post({ municipalityName });
       if (response.data) {
-        setOrganisations(response.data);
-        if (organisation()) {
-          setOrganisation(undefined);
+        setOrganizations(response.data);
+        if (organization()) {
+          setOrganization(undefined);
         }
       }
     } catch (error) {
@@ -139,13 +139,13 @@ const UsersEdit: Component = () => {
 
   createEffect(() => {
     if (municipality()) {
-      fetchOrganisationsByMunicipality(municipality()!);
+      fetchOrganizationsByMunicipality(municipality()!);
     }
   });
 
   const validateForm = () => {
     // TODO: Make a check such that at least something is changed
-    if (!name() && !email() && !username() && !password() && !municipality() && !organisation() && !userRole()) {
+    if (!name() && !email() && !username() && !password() && !municipality() && !organization() && !userRole()) {
       return "No changes made";
     }
 
@@ -182,7 +182,7 @@ const UsersEdit: Component = () => {
     const formUsername = username();
     const formPassword = password();
     const formMunicipality = municipality();
-    const formOrganisation = organisation();
+    const formOrganization = organization();
     const formUserRole = userRole();
 
     const requestBody: any = { userId: userId };
@@ -192,7 +192,7 @@ const UsersEdit: Component = () => {
     if (formUsername) requestBody.username = formUsername;
     if (formPassword) requestBody.password = formPassword;
     if (formMunicipality) requestBody.municipality = formMunicipality;
-    if (formOrganisation) requestBody.organisation = formOrganisation;
+    if (formOrganization) requestBody.organization = formOrganization;
     if (formUserRole) requestBody.userRole = formUserRole;
 
     const updated = await eden.admin["update-user"].post({
@@ -266,28 +266,28 @@ const UsersEdit: Component = () => {
                   </select>
                 </div>
                 {errors().municipality && <p class={styles.errorText}>{errors().municipality}</p>}
-                {/* TODO: Preselect the Organisation */}
+                {/* TODO: Preselect the Organization */}
 
                 {/* <FormField
-                  getter={organisation}
-                  setter={setOrganisation}
-                  labelText="Organisation"
-                  oldValue={oldOrganisation()}
+                  getter={organization}
+                  setter={setOrganization}
+                  labelText="Organization"
+                  oldValue={oldOrganization()}
                 /> */}
                 <div class={styles.textField}>
                   <label class={styles.textFieldLabel}>Organisation</label>
-                  <select class={styles.textFieldInput} value={organisation() ?? ""} onChange={(e) => setOrganisation(e.currentTarget.value)}>
+                  <select class={styles.textFieldInput} value={organization() ?? ""} onChange={(e) => setOrganization(e.currentTarget.value)}>
                     <option value="" disabled hidden>
                       Select an Option
                     </option>
-                    {organisations().length > 0 ? (
-                      organisations().map((organisation) => <option value={organisation}>{organisation}</option>)
+                    {organizations().length > 0 ? (
+                      organizations().map((organization) => <option value={organization}>{organization}</option>)
                     ) : (
                       <option disabled>No organizations available</option>
                     )}
                   </select>
                 </div>
-                {errors().organisation && <p class={styles.errorText}>{errors().organisation}</p>}
+                {errors().organization && <p class={styles.errorText}>{errors().organization}</p>}
                 {/* TODO: Preselect the userRole */}
                 <div class={styles.textField}>
                   <label class={styles.textFieldLabel}>User Role</label>

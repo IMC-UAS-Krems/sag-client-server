@@ -10,6 +10,7 @@ import Header from "@client/components/Header";
 // import { UserRole } from "../../../server/prisma";
 
 import styles from "@styles/Signin.module.css";
+import { JSCallback } from "bun:ffi";
 
 const FormField: Component<{
   getter: Accessor<string | undefined>;
@@ -39,9 +40,9 @@ const UsersCreate: Component = () => {
   const [username, setUsername] = createSignal<string | undefined>(undefined);
   const [password, setPassword] = createSignal<string | undefined>(undefined);
   const [municipality, setMunicipality] = createSignal<string | undefined>(undefined);
-  const [organisation, setOrganisation] = createSignal<string | undefined>(undefined);
+  const [organization, setOrganization] = createSignal<string | undefined>(undefined);
   const [municipalities, setMunicipalities] = createSignal<string[]>([]);
-  const [organisations, setOrganisations] = createSignal<string[]>([]);
+  const [organizations, setOrganizations] = createSignal<string[]>([]);
   const [userRole, setUserRole] = createSignal<UserRole | undefined>(undefined);
   const [errors, setErrors] = createSignal<{ [key: string]: string }>({});
 
@@ -58,13 +59,13 @@ const UsersCreate: Component = () => {
     }
   };
 
-  const fetchOrganisationsByMunicipality = async (municipalityName: string) => {
+  const fetchOrganizationsByMunicipality = async (municipalityName: string) => {
     try {
       const response = await eden.api.organizationsByMunicipality.post({ municipalityName });
       if (response.data) {
-        setOrganisations(response.data);
-        if (organisation()) {
-          setOrganisation(undefined);
+        setOrganizations(response.data);
+        if (organization()) {
+          setOrganization(undefined);
         }
       }
     } catch (error) {
@@ -78,7 +79,7 @@ const UsersCreate: Component = () => {
 
   createEffect(() => {
     if (municipality()) {
-      fetchOrganisationsByMunicipality(municipality()!);
+      fetchOrganizationsByMunicipality(municipality()!);
     }
   });
 
@@ -90,12 +91,73 @@ const UsersCreate: Component = () => {
     if (!username()) newErrors.username = "Username is required";
     if (!password()) newErrors.password = "Password is required";
     if (!municipality()) newErrors.municipality = "Municipality is required";
-    if (!organisation()) newErrors.organisation = "Organisation is required";
+    if (!organization()) newErrors.organization = "Organisation is required";
     if (!userRole()) newErrors.userRole = "User role is required";
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
+
+  // const submit = async () => {
+
+  //   if (!validateForm()) {
+  //     Swal.fire({
+  //       title: "Error",
+  //       text: "Please fix the errors in the form.",
+  //       icon: "error",
+  //     });
+  //     return;
+  //   }
+
+  //   const formName = name() ?? "";
+  //   const formEmail = email() ?? "";
+  //   const formUsername = username() ?? "";
+  //   const formPassword = password() ?? "";
+  //   const formMunicipality = municipality() ?? "";
+  //   const formOrganization = organization() ?? "";
+  //   const formUserRole = userRole() ?? UserRole.USER;   
+    
+  //   const requestBody: any = {};
+  //   requestBody.name = formName;
+  //   requestBody.email = formEmail;
+  //   requestBody.username = formUsername;
+  //   requestBody.password = formPassword;
+  //   requestBody.municipalityName = formMunicipality;
+  //   requestBody.organizationName = formOrganization;
+  //   requestBody.userRole = formUserRole;
+
+  //   console.log("Data to be submitted:", requestBody);
+    
+
+  //   const registered = await eden.admin.createUser.post({
+  //     ...requestBody,
+  //     $fetch: {
+  //       mode: "cors",
+  //       credentials: "include",
+  //       method: "POST",
+  //     },
+  //   });
+
+  //   if (!registered.data || registered.error) {
+  //     console.log(registered.error);
+  //     Swal.fire({
+  //       title: "Error",
+  //       text: `Error creating user: ${registered.error}`,
+  //       icon: "error",
+  //     });
+  //     return;
+  //   }
+
+  //   navigate("/users", { replace: true });
+
+  //   Swal.fire({
+  //     title: "Success",
+  //     text: `User created successfully.`,
+  //     icon: "success",
+  //   });
+
+  //   console.log(`Registration successful.`);
+  // };
 
   const submit = async () => {
     if (!validateForm()) {
@@ -112,43 +174,57 @@ const UsersCreate: Component = () => {
     const formUsername = username() ?? "";
     const formPassword = password() ?? "";
     const formMunicipality = municipality() ?? "";
-    const formOrganisation = organisation() ?? "";
+    const formOrganization = organization() ?? "";
     const formUserRole = userRole() ?? UserRole.USER;
 
-    const registered = await eden.admin["create-user"].post({
-      username: formUsername,
-      password: formPassword,
+    const requestBody = {
       name: formName,
       email: formEmail,
-      organisation: formOrganisation,
-      municipality: formMunicipality,
+      username: formUsername,
+      password: formPassword,
+      municipalityName: formMunicipality,
+      organizationName: formOrganization,
       userRole: formUserRole,
-      $fetch: {
-        mode: "cors",
-        credentials: "include",
-        method: "POST",
-      },
-    });
+    };
 
-    if (!registered.data || registered.error) {
-      console.log(registered.error);
+    console.log("Data to be submitted:", requestBody);
+
+    try {
+      const response = await eden.admin.createUser.post(requestBody, {
+        $fetch: {
+          mode: "cors",
+          credentials: "include",
+          method: "POST",
+        },
+      });
+
+      if (!response.data || response.error) {
+        console.error(response.error);
+        Swal.fire({
+          title: "Error",
+          text: `Error creating user: ${response.error}`,
+          icon: "error",
+        });
+        return;
+      }
+
+      navigate("/users", { replace: true });
+
+      Swal.fire({
+        title: "Success",
+        text: `User created successfully.`,
+        icon: "success",
+      });
+
+      console.log(`Registration successful.`);
+    } catch (error) {
+      console.error("Error submitting form:", error);
       Swal.fire({
         title: "Error",
-        text: `Error creating user: ${registered.error}`,
+        text: `An unexpected error occurred: ${error.message}`,
         icon: "error",
       });
-      return;
     }
-
-    navigate("/users", { replace: true });
-
-    Swal.fire({
-      title: "Success",
-      text: `User created successfully.`,
-      icon: "success",
-    });
-
-    console.log(`Registration successful.`);
   };
 
   return (
@@ -179,18 +255,18 @@ const UsersCreate: Component = () => {
             {errors().municipality && <p class={styles.errorText}>{errors().municipality}</p>}
             <div class={styles.textField}>
               <label class={styles.textFieldLabel}>Organisation</label>
-              <select class={styles.textFieldInput} value={organisation() ?? ""} onChange={(e) => setOrganisation(e.currentTarget.value)}>
+              <select class={styles.textFieldInput} value={organization() ?? ""} onChange={(e) => setOrganization(e.currentTarget.value)}>
                 <option value="" disabled hidden>
                   Select an Option
                 </option>
-                {organisations().length > 0 ? (
-                  organisations().map((organisation) => <option value={organisation}>{organisation}</option>)
+                {organizations().length > 0 ? (
+                  organizations().map((organization) => <option value={organization}>{organization}</option>)
                 ) : (
                   <option disabled>No organizations available</option>
                 )}
               </select>
             </div>
-            {errors().organisation && <p class={styles.errorText}>{errors().organisation}</p>}
+            {errors().organization && <p class={styles.errorText}>{errors().organization}</p>}
             <div class={styles.textField}>
               <label class={styles.textFieldLabel}>User Role</label>
               <select class={styles.textFieldInput} onChange={(e) => setUserRole(e.currentTarget.value as UserRole)}>
