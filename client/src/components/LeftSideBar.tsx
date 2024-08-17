@@ -3,6 +3,7 @@ import { Menu, Item, useContextMenu, animation, Submenu } from "solid-contextmen
 import Swal from "sweetalert2";
 import "../../../node_modules/solid-contextmenu/dist/style.css";
 import { eden } from "@client/api";
+import { file } from "bun";
 
 interface File {
   name: string;
@@ -10,7 +11,21 @@ interface File {
   content?: string;
   files?: File[];
   isSelected?: boolean;
+  //
+  municipalityName?: string;
+  orgName?: string;
+  projectName?: string;
+  documentType?: string;
+  documentPath?: string;
 }
+
+/*interface newFile {
+  municipalityName: string;
+  orgName: string;
+  projectName: string;
+  documentType: string;
+  documentPath: string;
+}*/
 
 const MENU_ID = "menu-id";
 
@@ -29,33 +44,164 @@ export function LeftSideBar(props: LeftSideBarProps) {
   let leftClickedFileOrFolder: File | null = null;
 
   const fetchFiles = async (): Promise<File[]> => {
-    let files = await eden.api.initialDocuments.get({
-      $fetch: {
-        mode: "cors",
-        credentials: "include",
-        method: "GET",
+    let filesFetched = await eden.api.documents.get(
+      {
+        $fetch: {
+          mode: "cors",
+          credentials: "include",
+          method: "GET",
+        },
       },
-    });
-    return files.data as File[];
-  };
-
-  const updateFiles = async (files: File[]): Promise<File[]> => {
-    let updated_files = await eden.api.initialDocuments.post({
-      documents: files,
-      $fetch: {
-        mode: "cors",
-        credentials: "include",
-        method: "POST",
+    );
+    return filesFetched.data as File[];
+  }
+  /*
+  .post(
+    "/documents",
+    async ({ log, set, body, userId }) => {
+      const { name, content, projectName, organizationName, municipalityName, path, documentType } = body;
+      const document = await sql.createDocument(name, content, userId, projectName, organizationName, municipalityName, path, documentType);
+      set.status = 200;
+      return document;
+    },
+    {
+      body: t.Object({
+        name: t.String(),
+        content: t.String(),
+        projectName: t.String(),
+        organizationName: t.String(),
+        municipalityName: t.String(),
+        path: t.String(),
+        documentType: t.String(),
+      }),
+      beforeHandle: authMiddleware,
+      detail: { tags: ["api"] },
+    },
+  )
+  */
+  const addSingleFileOrFolder = async (file: File) => {
+    let addedSingleFileOrFolder = await eden.api.documents.post(
+      {
+        $fetch: {
+          mode: "cors",
+          credentials: "include",
+          method: "POST",
+          
+        },
+        name: file.name,
+        path: file.documentPath || "",
+        content: file.content || "",
+        projectName: file.projectName || "",
+        organizationName: file.orgName || "",
+        municipalityName: file.municipalityName || "",
+        documentType: file.documentType || "",
       },
-    });
-    return updated_files.data as File[];
-  };
+    );
+  }
+    
+  const updateFiles = async (files: File[]) => {
+    let updatedFiles = await eden.api.documents.get(
+      {
+        $fetch: {
+          mode: "cors",
+          credentials: "include",
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        },
+        $query: {
+          files: JSON.stringify(files),
+        },
+      },
+    );
+    return updatedFiles.data as File[];
+  }
+  /*const updateFiles = async (files: File[]): Promise<File[]> => {
+    let updatedFiles = await eden.api.documents.post(
+      {
+        documents: files,
+        $fetch: {
+          mode: "cors",
+          credentials: "include",
+          method: "POST",
+        },
+      });
+    return updatedFiles.data as File[];
+  }*/
 
+  
+  /*
+  {municipalityName: 'Krems', orgName: 'Imc', projectName: 'Project 1', documentType: 'FOLDER', documentPath: 'Folder-1'}
+1
+: 
+{municipalityName: 'Krems', orgName: 'Imc', projectName: 'Project 1', documentType: 'FILE', documentPath: 'File-1'}
+2
+: 
+{municipalityName: 'Krems', orgName: 'Imc', projectName: 'Project 1', documentType: 'FILE', documentPath: 'File-2'}
+3
+: 
+{municipalityName: 'Krems', orgName: 'Imc', projectName: 'Project 1', documentType: 'FILE', documentPath: 'Folder-1.File-1'}
+4
+: 
+{municipalityName: 'Krems', orgName: 'Imc', projectName: 'Project 2', documentType: 'FILE', documentPath: 'File-1'}
+5
+: 
+{municipalityName: 'Krems', orgName: 'Sagittarius', projectName: 'Project 1', documentType: 'FOLDER', documentPath: 'Folder-1'}
+6
+: 
+{municipalityName: 'Krems', orgName: 'Sagittarius', projectName: 'Project 1', documentType: 'FILE', documentPath: 'File-1'}
+7
+: 
+{municipalityName: 'Krems', orgName: 'Sagittarius', projectName: 'Project 1', documentType: 'FILE', documentPath: 'File-2'}
+8
+: 
+{municipalityName: 'Krems', orgName: 'Sagittarius', projectName: 'Project 1', documentType: 'FILE', documentPath: 'Folder-1.File-1'}
+9
+: 
+{municipalityName: 'Krems', orgName: 'Sagittarius', projectName: 'Project 2', documentType: 'FILE', documentPath: 'File-1'}
+10
+: 
+{municipalityName: 'St. Pölten', orgName: 'FHSTP', projectName: 'Project 1', documentType: 'FOLDER', documentPath: 'Folder-1'}
+11
+: 
+{municipalityName: 'St. Pölten', orgName: 'FHSTP', projectName: 'Project 1', documentType: 'FILE', documentPath: 'File-1'}
+12
+: 
+{municipalityName: 'St. Pölten', orgName: 'FHSTP', projectName: 'Project 1', documentType: 'FILE', documentPath: 'File-2'}
+13
+: 
+{municipalityName: 'St. Pölten', orgName: 'FHSTP', projectName: 'Project 1', documentType: 'FILE', documentPath: 'Folder-1.File-1'}
+14
+: 
+{municipalityName: 'St. Pölten', orgName: 'FHSTP', projectName: 'Project 2', documentType: 'FILE', documentPath: 'File-1'}
+  */
   onMount(async () => {
     const initialFiles = await fetchFiles();
     if (!Array.isArray(initialFiles)) {
       return;
     }
+    let folderNames = Array.from(
+      new Set(
+        initialFiles
+          .filter((file) => file.documentPath && file.documentPath.includes('.'))
+          .map((file) => file.documentPath!.split('.')[0])
+      )
+    );
+    
+    folderNames.forEach((folderName) => {
+      let folder = initialFiles.find((file) => file.documentPath === folderName);
+      if (folder) {
+        folder.files = initialFiles.filter((file) => file.documentPath && file.documentPath.startsWith(folderName + '.'));
+      }
+    });
+
+    initialFiles.forEach((file, index) => {
+      if (file.documentPath && file.documentPath.includes('.')) {
+        initialFiles.splice(index, 1);
+      }
+    });
+
     setFiles(initialFiles);
     initialFiles.forEach((file) => {
       if (file.files) {
@@ -141,7 +287,7 @@ export function LeftSideBar(props: LeftSideBarProps) {
       rightClickedFileOrFolder = null;
       leftClickedFileOrFolder = null;
     } else {
-      console.log(`Right-clicked on ${file.name}`);
+      console.log(`Right-clicked on ${file.documentPath}`);
       setFilesIsSelectedToFalse(files());
       rightClickedFileOrFolder = file;
       rightClickedFileOrFolder.isSelected = true;
@@ -168,6 +314,10 @@ export function LeftSideBar(props: LeftSideBarProps) {
       }
       if (newFolderName !== null) {
         const updatedFiles = [...files(), { name: newFolderName, isExpanded: false, files: [] }];
+        addSingleFileOrFolder({
+          name: newFolderName, documentPath: newFolderName, documentType: 'FOLDER',
+          isExpanded: false
+        });
         setFilesAndUpdate(updatedFiles);
       }
     } else if (action === "Add file" && rightClickedFileOrFolder === null) {
@@ -203,7 +353,7 @@ export function LeftSideBar(props: LeftSideBarProps) {
 
     if (action === "Rename" && rightClickedFileOrFolder) {
       const newName = prompt(
-        `Enter new name for ${rightClickedFileOrFolder.files ? "folder" : "file"} <${rightClickedFileOrFolder.name}>:`,
+        `Enter new name for ${rightClickedFileOrFolder.files ? "folder" : "file"} <${rightClickedFileOrFolder.documentPath}>:`,
       );
       if (newName?.length == 0) {
         Swal.fire("Error", "Name cannot be empty.", "error");
@@ -215,7 +365,7 @@ export function LeftSideBar(props: LeftSideBarProps) {
         return;
       }
       if (newName !== null) {
-        rightClickedFileOrFolder.name = newName;
+        rightClickedFileOrFolder.documentPath = newName;
         setFilesAndUpdate([...files()]);
       }
     } else if (action === "Add folder" && rightClickedFileOrFolder) {
@@ -272,7 +422,7 @@ export function LeftSideBar(props: LeftSideBarProps) {
       rightClickedFileOrFolder.content = props.code;
       Swal.fire(
         "Success",
-        `The content of file ${rightClickedFileOrFolder.name} has been successfully saved.`,
+        `The content of file ${rightClickedFileOrFolder.documentPath} has been successfully saved.`,
         "success",
       );
     } else if (action === "Delete" && rightClickedFileOrFolder) {
@@ -323,7 +473,7 @@ export function LeftSideBar(props: LeftSideBarProps) {
         {files.map((file) => (
           <li>
             <div style={{ display: "flex", "align-items": "center" }}>
-              <span style={{ cursor: "default" }}>{file.files ? (file.isExpanded ? "📂" : "📁") : "📄"}</span>
+              <span style={{ cursor: "default" }}>{file.documentType === 'FOLDER' ? '📁' : '📄'}</span>
               <span
                 onClick={() => {
                   handleClick(file);
@@ -334,7 +484,7 @@ export function LeftSideBar(props: LeftSideBarProps) {
                   "font-weight": file.isSelected ? "bold" : "normal",
                 }}
               >
-                {file.name}
+                {file.documentPath}
               </span>
             </div>
             {file.isExpanded && file.files && renderFiles(file.files)}
@@ -346,7 +496,7 @@ export function LeftSideBar(props: LeftSideBarProps) {
 
   function findFileRecursive(files: File[], clickedName: string): File | null {
     for (const file of files) {
-      if (file.name === clickedName) {
+      if (file.documentPath === clickedName) {
         return file;
       }
       if (file.files) {
