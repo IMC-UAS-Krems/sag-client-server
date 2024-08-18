@@ -150,9 +150,11 @@ const UsersEdit: Component = () => {
     }
 
     const newErrors: { [key: string]: string } = {};
-    if (email() && !/\S+@\S+\.\S+/.test(email()!)) {
-      newErrors.email = "Email is invalid";
-    }
+
+    if (email() && !/\S+@\S+\.\S+/.test(email()!)) newErrors.email = "Email is invalid";
+    if (name() && name()!.length < 4) newErrors.name = "Name must be at least 4 characters long";
+    if (username() && username()!.length < 4) newErrors.username = "Username must be at least 4 characters long";
+    if (password() && password()!.length < 8) newErrors.password = "Password must be at least 8 characters long";
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;

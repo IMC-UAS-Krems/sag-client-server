@@ -86,78 +86,20 @@ const UsersCreate: Component = () => {
   const validateForm = () => {
     const newErrors: { [key: string]: string } = {};
     if (!name()) newErrors.name = "Name is required";
+    else if (name()!.length < 4) newErrors.name = "Name must be at least 4 characters long";
     if (!email()) newErrors.email = "Email is required";
     else if (!/\S+@\S+\.\S+/.test(email()!)) newErrors.email = "Email is invalid";
     if (!username()) newErrors.username = "Username is required";
+    else if (username()!.length < 4) newErrors.username = "Username must be at least 4 characters long";
     if (!password()) newErrors.password = "Password is required";
+    else if (password()!.length < 8) newErrors.password = "Password must be at least 8 characters long";
     if (!municipality()) newErrors.municipality = "Municipality is required";
-    if (!organization()) newErrors.organization = "Organisation is required";
+    if (!organization()) newErrors.organization = "Organization is required";
     if (!userRole()) newErrors.userRole = "User role is required";
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
-
-  // const submit = async () => {
-
-  //   if (!validateForm()) {
-  //     Swal.fire({
-  //       title: "Error",
-  //       text: "Please fix the errors in the form.",
-  //       icon: "error",
-  //     });
-  //     return;
-  //   }
-
-  //   const formName = name() ?? "";
-  //   const formEmail = email() ?? "";
-  //   const formUsername = username() ?? "";
-  //   const formPassword = password() ?? "";
-  //   const formMunicipality = municipality() ?? "";
-  //   const formOrganization = organization() ?? "";
-  //   const formUserRole = userRole() ?? UserRole.USER;   
-    
-  //   const requestBody: any = {};
-  //   requestBody.name = formName;
-  //   requestBody.email = formEmail;
-  //   requestBody.username = formUsername;
-  //   requestBody.password = formPassword;
-  //   requestBody.municipalityName = formMunicipality;
-  //   requestBody.organizationName = formOrganization;
-  //   requestBody.userRole = formUserRole;
-
-  //   console.log("Data to be submitted:", requestBody);
-    
-
-  //   const registered = await eden.admin.createUser.post({
-  //     ...requestBody,
-  //     $fetch: {
-  //       mode: "cors",
-  //       credentials: "include",
-  //       method: "POST",
-  //     },
-  //   });
-
-  //   if (!registered.data || registered.error) {
-  //     console.log(registered.error);
-  //     Swal.fire({
-  //       title: "Error",
-  //       text: `Error creating user: ${registered.error}`,
-  //       icon: "error",
-  //     });
-  //     return;
-  //   }
-
-  //   navigate("/users", { replace: true });
-
-  //   Swal.fire({
-  //     title: "Success",
-  //     text: `User created successfully.`,
-  //     icon: "success",
-  //   });
-
-  //   console.log(`Registration successful.`);
-  // };
 
   const submit = async () => {
     if (!validateForm()) {
@@ -254,8 +196,12 @@ const UsersCreate: Component = () => {
             </div>
             {errors().municipality && <p class={styles.errorText}>{errors().municipality}</p>}
             <div class={styles.textField}>
-              <label class={styles.textFieldLabel}>Organisation</label>
-              <select class={styles.textFieldInput} value={organization() ?? ""} onChange={(e) => setOrganization(e.currentTarget.value)}>
+              <label class={styles.textFieldLabel}>Organization</label>
+              <select
+                class={styles.textFieldInput}
+                value={organization() ?? ""}
+                onChange={(e) => setOrganization(e.currentTarget.value)}
+              >
                 <option value="" disabled hidden>
                   Select an Option
                 </option>

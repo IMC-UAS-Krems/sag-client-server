@@ -36,8 +36,9 @@ const Register: Component = () => {
   const [username, setUsername] = createSignal<string | undefined>(undefined);
   const [password, setPassword] = createSignal<string | undefined>(undefined);
   const [municipality, setMunicipality] = createSignal<string | undefined>(undefined);
-  const [organisation, setOrganisation] = createSignal<string | undefined>(undefined);
+  const [organization, setOrganization] = createSignal<string | undefined>(undefined);
   const [municipalities, setMunicipalities] = createSignal<string[]>([]);
+  const [organizations, setOrganizations] = createSignal<string[]>([]);
 
   const navigate = useNavigate();
 
@@ -52,27 +53,64 @@ const Register: Component = () => {
     }
   };
 
+  const fetchOrganizationsByMunicipality = async (municipalityName: string) => {
+    try {
+      const response = await eden.api.organizationsByMunicipality.post({ municipalityName });
+      if (response.data) {
+        setOrganizations(response.data);
+        if (organization()) {
+          setOrganization(undefined);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching organizations:", error);
+    }
+  };
+
   createEffect(() => {
     fetchMunicipalities();
   });
 
+  createEffect(() => {
+    if (municipality()) {
+      fetchOrganizationsByMunicipality(municipality()!);
+    }
+  });
+
+  const [registerErrors, setRegisterErrors] = createSignal<{ [key: string]: string }>({});
+  const validateRegisterForm = () => {
+    const newErrors: { [key: string]: string } = {};
+    if (!name()) newErrors.name = "Name is required";
+    else if (name()!.length < 4) newErrors.name = "Name must be at least 4 characters long";
+    if (!email()) newErrors.email = "Email is required";
+    else if (!/\S+@\S+\.\S+/.test(email()!)) newErrors.email = "Email is invalid";
+    if (!username()) newErrors.username = "Username is required";
+    else if (username()!.length < 4) newErrors.username = "Username must be at least 4 characters long";
+    if (!password()) newErrors.password = "Password is required";
+    else if (password()!.length < 8) newErrors.password = "Password must be at least 8 characters long";
+    if (!municipality()) newErrors.municipality = "Municipality is required";
+    if (!organization()) newErrors.organization = "Organization is required";
+
+    setRegisterErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const submit = async () => {
+    if (!validateRegisterForm()) {
+      Swal.fire({
+        title: "Error",
+        text: "Please fix the errors in the form.",
+        icon: "error",
+      });
+      return;
+    }
+
     const formName = name();
     const formEmail = email();
     const formUsername = username();
     const formPassword = password();
     const formMunicipality = municipality();
-    const formOrganisation = organisation();
-
-    if (!(formName && formEmail && formUsername && formPassword)) {
-      console.log("Invalid data");
-      Swal.fire({
-        title: "Error",
-        text: "Wrong login data",
-        icon: "error",
-      });
-      return;
-    }
+    const formOrganization = organization();
 
     const registered = await eden.auth.register.post({
       name: formName,
@@ -80,7 +118,7 @@ const Register: Component = () => {
       username: formUsername,
       key: formPassword,
       municipality: formMunicipality,
-      organisation: formOrganisation,
+      organization: formOrganization,
       $fetch: {
         mode: "cors",
         credentials: "include",
@@ -111,20 +149,44 @@ const Register: Component = () => {
       <div style={{ padding: "50px 0 50px 0", "margin-bottom": "30px" }} class={styles.signinCardContainer}>
         <form class={styles.signinFormContainer}>
           <FormField getter={name} setter={setName} labelText="Name" />
+          {registerErrors().name && <p class={styles.errorText}>{registerErrors().name}</p>}
           <FormField getter={email} setter={setEmail} labelText="Email" />
+          {registerErrors().email && <p class={styles.errorText}>{registerErrors().email}</p>}
           <FormField getter={username} setter={setUsername} labelText="Username" />
+          {registerErrors().username && <p class={styles.errorText}>{registerErrors().username}</p>}
           <FormField getter={password} setter={setPassword} labelText="Password" password={true} />
+          {registerErrors().password && <p class={styles.errorText}>{registerErrors().password}</p>}
           <div class={styles.textField}>
             <label class={styles.textFieldLabel}>Municipality</label>
             <select class={styles.textFieldInput} onChange={(e) => setMunicipality(e.currentTarget.value)}>
+              <option value="none" selected disabled hidden>
+                Select an Option
+              </option>
               {municipalities().map((municipality) => (
-                <option key={municipality} value={municipality}>
-                  {municipality}
-                </option>
+                <option value={municipality}>{municipality}</option>
               ))}
             </select>
           </div>
-          <FormField getter={organisation} setter={setOrganisation} labelText="Organisation" />
+          {registerErrors().municipality && <p class={styles.errorText}>{registerErrors().municipality}</p>}
+          <div class={styles.textField}>
+            <label class={styles.textFieldLabel}>Organization</label>
+            <select
+              class={styles.textFieldInput}
+              value={organization() ?? ""}
+              onChange={(e) => setOrganization(e.currentTarget.value)}
+            >
+              <option value="" disabled hidden>
+                Select an Option
+              </option>
+              {organizations().length > 0 ? (
+                organizations().map((organization) => <option value={organization}>{organization}</option>)
+              ) : (
+                <option disabled>No organizations available</option>
+              )}
+            </select>
+          </div>
+          {registerErrors().organization && <p class={styles.errorText}>{registerErrors().organization}</p>}
+          {/* <FormField getter={organization} setter={setOrganization} labelText="Organization" /> */}
         </form>
         <Button.Root onClick={submit}>Submit</Button.Root>
       </div>
@@ -134,13 +196,33 @@ const Register: Component = () => {
 
 const Login: Component = () => {
   // const [t, { add, locale, dict }] = useI18n();
+  const navigate = useNavigate();
 
   const [username, setUsername] = createSignal<string | undefined>(undefined);
   const [password, setPassword] = createSignal<string | undefined>(undefined);
+  const [loginErrors, setLoginErrors] = createSignal<{ [key: string]: string }>({});
 
-  const navigate = useNavigate();
+  const validateLoginForm = () => {
+    const newErrors: { [key: string]: string } = {};
+    if (!username()) newErrors.username = "Username is required";
+    else if (username()!.length < 4) newErrors.username = "Username must be at least 4 characters long";
+    if (!password()) newErrors.password = "Password is required";
+    else if (password()!.length < 8) newErrors.password = "Password must be at least 8 characters long";
+
+    setLoginErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const submit = async () => {
+    if (!validateLoginForm()) {
+      Swal.fire({
+        title: "Error",
+        text: "Please fix the errors in the form.",
+        icon: "error",
+      });
+      return;
+    }
+
     const formUsername = username();
     const formPassword = password();
 
@@ -192,7 +274,9 @@ const Login: Component = () => {
       <div class={styles.signinCardContainer}>
         <form class={styles.signinFormContainer}>
           <FormField getter={username} setter={setUsername} labelText="Username" />
+          {loginErrors().username && <p class={styles.errorText}>{loginErrors().username}</p>}
           <FormField getter={password} setter={setPassword} labelText="Password" password={true} />
+          {loginErrors().password && <p class={styles.errorText}>{loginErrors().password}</p>}
         </form>
         <Button.Root onClick={submit}>Submit</Button.Root>
       </div>

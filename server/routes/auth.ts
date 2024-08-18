@@ -74,6 +74,7 @@ export const auth = new Elysia({ prefix: "/auth" })
       detail: { tags: ["auth"] },
     },
   )
+
   .post(
     "/login",
     async ({ log, set, body: { identifier, key }, cookie: { access_token } }): Promise<ReturnUser | undefined> => {
@@ -124,6 +125,7 @@ export const auth = new Elysia({ prefix: "/auth" })
       detail: { tags: ["auth"] },
     },
   )
+
   .post(
     "/logout",
     async ({ log, set, cookie: { access_token } }) => {
@@ -145,6 +147,7 @@ export const auth = new Elysia({ prefix: "/auth" })
       detail: { tags: ["auth"] },
     },
   )
+
   .get(
     "/check-if-logged-in",
     async ({ log, set, userId }) => {
