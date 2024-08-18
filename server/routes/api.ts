@@ -17,7 +17,12 @@ export const api = new Elysia({ prefix: "/api" })
       set.status = 200;
       return municipalities.map((m) => m.name);
     },
-    { detail: { tags: ["api"] } },
+    {
+      detail: {
+        tags: ["api"],
+        description: "Get all municipalities from the database",
+      },
+    },
   )
 
   .get(
@@ -31,7 +36,12 @@ export const api = new Elysia({ prefix: "/api" })
       set.status = 200;
       return organizations.map((o) => o.name);
     },
-    { detail: { tags: ["api"] } },
+    {
+      detail: {
+        tags: ["api"],
+        description: "Get all organizations from the database",
+      },
+    },
   )
 
   .post(
@@ -52,8 +62,14 @@ export const api = new Elysia({ prefix: "/api" })
         return { error: "Failed to fetch organizations" };
       }
     },
-    { detail: { tags: ["api"] } },
+    {
+      detail: {
+        tags: ["api"],
+        description: "Get all organizations of a given municipality via its name",
+      },
+    },
   )
+  
   .post(
     "/compile",
     async ({ log, set, body: { code }, userId }) => {
@@ -92,6 +108,7 @@ export const api = new Elysia({ prefix: "/api" })
       detail: { tags: ["api"] },
     },
   )
+
   .post(
     "/check",
     async ({ log, set, userId, body: { code } }) => {
@@ -132,6 +149,7 @@ export const api = new Elysia({ prefix: "/api" })
       detail: { tags: ["api"] },
     },
   )
+
   .get(
     "/documents",
     async ({ log, set, userId }): Promise<Document[]> => {
@@ -141,9 +159,13 @@ export const api = new Elysia({ prefix: "/api" })
     },
     {
       beforeHandle: authMiddleware,
-      detail: { tags: ["api"] },
+      detail: {
+        tags: ["api"],
+        description: "Get all documents of a user by user ID",
+      },
     },
   )
+
   .post(
     "/test",
     async ({ log, set, body: { code }, userId }) => {

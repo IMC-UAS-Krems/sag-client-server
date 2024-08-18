@@ -71,7 +71,10 @@ export const auth = new Elysia({ prefix: "/auth" })
       cookie: t.Cookie({
         access_token: t.Optional(t.String()),
       }),
-      detail: { tags: ["auth"] },
+      detail: {
+        tags: ["auth"],
+        description: "Register a new user and log them in by setting an access token cookie",
+      },
     },
   )
 
@@ -116,13 +119,16 @@ export const auth = new Elysia({ prefix: "/auth" })
     },
     {
       body: t.Object({
-        identifier: t.String() /** <-- Check for both email and username */,
+        identifier: t.String({ minLength: 4 }) /** <-- Check for both email and username */,
         key: t.String({ minLength: 8 }),
       }),
       cookie: t.Cookie({
         access_token: t.Optional(t.String()),
       }),
-      detail: { tags: ["auth"] },
+      detail: {
+        tags: ["auth"],
+        description: "Authenticate and log in a user by setting an access token cookie",
+      },
     },
   )
 
@@ -144,7 +150,10 @@ export const auth = new Elysia({ prefix: "/auth" })
       cookie: t.Cookie({
         access_token: t.String(),
       }),
-      detail: { tags: ["auth"] },
+      detail: {
+        tags: ["auth"],
+        description: "Log out a user by deleting the access token cookie",
+      },
     },
   )
 

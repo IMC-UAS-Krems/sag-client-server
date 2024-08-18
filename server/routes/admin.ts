@@ -47,7 +47,10 @@ export const admin = new Elysia({ prefix: "/admin" })
     },
     {
       beforeHandle: authMiddleware,
-      detail: { tags: ["admin"] },
+      detail: {
+        tags: ["admin"],
+        description: "Get all users from the database",
+      },
     },
   )
 
@@ -68,13 +71,15 @@ export const admin = new Elysia({ prefix: "/admin" })
     },
     {
       beforeHandle: authMiddleware,
-      detail: { tags: ["admin"] },
+      detail: {
+        tags: ["admin"],
+        description: "Delete a user from the database by ID",
+      },
       body: t.Object({
         userId: t.String(),
       }),
     },
   )
-
 
   .post(
     "/createUser",
@@ -108,11 +113,14 @@ export const admin = new Elysia({ prefix: "/admin" })
     },
     {
       beforeHandle: authMiddleware,
-      detail: { tags: ["admin"] },
+      detail: {
+        tags: ["admin"],
+        description: "Create a new user in the database with the provided details",
+      },
       body: t.Object({
-        username: t.String(),
-        password: t.String(),
-        name: t.String(),
+        username: t.String({ minLength: 4 }),
+        password: t.String({ minLength: 8 }),
+        name: t.String({ minLength: 4 }),
         email: t.String({ format: "email" }),
         userRole: t.Enum(UserRole),
         organizationName: t.String(),
@@ -120,6 +128,7 @@ export const admin = new Elysia({ prefix: "/admin" })
       }),
     },
   )
+
   .get(
     "/update-user",
     async ({ log, set, query }: { log: any; set: any; query: { userId: string } }) => {
@@ -141,7 +150,10 @@ export const admin = new Elysia({ prefix: "/admin" })
     },
     {
       beforeHandle: authMiddleware,
-      detail: { tags: ["admin"] },
+      detail: {
+        tags: ["admin"],
+        description: "Get the details of a user by ID",
+      },
       query: t.Object({
         userId: t.String(),
       }),
@@ -175,12 +187,15 @@ export const admin = new Elysia({ prefix: "/admin" })
     },
     {
       beforeHandle: authMiddleware,
-      detail: { tags: ["admin"] },
+      detail: {
+        tags: ["admin"],
+        description: "Update the details of a user by ID, only the fields that are provided will be updated",
+      },
       body: t.Object({
         userId: t.String(),
-        username: t.Optional(t.String()),
-        password: t.Optional(t.String()),
-        name: t.Optional(t.String()),
+        username: t.Optional(t.String({ minLength: 4 })),
+        password: t.Optional(t.String({ minLength: 8 })),
+        name: t.Optional(t.String({ minLength: 4 })),
         email: t.Optional(t.String({ format: "email" })),
         organization: t.Optional(t.String()),
         municipality: t.Optional(t.String()),
@@ -256,7 +271,10 @@ export const admin = new Elysia({ prefix: "/admin" })
     {
       beforeHandle: authMiddleware,
 
-      detail: { tags: ["admin"] },
+      detail: {
+        tags: ["admin"],
+        description: "Log out a user by ID",
+      },
       body: t.Object({
         userId: t.String(),
       }),
