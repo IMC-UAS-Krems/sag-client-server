@@ -5,6 +5,21 @@ import "../../../node_modules/solid-contextmenu/dist/style.css";
 import { eden } from "@client/api";
 import { file } from "bun";
 
+/*
+{
+      body: t.Object({
+        name: t.String(),
+        projectName: t.String(),
+        organizationName: t.String(),
+        municipalityName: t.String(),
+        path: t.String(),
+        documentType: t.Union([t.Literal("file"), t.Literal("folder")]),
+      }),
+      beforeHandle: authMiddleware,
+      detail: { tags: ["api"], description: "Create a new document" },
+    },
+*/
+
 interface File {
   name: string;
   isExpanded: boolean;
@@ -12,11 +27,11 @@ interface File {
   files?: File[];
   isSelected?: boolean;
   //
-  municipalityName?: string;
-  orgName?: string;
-  projectName?: string;
-  documentType?: string;
-  documentPath?: string;
+  municipalityName: string;
+  orgName: string;
+  projectName: string;
+  documentType: "file" | "folder";
+  documentPath: string;
 }
 
 /*interface newFile {
@@ -55,50 +70,24 @@ export function LeftSideBar(props: LeftSideBarProps) {
     );
     return filesFetched.data as File[];
   }
-  /*
-  .post(
-    "/documents",
-    async ({ log, set, body, userId }) => {
-      const { name, content, projectName, organizationName, municipalityName, path, documentType } = body;
-      const document = await sql.createDocument(name, content, userId, projectName, organizationName, municipalityName, path, documentType);
-      set.status = 200;
-      return document;
-    },
-    {
-      body: t.Object({
-        name: t.String(),
-        content: t.String(),
-        projectName: t.String(),
-        organizationName: t.String(),
-        municipalityName: t.String(),
-        path: t.String(),
-        documentType: t.String(),
-      }),
-      beforeHandle: authMiddleware,
-      detail: { tags: ["api"] },
-    },
-  )
-  */
+
   const addSingleFileOrFolder = async (file: File) => {
-    let addedSingleFileOrFolder = await eden.api.documents.post(
+    let addedFileOrFolder = await eden.api.document.post(
       {
         $fetch: {
           mode: "cors",
           credentials: "include",
           method: "POST",
-          
         },
         name: file.name,
-        path: file.documentPath || "",
-        content: file.content || "",
-        projectName: file.projectName || "",
-        organizationName: file.orgName || "",
-        municipalityName: file.municipalityName || "",
-        documentType: file.documentType || "",
-      },
-    );
-  }
-    
+        path: file.documentPath,
+        projectName: file.projectName,
+        organizationName: file.orgName,
+        municipalityName: file.municipalityName,
+        documentType: file.documentType,
+      });
+    }
+      
   const updateFiles = async (files: File[]) => {
     let updatedFiles = await eden.api.documents.get(
       {
@@ -130,52 +119,6 @@ export function LeftSideBar(props: LeftSideBarProps) {
     return updatedFiles.data as File[];
   }*/
 
-  
-  /*
-  {municipalityName: 'Krems', orgName: 'Imc', projectName: 'Project 1', documentType: 'FOLDER', documentPath: 'Folder-1'}
-1
-: 
-{municipalityName: 'Krems', orgName: 'Imc', projectName: 'Project 1', documentType: 'FILE', documentPath: 'File-1'}
-2
-: 
-{municipalityName: 'Krems', orgName: 'Imc', projectName: 'Project 1', documentType: 'FILE', documentPath: 'File-2'}
-3
-: 
-{municipalityName: 'Krems', orgName: 'Imc', projectName: 'Project 1', documentType: 'FILE', documentPath: 'Folder-1.File-1'}
-4
-: 
-{municipalityName: 'Krems', orgName: 'Imc', projectName: 'Project 2', documentType: 'FILE', documentPath: 'File-1'}
-5
-: 
-{municipalityName: 'Krems', orgName: 'Sagittarius', projectName: 'Project 1', documentType: 'FOLDER', documentPath: 'Folder-1'}
-6
-: 
-{municipalityName: 'Krems', orgName: 'Sagittarius', projectName: 'Project 1', documentType: 'FILE', documentPath: 'File-1'}
-7
-: 
-{municipalityName: 'Krems', orgName: 'Sagittarius', projectName: 'Project 1', documentType: 'FILE', documentPath: 'File-2'}
-8
-: 
-{municipalityName: 'Krems', orgName: 'Sagittarius', projectName: 'Project 1', documentType: 'FILE', documentPath: 'Folder-1.File-1'}
-9
-: 
-{municipalityName: 'Krems', orgName: 'Sagittarius', projectName: 'Project 2', documentType: 'FILE', documentPath: 'File-1'}
-10
-: 
-{municipalityName: 'St. Pölten', orgName: 'FHSTP', projectName: 'Project 1', documentType: 'FOLDER', documentPath: 'Folder-1'}
-11
-: 
-{municipalityName: 'St. Pölten', orgName: 'FHSTP', projectName: 'Project 1', documentType: 'FILE', documentPath: 'File-1'}
-12
-: 
-{municipalityName: 'St. Pölten', orgName: 'FHSTP', projectName: 'Project 1', documentType: 'FILE', documentPath: 'File-2'}
-13
-: 
-{municipalityName: 'St. Pölten', orgName: 'FHSTP', projectName: 'Project 1', documentType: 'FILE', documentPath: 'Folder-1.File-1'}
-14
-: 
-{municipalityName: 'St. Pölten', orgName: 'FHSTP', projectName: 'Project 2', documentType: 'FILE', documentPath: 'File-1'}
-  */
   onMount(async () => {
     const initialFiles = await fetchFiles();
     if (!Array.isArray(initialFiles)) {
@@ -315,10 +258,13 @@ export function LeftSideBar(props: LeftSideBarProps) {
       if (newFolderName !== null) {
         const updatedFiles = [...files(), { name: newFolderName, isExpanded: false, files: [] }];
         addSingleFileOrFolder({
-          name: newFolderName, documentPath: newFolderName, documentType: 'FOLDER',
-          isExpanded: false
+          name: newFolderName, documentPath: newFolderName, documentType: 'folder',
+          isExpanded: false,
+          municipalityName: "",
+          orgName: "",
+          projectName: ""
         });
-        setFilesAndUpdate(updatedFiles);
+        setFilesAndUpdate(updatedFiles as File[]);
       }
     } else if (action === "Add file" && rightClickedFileOrFolder === null) {
       const newFileName = prompt("Enter new file name:");
@@ -341,7 +287,7 @@ export function LeftSideBar(props: LeftSideBarProps) {
             isSelected: false,
           },
         ];
-        setFilesAndUpdate(updatedFiles);
+        setFilesAndUpdate(updatedFiles as File[]);
       }
     } else if (action === "Save" && rightClickedFileOrFolder === null) {
       Swal.fire("Error", "Please right-click on a file in order to save its content.", "error");
@@ -385,6 +331,11 @@ export function LeftSideBar(props: LeftSideBarProps) {
           name: newFolderName,
           isExpanded: false,
           files: [],
+          municipalityName: "",
+          orgName: "",
+          projectName: "",
+          documentType: "",
+          documentPath: ""
         });
         setFilesAndUpdate([...files()]);
       }
@@ -406,6 +357,11 @@ export function LeftSideBar(props: LeftSideBarProps) {
           isExpanded: false,
           content: "",
           isSelected: false,
+          municipalityName: "",
+          orgName: "",
+          projectName: "",
+          documentType: "",
+          documentPath: ""
         });
         setFilesAndUpdate([...files()]);
       }
@@ -473,7 +429,7 @@ export function LeftSideBar(props: LeftSideBarProps) {
         {files.map((file) => (
           <li>
             <div style={{ display: "flex", "align-items": "center" }}>
-              <span style={{ cursor: "default" }}>{file.documentType === 'FOLDER' ? '📁' : '📄'}</span>
+              <span style={{ cursor: "default" }}>{file.documentType === 'folder' ? '📁' : '📄'}</span>
               <span
                 onClick={() => {
                   handleClick(file);
