@@ -9,6 +9,21 @@ import { eden } from "@client/api";
 import { theme } from "@store/index";
 import { file } from "bun";
 
+/*
+{
+      body: t.Object({
+        name: t.String(),
+        projectName: t.String(),
+        organizationName: t.String(),
+        municipalityName: t.String(),
+        path: t.String(),
+        documentType: t.Union([t.Literal("file"), t.Literal("folder")]),
+      }),
+      beforeHandle: authMiddleware,
+      detail: { tags: ["api"], description: "Create a new document" },
+    },
+*/
+
 interface File {
   name: string;
   isExpanded: boolean;
@@ -16,11 +31,11 @@ interface File {
   files?: File[];
   isSelected?: boolean;
   //
-  municipalityName?: string;
-  orgName?: string;
-  projectName?: string;
-  documentType?: string;
-  documentPath?: string;
+  municipalityName: string;
+  orgName: string;
+  projectName: string;
+  documentType: "file" | "folder";
+  documentPath: string;
 }
 
 /*interface newFile {
@@ -317,7 +332,7 @@ export function LeftSideBar(props: LeftSideBarProps) {
           documentType: "FOLDER",
           isExpanded: false,
         });
-        setFilesAndUpdate(updatedFiles);
+        setFilesAndUpdate(updatedFiles as File[]);
       }
     } else if (action === "Add file" && rightClickedFileOrFolder === null) {
       const newFileName = prompt("Enter new file name:");
@@ -340,7 +355,7 @@ export function LeftSideBar(props: LeftSideBarProps) {
             isSelected: false,
           },
         ];
-        setFilesAndUpdate(updatedFiles);
+        setFilesAndUpdate(updatedFiles as File[]);
       }
     } else if (action === "Save" && rightClickedFileOrFolder === null) {
       Swal.fire("Error", "Please right-click on a file in order to save its content.", "error");
@@ -384,6 +399,11 @@ export function LeftSideBar(props: LeftSideBarProps) {
           name: newFolderName,
           isExpanded: false,
           files: [],
+          municipalityName: "",
+          orgName: "",
+          projectName: "",
+          documentType: "",
+          documentPath: "",
         });
         setFilesAndUpdate([...files()]);
       }
@@ -405,6 +425,11 @@ export function LeftSideBar(props: LeftSideBarProps) {
           isExpanded: false,
           content: "",
           isSelected: false,
+          municipalityName: "",
+          orgName: "",
+          projectName: "",
+          documentType: "",
+          documentPath: "",
         });
         setFilesAndUpdate([...files()]);
       }
