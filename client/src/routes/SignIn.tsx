@@ -105,20 +105,20 @@ const Register: Component = () => {
       return;
     }
 
-    const formName = name();
-    const formEmail = email();
-    const formUsername = username();
-    const formPassword = password();
-    const formMunicipality = municipality();
-    const formOrganization = organization();
+    const formName = name() ?? "";
+    const formEmail = email() ?? "";
+    const formUsername = username() ?? "";
+    const formPassword = password() ?? "";
+    const formMunicipality = municipality() ?? "";
+    const formOrganization = organization() ?? "";
 
     const registered = await eden.auth.register.post({
       name: formName,
       email: formEmail,
       username: formUsername,
       key: formPassword,
-      municipality: formMunicipality,
-      organization: formOrganization,
+      municipalityName: formMunicipality,
+      organizationName: formOrganization,
       $fetch: {
         mode: "cors",
         credentials: "include",
@@ -137,7 +137,7 @@ const Register: Component = () => {
 
     Swal.fire({
       title: "Success",
-      text: `Login successful.`,
+      text: `Registration successful.`,
       icon: "success",
     });
 

@@ -14,13 +14,22 @@ export const auth = new Elysia({ prefix: "/auth" })
     async ({
       log,
       set,
-      body: { name, email, username, key, municipality, organisation },
+      body: { name, email, username, key, municipalityName, organizationName },
       cookie: { access_token },
     }): Promise<ReturnUser | undefined> => {
       try {
         log.info("Trying to create user");
 
-        const userResult = await sql.createUser(username, key, name, email, organisation, municipality);
+        const userRole = "USER";
+        const userResult = await sql.createUser({
+          username,
+          password: key,
+          name,
+          email,
+          userRole,
+          organizationName,
+          municipalityName,
+        });
         if (!userResult) {
           set.status = 409; // Conflict
           log.warn(`Error creating user, user is ${userResult}`);
@@ -64,9 +73,9 @@ export const auth = new Elysia({ prefix: "/auth" })
         email: t.String({ format: "email" }),
         username: t.String({ minLength: 4 }),
         key: t.String({ minLength: 8 }),
-        municipality: t.String(),
-        organisation: t.String(),
-        project: t.Optional(t.String()),
+        municipalityName: t.String(),
+        organizationName: t.String(),
+        // project: t.Optional(t.String()),
       }),
       cookie: t.Cookie({
         access_token: t.Optional(t.String()),
