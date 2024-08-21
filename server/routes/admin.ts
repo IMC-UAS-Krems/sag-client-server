@@ -56,10 +56,9 @@ export const admin = new Elysia({ prefix: "/admin" })
 
   .delete(
     "/users",
-    async ({ log, set, body }: { log: any; set: any; body: DeleteUserRequestBody }) => {
+    async ({ log, set, body: { userId } }) => {
       try {
         log.info("Trying to delete user");
-        const { userId } = body;
         const user = await sql.deleteUser(userId);
         set.status = 200;
         return user;

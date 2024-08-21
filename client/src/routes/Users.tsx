@@ -3,6 +3,7 @@ import { Component, createSignal, onMount } from "solid-js";
 import { Menu, Item, useContextMenu, animation, Separator } from "solid-contextmenu";
 import { eden } from "@client/api";
 import { useNavigate } from "@solidjs/router";
+import authStore from "@store/authStore";
 
 import Swal from "sweetalert2";
 // import authStore from "@store/authStore";
@@ -35,6 +36,9 @@ interface UsersResponse {
 // TODO: If user is not an admin, they should not be able to access this page
 const Users: Component = () => {
   const navigate = useNavigate();
+  const loggedInUser = authStore.state().user;
+  console.log("Auth store:", authStore.state());
+  console.log("Logged in user:", loggedInUser);
 
   // User data
   const [users, setUsers] = createSignal<User[]>([]);
@@ -80,7 +84,6 @@ const Users: Component = () => {
     navigate(`/users/edit/${userId}`);
   }
 
-  // TODO: Check that this new delete logic works
   async function handleDeleteUser(userId: string) {
     console.log("Deleting user:", userId);
     Swal.fire({
@@ -95,14 +98,11 @@ const Users: Component = () => {
       if (result.isConfirmed) {
         try {
           const deletedUser = await eden.admin.users.delete({
+            userId: userId,
             $fetch: {
               mode: "cors",
               credentials: "include",
               method: "DELETE",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({ userId: userId }),
             },
           });
 
@@ -163,8 +163,8 @@ const Users: Component = () => {
                 const { show } = useContextMenu({ id: user.id });
  
                 return (
-                  <tr>
-                    {/* <tr key={user.id}> */}
+                  // TODO: Highlighting the logged in user works, but it disappears on page reload
+                  <tr class={user.email == loggedInUser ? styles.loggedInUser : ""}>
                     <td>{user.username}</td>
                     <td>{user.name}</td>
                     <td>{user.email}</td>

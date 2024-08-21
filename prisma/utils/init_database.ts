@@ -109,6 +109,25 @@ try {
 
   await prisma.user.create({
     data: {
+      id: "clxy0d4xo0003sw97z0cqzc0h",
+      name: "Example Admin",
+      email: "admin@example.com",
+      username: "admin",
+      password: "password123",
+      userRole: "ADMIN",
+      userType: UserType.SUPERUSER_GLOBAL,
+      organization: {
+        connect: { name: "Sagittarius" },
+      },
+      municipality: {
+        connect: { name: "Krems" },
+      },
+      project: undefined,
+    },
+  });
+
+  await prisma.user.create({
+    data: {
       id: "clxy0d4xo0003sw97z0cqzc0c",
       name: "test",
       email: "test@mail.com",

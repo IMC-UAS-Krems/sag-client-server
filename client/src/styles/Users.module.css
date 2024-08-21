@@ -58,6 +58,10 @@ td {
   text-align: center;
 }
 
+.loggedInUser {
+  background-color: var(--secondary-color);
+}
+
 /* HTML: <div class="loader"></div> */
 .loader {
   width: 50px;

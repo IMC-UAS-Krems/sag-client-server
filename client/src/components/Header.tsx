@@ -19,7 +19,7 @@ const Header: Component<{ children: JSX.Element }> = (props) => {
         method: "POST",
       },
     });
-    authStore.setState({ isAuthenticated: false, user: "" });
+    authStore.setState({ isAuthenticated: false, user: "", userRole: "" });
     navigate("/sign-in");
   };
 
@@ -36,11 +36,11 @@ const Header: Component<{ children: JSX.Element }> = (props) => {
       console.log(response);
       console.log(typeof response.data);
       if (response.status === 200 && response.data) {
-        authStore.setState({ isAuthenticated: true, user: response.data });
+        authStore.setState({ isAuthenticated: true, user: response.data.email, userRole: response.data.userRole });
         console.log("here");
         console.log(authStore.state());
       } else {
-        authStore.setState({ isAuthenticated: false, user: "" });
+        authStore.setState({ isAuthenticated: false, user: "", userRole: "" });
       }
     } catch (error) {
       console.error("Error checking authentication status", error);
@@ -64,15 +64,15 @@ const Header: Component<{ children: JSX.Element }> = (props) => {
             <li>
               <A href="/home">Home</A>
             </li>
-            {/* TODO: The editor should not be displayed when admin is using the page */}
-            <li>
-              <A href="/editor">Editor</A>
-            </li>
+            {authStore.state().userRole !== "ADMIN" && (
+              <li>
+                <A href="/editor">Editor</A>
+              </li>
+            )}
             <li>
               <A href="/about">About Us</A>
             </li>
-            {/* TODO: This should actually check whether the user status is Admin, status should probably be stored in Store */}
-            {authStore.state().user === "email@example6.com" && (
+            {authStore.state().userRole === "ADMIN" && (
               <li>
                 <A href="/users">Users</A>
               </li>
