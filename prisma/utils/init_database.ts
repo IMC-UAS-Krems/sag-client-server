@@ -133,6 +133,7 @@ try {
       username: "test@mail.com",
       password: "password123",
       userRole: "Manager",
+      userType: UserType.SUPERUSER_MUNICIPALITY,
       organization: {
         connect: { name: "Sagittarius" },
       },
