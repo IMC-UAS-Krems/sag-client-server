@@ -114,6 +114,7 @@ try {
       email: "test@mail.com",
       username: "test@mail.com",
       password: "password123",
+      userType: UserType.SUPERUSER_MUNICIPALITY,
       organization: {
         connect: { name: "Sagittarius" },
       },
