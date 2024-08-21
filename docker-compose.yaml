@@ -1,6 +1,7 @@
 # version: '3'
 
 name: sagittarius-web
+
 services:
   db:
     container_name: sagittarius-db
@@ -27,6 +28,7 @@ services:
     # command: ["postgres", "-c", "log_statement=all"]
 
   db-setup:
+    container_name: sagittarius-db-setup
     build:
       context: ./prisma/
       dockerfile: utils/Dockerfile.db_setup
@@ -42,6 +44,8 @@ services:
           memory: 512M
         reservations:
           memory: 256M
+    extra_hosts:
+      - "localhost:host-gateway"
 
 
   server:
@@ -66,6 +70,8 @@ services:
           memory: 512M
         reservations:
           memory: 256M
+    extra_hosts:
+      - "localhost:host-gateway"
 
   client:
     container_name: sagittarius-client
