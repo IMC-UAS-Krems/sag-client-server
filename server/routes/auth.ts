@@ -4,6 +4,7 @@ import { panic } from "@utils/panic";
 import { UserDocument, sql } from "@server/sql";
 import { Prisma } from "@prisma/client";
 import { authMiddleware } from "@server/middleware";
+import { SagError } from "@server/errors";
 
 export const { encrypt, decrypt } = new crypt(Bun.env.JWT_SECRET ?? panic("JWT_SECRET environment variable not set"));
 export type ReturnUser = Omit<UserDocument, "password" | "id">;
@@ -16,7 +17,7 @@ export const auth = new Elysia({ prefix: "/auth" })
       set,
       body: { name, email, username, key, municipality, organisation },
       cookie: { access_token },
-    }): Promise<ReturnUser | undefined> => {
+    }): Promise<ReturnUser | string | undefined> => {
       try {
         log.info("Trying to create user");
 
@@ -52,6 +53,10 @@ export const auth = new Elysia({ prefix: "/auth" })
         if (error instanceof Prisma.PrismaClientKnownRequestError) {
           log.error(`PRISMA ERROR: ${error.message}. CODE: ${error.code}`);
           set.status = 400; // Bad Request
+        } else if (error instanceof SagError) {
+          set.status = 400;
+          log.error(error.message);
+          return error.message;
         } else {
           log.error(error);
           set.status = 500; // Internal Server Error
