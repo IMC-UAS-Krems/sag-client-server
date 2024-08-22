@@ -6,7 +6,6 @@ import pretty from "pino-pretty";
 import { auth, decrypt } from "@server/routes/auth";
 import { api } from "@server/routes/api";
 import { admin } from "@server/routes/admin";
-import { sql } from "@server/sql";
 
 // TODO: @elysiajs/cookie not needed, can be reverted to original
 // TODO: check cors settings for production
@@ -43,7 +42,7 @@ const app = new Elysia()
   )
   .resolve(({ cookie: { access_token } }) => {
     if (access_token.value == null) {
-      return { userId: null };
+      return { userId: null, userRole: "USER" };
     }
     const id = decrypt(access_token.value) as string;
     return { userId: id };

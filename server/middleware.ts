@@ -1,13 +1,8 @@
 import { sql } from "./sql";
 import { Context } from "elysia";
 
-interface CustomContext extends Context {
-  set: any;
-  userId?: string;
-  user?: any;
-}
 
-export const authMiddleware = async ({ set, userId }: CustomContext): Promise<void> => {
+export const authMiddleware = async ({ set, userId })  => {
   // Check if userId is provided
   if (!userId) {
     set.status = 401;

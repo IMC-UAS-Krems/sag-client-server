@@ -175,7 +175,7 @@ export const auth = new Elysia({ prefix: "/auth" })
       if (user == null) {
         set.status = 401;
       }
-      return { email: user.email, userRole: user.userRole };
+      return { userId: user.userId, userRole: user.userRole };
     },
     {
       cookie: t.Cookie({

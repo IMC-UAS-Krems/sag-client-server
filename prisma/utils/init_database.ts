@@ -96,6 +96,7 @@ try {
       email: "email@example6.com",
       username: "email@example6.com",
       password: "password123",
+      userRole: "USER",
       userType: UserType.SUPERUSER_GLOBAL,
       organization: {
         connect: { name: "Imc" },
@@ -133,6 +134,7 @@ try {
       email: "test@mail.com",
       username: "test@mail.com",
       password: "password123",
+      userRole: "USER",
       organization: {
         connect: { name: "Sagittarius" },
       },
@@ -150,6 +152,7 @@ try {
       email: "mike@mail.com",
       username: "mike@mail.com",
       password: "password123",
+      userRole: "USER",
       organization: {
         connect: { name: "FHSTP" },
       },
