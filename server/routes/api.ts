@@ -186,7 +186,7 @@ export const api = new Elysia({ prefix: "/api" })
       set,
       body: { name, projectName, organizationName, municipalityName, path, documentType },
       userId,
-    }) => {
+    }): Promise<Document[] | string> => {
       let result: number;
 
       try {
@@ -217,7 +217,7 @@ export const api = new Elysia({ prefix: "/api" })
       }
 
       set.status = 200;
-      return "Document created";
+      return sql.getDocuments(userId);
     },
     {
       body: t.Object({
