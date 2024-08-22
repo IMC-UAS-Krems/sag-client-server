@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { DocumentType, PrismaClient } from "@prisma/client";
 import { sql } from "@server/sql";
 import { afterAll, afterEach, beforeAll, describe, expect, mock, test } from "bun:test";
 import { GenericContainer, StartedTestContainer, Wait } from "testcontainers";
@@ -49,8 +49,8 @@ describe("Documents", () => {
   });
 
   afterAll(async () => {
-    await dbContainer.stop();
-    await dbSetupContainer.stop();
+    await dbContainer.stop({ remove: true });
+    await dbSetupContainer.stop({ remove: true });
   });
 
   afterEach(async () => {
@@ -244,6 +244,164 @@ describe("Documents", () => {
       );
       expect(result3).toBe(1);
     });
+
+    test("add new file", async () => {
+      // add new document in another municipality project
+      const result = await sql.createDocument(
+        "new-file",
+        "clxy0d4xo0003sw97z0cqzc0s",
+        "Project 1",
+        "FHSTP",
+        "St. Pölten",
+        "folder-1",
+        DocumentType.FILE,
+      );
+      expect(result).toBe(1);
+
+      // add new document in owned organization project
+      const result2 = await sql.createDocument(
+        "new-file",
+        "clxy0d4xo0003sw97z0cqzc0s",
+        "Project 1",
+        "Imc",
+        "Krems",
+        "folder-1",
+        DocumentType.FILE,
+      );
+      expect(result2).toBe(1);
+
+      // add new document in owned municipality project
+      const result3 = await sql.createDocument(
+        "new-file",
+        "clxy0d4xo0003sw97z0cqzc0s",
+        "Project 1",
+        "Sagittarius",
+        "Krems",
+        "folder-1",
+        DocumentType.FILE,
+      );
+      expect(result3).toBe(1);
+    });
+
+    test("add new file to unexisting folder", async () => {
+      // add new document in another municipality project
+      expect(async () => {
+        await sql.createDocument(
+          "new-file",
+          "clxy0d4xo0003sw97z0cqzc0s",
+          "Project 1",
+          "FHSTP",
+          "St. Pölten",
+          "something",
+          DocumentType.FILE,
+        );
+      }).toThrow();
+
+      // add new document in owned organization project
+      expect(async () => {
+        await sql.createDocument(
+          "new-file",
+          "clxy0d4xo0003sw97z0cqzc0s",
+          "Project 1",
+          "Imc",
+          "Krems",
+          "something",
+          DocumentType.FILE,
+        );
+      }).toThrow();
+
+      // add new document in owned municipality project
+      expect(async () => {
+        await sql.createDocument(
+          "new-file",
+          "clxy0d4xo0003sw97z0cqzc0s",
+          "Project 1",
+          "Sagittarius",
+          "Krems",
+          "something",
+          DocumentType.FILE,
+        );
+      }).toThrow();
+    });
+
+    test("add new folder", async () => {
+      // add new document in another municipality project
+      const result = await sql.createDocument(
+        "folder-new",
+        "clxy0d4xo0003sw97z0cqzc0s",
+        "Project 1",
+        "FHSTP",
+        "St. Pölten",
+        "folder-1",
+        DocumentType.FOLDER,
+      );
+      expect(result).toBe(1);
+
+      // add new document in owned organization project
+      const result2 = await sql.createDocument(
+        "new-folder",
+        "clxy0d4xo0003sw97z0cqzc0s",
+        "Project 1",
+        "Imc",
+        "Krems",
+        "folder-1",
+        DocumentType.FOLDER,
+      );
+      expect(result2).toBe(1);
+
+      // add new document in owned municipality project
+      const result3 = await sql.createDocument(
+        "new-folder",
+        "clxy0d4xo0003sw97z0cqzc0s",
+        "Project 1",
+        "Sagittarius",
+        "Krems",
+        "folder-1",
+        DocumentType.FOLDER,
+      );
+      expect(result3).toBe(1);
+    });
+
+    test("add new file to unexisting folder", async () => {
+      // add new document in another municipality project
+      expect(async () => {
+        await sql.createDocument(
+          "new-folder",
+          "clxy0d4xo0003sw97z0cqzc0s",
+          "Project 1",
+          "FHSTP",
+          "St. Pölten",
+          "something",
+          DocumentType.FOLDER,
+        );
+      }).toThrow();
+
+      // add new document in owned organization project
+      expect(async () => {
+        await sql.createDocument(
+          "new-folder",
+          "clxy0d4xo0003sw97z0cqzc0s",
+          "Project 1",
+          "Imc",
+          "Krems",
+          "something",
+          DocumentType.FOLDER,
+        );
+      }).toThrow();
+
+      // add new document in owned municipality project
+      expect(async () => {
+        await sql.createDocument(
+          "new-folder",
+          "clxy0d4xo0003sw97z0cqzc0s",
+          "Project 1",
+          "Sagittarius",
+          "Krems",
+          "something",
+          DocumentType.FOLDER,
+        );
+      }).toThrow();
+    });
   });
 
   describe("Documents with SUPERUSER_MUNICIPALITY", () => {
@@ -433,6 +591,166 @@ describe("Documents", () => {
       );
       expect(result3).toBe(1);
     });
+
+    test("add new file", async () => {
+      // add new document in another municipality project
+      expect(async () => {
+        await sql.createDocument(
+          "new-file",
+          "clxy0d4xo0003sw97z0cqzc0c",
+          "Project 1",
+          "FHSTP",
+          "St. Pölten",
+          "folder-1",
+          DocumentType.FILE,
+        );
+      }).toThrow("Can't create document, invalid permissions");
+
+      // add new document in owned organization project
+      const result2 = await sql.createDocument(
+        "new-file",
+        "clxy0d4xo0003sw97z0cqzc0c",
+        "Project 1",
+        "Imc",
+        "Krems",
+        "folder-1",
+        DocumentType.FILE,
+      );
+      expect(result2).toBe(1);
+
+      // add new document in owned municipality project
+      const result3 = await sql.createDocument(
+        "new-file",
+        "clxy0d4xo0003sw97z0cqzc0c",
+        "Project 1",
+        "Sagittarius",
+        "Krems",
+        "folder-1",
+        DocumentType.FILE,
+      );
+      expect(result3).toBe(1);
+    });
+
+    test("add new file to unexisting folder", async () => {
+      // add new document in another municipality project
+      expect(async () => {
+        await sql.createDocument(
+          "new-file",
+          "clxy0d4xo0003sw97z0cqzc0c",
+          "Project 1",
+          "FHSTP",
+          "St. Pölten",
+          "something",
+          DocumentType.FILE,
+        );
+      }).toThrow();
+
+      // add new document in owned organization project
+      expect(async () => {
+        await sql.createDocument(
+          "new-file",
+          "clxy0d4xo0003sw97z0cqzc0c",
+          "Project 1",
+          "Imc",
+          "Krems",
+          "something",
+          DocumentType.FILE,
+        );
+      }).toThrow();
+
+      // add new document in owned municipality project
+      expect(async () => {
+        await sql.createDocument(
+          "new-file",
+          "clxy0d4xo0003sw97z0cqzc0c",
+          "Project 1",
+          "Sagittarius",
+          "Krems",
+          "something",
+          DocumentType.FILE,
+        );
+      }).toThrow();
+    });
+
+    test("add new folder", async () => {
+      // add new document in another municipality project
+      expect(async () => {
+        await sql.createDocument(
+          "folder-new",
+          "clxy0d4xo0003sw97z0cqzc0c",
+          "Project 1",
+          "FHSTP",
+          "St. Pölten",
+          "folder-1",
+          DocumentType.FOLDER,
+        );
+      }).toThrow("Can't create document, invalid permissions");
+
+      // add new document in owned organization project
+      const result2 = await sql.createDocument(
+        "new-folder",
+        "clxy0d4xo0003sw97z0cqzc0c",
+        "Project 1",
+        "Imc",
+        "Krems",
+        "folder-1",
+        DocumentType.FOLDER,
+      );
+      expect(result2).toBe(1);
+
+      // add new document in owned municipality project
+      const result3 = await sql.createDocument(
+        "new-folder",
+        "clxy0d4xo0003sw97z0cqzc0c",
+        "Project 1",
+        "Sagittarius",
+        "Krems",
+        "folder-1",
+        DocumentType.FOLDER,
+      );
+      expect(result3).toBe(1);
+    });
+
+    test("add new file to unexisting folder", async () => {
+      // add new document in another municipality project
+      expect(async () => {
+        await sql.createDocument(
+          "new-folder",
+          "clxy0d4xo0003sw97z0cqzc0c",
+          "Project 1",
+          "FHSTP",
+          "St. Pölten",
+          "something",
+          DocumentType.FOLDER,
+        );
+      }).toThrow();
+
+      // add new document in owned organization project
+      expect(async () => {
+        await sql.createDocument(
+          "new-folder",
+          "clxy0d4xo0003sw97z0cqzc0c",
+          "Project 1",
+          "Imc",
+          "Krems",
+          "something",
+          DocumentType.FOLDER,
+        );
+      }).toThrow();
+
+      // add new document in owned municipality project
+      expect(async () => {
+        await sql.createDocument(
+          "new-folder",
+          "clxy0d4xo0003sw97z0cqzc0c",
+          "Project 1",
+          "Sagittarius",
+          "Krems",
+          "something",
+          DocumentType.FOLDER,
+        );
+      }).toThrow();
+    });
   });
 
   describe("Documents with DEFAULT USER", () => {
@@ -621,6 +939,183 @@ describe("Documents", () => {
         "folder-1.file-1",
       );
       expect(result3).toBe(0);
+    });
+
+    test("add new file", async () => {
+      // add new document in another municipality project
+      const result = await sql.createDocument(
+        "new-file",
+        "clxy0d4xo0003sw97z0cqzc1c",
+        "Project 1",
+        "FHSTP",
+        "St. Pölten",
+        "folder-1",
+        DocumentType.FILE,
+      );
+      expect(result).toBe(1);
+
+      // add new document in owned organization project
+      expect(async () => {
+        await sql.createDocument(
+          "new-file",
+          "clxy0d4xo0003sw97z0cqzc1c",
+          "Project 1",
+          "Imc",
+          "Krems",
+          "folder-1",
+          DocumentType.FILE,
+        );
+      }).toThrow("Can't create document, invalid permissions");
+
+      // add new document in owned municipality project
+      expect(async () => {
+        await sql.createDocument(
+          "new-file",
+          "clxy0d4xo0003sw97z0cqzc1c",
+          "Project 1",
+          "Sagittarius",
+          "Krems",
+          "folder-1",
+          DocumentType.FILE,
+        );
+      }).toThrow("Can't create document, invalid permissions");
+    });
+
+    test("add new file to unexisting folder", async () => {
+      // add new document in another municipality project
+      expect(async () => {
+        await sql.createDocument(
+          "new-file",
+          "clxy0d4xo0003sw97z0cqzc1c",
+          "Project 1",
+          "FHSTP",
+          "St. Pölten",
+          "something",
+          DocumentType.FILE,
+        );
+      }).toThrow();
+
+      // add new document in owned organization project
+      expect(async () => {
+        await sql.createDocument(
+          "new-file",
+          "clxy0d4xo0003sw97z0cqzc1c",
+          "Project 1",
+          "Imc",
+          "Krems",
+          "something",
+          DocumentType.FILE,
+        );
+      }).toThrow();
+
+      // add new document in owned municipality project
+      expect(async () => {
+        await sql.createDocument(
+          "new-file",
+          "clxy0d4xo0003sw97z0cqzc1c",
+          "Project 1",
+          "Sagittarius",
+          "Krems",
+          "something",
+          DocumentType.FILE,
+        );
+      }).toThrow();
+    });
+
+    test("add new folder", async () => {
+      // add new document in another municipality project
+      const result = await sql.createDocument(
+        "folder-new",
+        "clxy0d4xo0003sw97z0cqzc1c",
+        "Project 1",
+        "FHSTP",
+        "St. Pölten",
+        "folder-1",
+        DocumentType.FOLDER,
+      );
+      expect(result).toBe(1);
+
+      // add new document in owned organization project
+      expect(async () => {
+        await sql.createDocument(
+          "new-folder",
+          "clxy0d4xo0003sw97z0cqzc1c",
+          "Project 1",
+          "Imc",
+          "Krems",
+          "folder-1",
+          DocumentType.FOLDER,
+        );
+      }).toThrow("Can't create document, invalid permissions");
+
+      // add new document in owned municipality project
+      expect(async () => {
+        await sql.createDocument(
+          "new-folder",
+          "clxy0d4xo0003sw97z0cqzc1c",
+          "Project 1",
+          "Sagittarius",
+          "Krems",
+          "folder-1",
+          DocumentType.FOLDER,
+        );
+      }).toThrow("Can't create document, invalid permissions");
+    });
+
+    test("add new file to unexisting folder", async () => {
+      // add new document in another municipality project
+      expect(async () => {
+        await sql.createDocument(
+          "new-folder",
+          "clxy0d4xo0003sw97z0cqzc1c",
+          "Project 1",
+          "FHSTP",
+          "St. Pölten",
+          "something",
+          DocumentType.FOLDER,
+        );
+      }).toThrow();
+
+      // add new document in owned organization project
+      expect(async () => {
+        await sql.createDocument(
+          "new-folder",
+          "clxy0d4xo0003sw97z0cqzc1c",
+          "Project 1",
+          "Imc",
+          "Krems",
+          "something",
+          DocumentType.FOLDER,
+        );
+      }).toThrow();
+
+      // add new document in owned municipality project
+      expect(async () => {
+        await sql.createDocument(
+          "new-folder",
+          "clxy0d4xo0003sw97z0cqzc1c",
+          "Project 1",
+          "Sagittarius",
+          "Krems",
+          "something",
+          DocumentType.FOLDER,
+        );
+      }).toThrow();
+    });
+  });
+
+  describe.only("Generic tests", () => {
+    test("insert document with an empty path", async () => {
+      const result = await sql.createDocument(
+        "new_root",
+        "clxy0d4xo0003sw97z0cqzc0s",
+        "Project 1",
+        "Imc",
+        "Krems",
+        "",
+        DocumentType.FOLDER,
+      );
+      expect(result).toBe(1);
     });
   });
 });
