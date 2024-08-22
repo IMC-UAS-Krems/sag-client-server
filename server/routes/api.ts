@@ -3,6 +3,7 @@ import { prisma } from "@server/prisma";
 import { authMiddleware } from "@server/middleware";
 import { sql, Document } from "@server/sql";
 import { DocumentType } from "@prisma/client";
+import { SagError } from "@server/errors";
 
 const COMPILER_URL = Bun.env.COMPILER_URL || "http://localhost:8080";
 
@@ -118,19 +119,35 @@ export const api = new Elysia({ prefix: "/api" })
       body: { name, projectName, organizationName, municipalityName, path, documentType },
       userId,
     }) => {
-      const result = await sql.createDocument(
-        name,
-        userId,
-        projectName,
-        organizationName,
-        municipalityName,
-        path,
-        DocumentType[documentType.toUpperCase()],
-      );
+      let result: number;
+
+      try {
+        result = await sql.createDocument(
+          name,
+          userId,
+          projectName,
+          organizationName,
+          municipalityName,
+          path,
+          DocumentType[documentType.toUpperCase()],
+        );
+      } catch (e) {
+        if (e instanceof SagError) {
+          log.error(e);
+          set.status = 400;
+          return e.message;
+        }
+
+        log.error(e);
+        set.status = 500;
+        return "An error occurred";
+      }
+
       if (result === null || result < 1) {
         set.status = 400;
         return "Could not create document";
       }
+
       set.status = 200;
       return "Document created";
     },
