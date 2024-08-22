@@ -1,6 +1,7 @@
 import { createId } from "@paralleldrive/cuid2";
 import { prisma } from "@∆";
-import { Organization, Project, User, Municipality, UserType, DocumentType } from "@prisma/client";
+import { Organization, Project, User, Municipality, UserType, DocumentType, Prisma } from "@prisma/client";
+import { SagError } from "./errors";
 
 export type Document = {
   name: string;
@@ -30,9 +31,12 @@ export async function selectMunicipality(name: string): Promise<Municipality | n
   });
 }
 
+/**
+ * throws an error if the organization does not exist
+ */
 export async function createOrganization(name: string, municipalityName: string): Promise<Organization> {
   if (selectMunicipality(municipalityName) === null) {
-    throw new Error(`Municipality ${municipalityName} does not exist`);
+    throw new SagError(`Municipality ${municipalityName} does not exist`);
   }
   return await prisma.organization.create({
     data: {
@@ -52,9 +56,12 @@ export async function selectOrganization(name: string): Promise<Organization | n
   });
 }
 
+/**
+ * throws an error if the organization does not exist
+ */
 export async function createProject(name: string, organizationName: string): Promise<Project> {
   if ((await selectOrganization(organizationName)) === null) {
-    throw new Error(`Organization ${organizationName} does not exist`);
+    throw new SagError(`Organization ${organizationName} does not exist`);
   }
 
   return await prisma.project.create({
@@ -67,6 +74,9 @@ export async function createProject(name: string, organizationName: string): Pro
   });
 }
 
+/**
+ * throws an error if user can't be created
+ */
 export async function createUser(
   username: string,
   password: string,
@@ -90,13 +100,16 @@ export async function createUser(
     },
   });
   if (user === null) {
-    throw new Error(`User ${username} could not be created`);
+    throw new SagError(`User ${username} could not be created`);
   }
 
   (user as UserDocument).documents = await getDocuments(user.id);
   return user as UserDocument;
 }
 
+/**
+ * throws an error when all optional arguments are null
+ */
 export async function selectUser(
   userId?: string,
   email?: string,
@@ -104,7 +117,7 @@ export async function selectUser(
   includeDocuments: boolean = false,
 ): Promise<User | UserDocument | null> {
   if (userId === undefined && email === undefined && username === undefined) {
-    throw new Error("At least one of userId, email, or username must be provided");
+    throw new SagError("At least one of userId, email, or username must be provided");
   }
   let user: User | null = null;
   if (userId != undefined) {
@@ -135,6 +148,26 @@ export async function selectUser(
   return user;
 }
 
+export async function getDocumentFolderPath(
+  path: string,
+  projectName: string,
+  organizationName: string,
+  municipalityName: string,
+): Promise<{ path: string }[]> {
+  return await prisma.$queryRaw<{ path: string }[]>`
+    SELECT ltree2text(path) as path FROM documents
+    INNER JOIN projects ON projects.id = documents."projectId"
+    INNER JOIN organisations ON organisations.id = projects."organizationId"
+    INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
+    WHERE projects.name = ${projectName} AND organisations.name = ${organizationName} AND municipalities.name = ${municipalityName}
+    AND documents.path = text2ltree(${path}) AND documents."documentType" = 'FOLDER'::"DocumentType"
+    `;
+}
+
+/**
+ * throws an error if path is wrong
+ * throws an error if user does not have permissions to create document
+ */
 export async function createDocument(
   name: string,
   authorId: string,
@@ -143,21 +176,74 @@ export async function createDocument(
   municipalityName: string,
   path: string,
   documentType: DocumentType,
-) {
+): Promise<number> {
+  if (
+    path.length > 0 &&
+    (await getDocumentFolderPath(path, projectName, organizationName, municipalityName)).length < 1
+  ) {
+    throw new SagError(
+      `${path} does not exist in ${municipalityName}.${organizationName}.${projectName} or it's not a folder`,
+    );
+  }
+
   path =
     path.length == 0 ? name.toLowerCase().replaceAll(" ", "-") : `${path}.${name.toLowerCase().replaceAll(" ", "-")}`;
-  const docType = documentType === "FOLDER" ? "FOLDER" : "FILE";
-  return await prisma.$executeRaw`
-        INSERT INTO documents (id, name, content, "authorId", "projectId", path, "documentType")
-        VALUES (${createId()}, ${name}, '', ${authorId},
-          (SELECT id FROM projects WHERE projects.name = ${projectName}
-          AND projects."organizationId" =
-            (SELECT organisations.id FROM organisations
-              INNER JOIN users ON users."organizationId" = organisations.id
-              INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
-              WHERE organisations.name = ${organizationName} AND municipalities.name = ${municipalityName})),
-          text2ltree(${path}), ${docType}::"DocumentType")
-        `;
+
+  // @ts-ignore
+  const user: User | UserDocument = await selectUser(authorId);
+
+  try {
+    switch (user.userType) {
+      case UserType.DEFAULT: {
+        return await prisma.$executeRaw`
+            INSERT INTO documents (id, name, content, "authorId", "projectId", path, "documentType")
+            VALUES (${createId()}, ${name}, '', ${authorId},
+              (SELECT id FROM projects WHERE projects.name = ${projectName}
+              AND projects."organizationId" =
+                (SELECT organisations.id FROM organisations
+                  INNER JOIN users ON users."organizationId" = organisations.id
+                  INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
+                  WHERE organisations.name = ${organizationName} AND organisations.id = (SELECT "organizationId" FROM users WHERE id = ${authorId})
+                  AND municipalities.name = ${municipalityName} AND municipalities.id = (SELECT "municipalityId" FROM users WHERE id = ${authorId}))),
+              text2ltree(${path}), ${documentType}::"DocumentType")
+            `;
+      }
+      case UserType.SUPERUSER_MUNICIPALITY: {
+        return await prisma.$executeRaw`
+            INSERT INTO documents (id, name, content, "authorId", "projectId", path, "documentType")
+            VALUES (${createId()}, ${name}, '', ${authorId},
+              (SELECT id FROM projects WHERE projects.name = ${projectName}
+              AND projects."organizationId" =
+                (SELECT organisations.id FROM organisations
+                  INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
+                  WHERE organisations.name = ${organizationName}
+                  AND municipalities.name = ${municipalityName} AND municipalities.id = (SELECT "municipalityId" FROM users WHERE id = ${authorId}))),
+              text2ltree(${path}), ${documentType}::"DocumentType")
+            `;
+      }
+      case UserType.SUPERUSER_GLOBAL: {
+        return await prisma.$executeRaw`
+            INSERT INTO documents (id, name, content, "authorId", "projectId", path, "documentType")
+            VALUES (${createId()}, ${name}, '', ${authorId},
+              (SELECT id FROM projects WHERE projects.name = ${projectName}
+              AND projects."organizationId" =
+                (SELECT organisations.id FROM organisations
+                  INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
+                  WHERE organisations.name = ${organizationName} AND municipalities.name = ${municipalityName})),
+              text2ltree(${path}), ${documentType}::"DocumentType")
+            `;
+      }
+    }
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError) {
+      if (e.code == "P2010") {
+        throw new SagError("Can't create document, invalid permissions");
+      }
+    }
+    throw e;
+  }
+
+  //const docType = documentType === "FOLDER" ? "FOLDER" : "FILE";
 }
 
 /**
@@ -167,10 +253,8 @@ export async function createDocument(
  * when the `user.UserType` is `SUPERUSER_GLOBAL`, select documents from all municipalities
  */
 export async function getDocuments(userId: string): Promise<Document[]> {
-  const user = await selectUser(userId);
-  if (user === null) {
-    throw new Error(`User ${userId} does not exist`);
-  }
+  // @ts-ignore
+  const user: User | UserDocument = await selectUser(userId);
 
   switch (user.userType) {
     case UserType.DEFAULT: {
@@ -222,10 +306,9 @@ export async function getContent(
   projectName: string,
   documentPath: string,
 ): Promise<{ content: string }[]> {
-  const user = await selectUser(userId);
-  if (user === null) {
-    throw new Error(`User ${userId} does not exist`);
-  }
+  // @ts-ignore
+  const user: User | UserDocument = await selectUser(userId);
+
   switch (user.userType) {
     case UserType.DEFAULT: {
       return await prisma.$queryRaw<{ content: string }[]>`
@@ -277,10 +360,8 @@ export async function updateContent(
   documentPath: string,
   content: string,
 ) {
-  const user = await selectUser(authorId);
-  if (user === null) {
-    throw new Error(`User ${authorId} does not exist`);
-  }
+  // @ts-ignore
+  const user: User | UserDocument = await selectUser(authorId);
 
   switch (user.userType) {
     case UserType.DEFAULT: {
@@ -332,10 +413,9 @@ export async function deleteDocument(
   projectName: string,
   documentPath: string,
 ) {
-  const user = await selectUser(userId);
-  if (user === null) {
-    throw new Error(`User ${userId} does not exist`);
-  }
+  // @ts-ignore
+  const user: User | UserDocument = await selectUser(userId);
+
   switch (user.userType) {
     case UserType.DEFAULT: {
       return await prisma.$executeRaw`
