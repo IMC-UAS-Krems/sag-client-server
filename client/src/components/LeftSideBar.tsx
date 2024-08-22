@@ -334,7 +334,7 @@ export function LeftSideBar(props: LeftSideBarProps) {
           municipalityName: "",
           orgName: "",
           projectName: "",
-          documentType: "",
+          documentType: "folder",
           documentPath: ""
         });
         setFilesAndUpdate([...files()]);
@@ -360,7 +360,7 @@ export function LeftSideBar(props: LeftSideBarProps) {
           municipalityName: "",
           orgName: "",
           projectName: "",
-          documentType: "",
+          documentType: "file",
           documentPath: ""
         });
         setFilesAndUpdate([...files()]);
