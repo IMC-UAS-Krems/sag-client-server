@@ -22,6 +22,8 @@ documentType: file
 [Cookies]
 access_token: {{token}}
 HTTP 200
+[Asserts]
+jsonpath "$[*].documentPath" includes "test-document"
 
 
 POST http://localhost:9512/api/document
@@ -35,6 +37,8 @@ documentType: folder
 [Cookies]
 access_token: {{token}}
 HTTP 200
+[Asserts]
+jsonpath "$[*].documentPath" includes "test-folder"
 
 POST http://localhost:9512/api/document
 [FormParams]
@@ -47,6 +51,8 @@ documentType: file
 [Cookies]
 access_token: {{token}}
 HTTP 200
+[Asserts]
+jsonpath "$[*].documentPath" includes "test-folder.test-file-inside-folder"
 
 POST http://localhost:9512/api/document
 [FormParams]
@@ -59,6 +65,8 @@ documentType: folder
 [Cookies]
 access_token: {{token}}
 HTTP 200
+[Asserts]
+jsonpath "$[*].documentPath" includes "test-folder.test-folder-inside-folder"
 
 POST http://localhost:9512/api/document
 [FormParams]
@@ -71,6 +79,8 @@ documentType: file
 [Cookies]
 access_token: {{token}}
 HTTP 200
+[Asserts]
+jsonpath "$[*].documentPath" includes "test-folder.test-folder-inside-folder.egor-file"
 
 POST http://localhost:9512/api/document
 [FormParams]
@@ -83,6 +93,8 @@ documentType: file
 [Cookies]
 access_token: {{token}}
 HTTP 200
+[Asserts]
+jsonpath "$[*].documentPath" includes "test-folder.test-folder-inside-folder.egor-file-2"
 
 POST http://localhost:9512/api/document_content
 [FormParams]
