@@ -1104,7 +1104,7 @@ describe("Documents", () => {
     });
   });
 
-  describe.only("Generic tests", () => {
+  describe("Generic tests", () => {
     test("insert document with an empty path", async () => {
       const result = await sql.createDocument(
         "new_root",
