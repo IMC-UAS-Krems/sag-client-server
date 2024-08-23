@@ -18,7 +18,7 @@ export const auth = new Elysia({ prefix: "/auth" })
       cookie: { access_token },
     }): Promise<ReturnUser | undefined> => {
       try {
-        log.info("Trying to create user");
+        // log.info("Trying to create user");
 
         const userRole = "USER";
         const userResult = await sql.createUser({
@@ -141,6 +141,10 @@ export const auth = new Elysia({ prefix: "/auth" })
     },
   )
 
+  .onBeforeHandle(async ({ set, userId }) => {
+    return await authMiddleware({ set, userId });
+  })
+
   .post(
     "/logout",
     async ({ log, set, cookie: { access_token } }) => {
@@ -170,18 +174,17 @@ export const auth = new Elysia({ prefix: "/auth" })
     "/check-if-logged-in",
     async ({ log, set, userId }) => {
       const user = await sql.selectUser(userId);
-      console.log("Logged in user is:", user);
+      // console.log("Logged in user is:", user);
       set.status = 200;
       if (user == null) {
         set.status = 401;
       }
-      return { userId: user.userId, userRole: user.userRole };
+      return { email: user.email, userRole: user.userRole };
     },
     {
       cookie: t.Cookie({
         access_token: t.Optional(t.String()),
       }),
-      beforeHandle: authMiddleware,
       detail: {
         tags: ["auth"],
         description: "Check if the cookie from the request contains an access token and returns the user's email",

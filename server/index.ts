@@ -42,7 +42,7 @@ const app = new Elysia()
   )
   .resolve(({ cookie: { access_token } }) => {
     if (access_token.value == null) {
-      return { userId: null, userRole: "USER" };
+      return { userId: null };
     }
     const id = decrypt(access_token.value) as string;
     return { userId: id };

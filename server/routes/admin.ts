@@ -33,6 +33,10 @@ interface DeleteUserRequestBody {
 // }
 
 export const admin = new Elysia({ prefix: "/admin" })
+  .onBeforeHandle(async ({ set, userId }) => {
+    return await authMiddleware({ set, userId });
+  })
+
   .get(
     "/users",
     async ({ set }) => {
@@ -46,7 +50,6 @@ export const admin = new Elysia({ prefix: "/admin" })
       }
     },
     {
-      beforeHandle: authMiddleware,
       detail: {
         tags: ["admin"],
         description: "Get all users from the database",
@@ -69,7 +72,6 @@ export const admin = new Elysia({ prefix: "/admin" })
       }
     },
     {
-      beforeHandle: authMiddleware,
       detail: {
         tags: ["admin"],
         description: "Delete a user from the database by ID",
@@ -80,6 +82,7 @@ export const admin = new Elysia({ prefix: "/admin" })
     },
   )
 
+  // TODO: Specifically this is blocked by the authMiddleware for some reason
   .post(
     "/createUser",
     async ({ log, set, body }) => {
@@ -111,7 +114,6 @@ export const admin = new Elysia({ prefix: "/admin" })
       }
     },
     {
-      beforeHandle: authMiddleware,
       detail: {
         tags: ["admin"],
         description: "Create a new user in the database with the provided details",
@@ -148,7 +150,6 @@ export const admin = new Elysia({ prefix: "/admin" })
       }
     },
     {
-      beforeHandle: authMiddleware,
       detail: {
         tags: ["admin"],
         description: "Get the details of a user by ID",
@@ -185,7 +186,6 @@ export const admin = new Elysia({ prefix: "/admin" })
       }
     },
     {
-      beforeHandle: authMiddleware,
       detail: {
         tags: ["admin"],
         description: "Update the details of a user by ID, only the fields that are provided will be updated",
@@ -268,8 +268,6 @@ export const admin = new Elysia({ prefix: "/admin" })
       }
     },
     {
-      beforeHandle: authMiddleware,
-
       detail: {
         tags: ["admin"],
         description: "Log out a user by ID",

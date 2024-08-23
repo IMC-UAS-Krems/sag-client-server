@@ -1,31 +1,35 @@
+import { log } from "console";
 import { sql } from "./sql";
 import { Context } from "elysia";
 
 
-export const authMiddleware = async ({ set, userId })  => {
+export const authMiddleware = async ({ set, userId }: CustomContext): Promise<void> => {
+  console.info("Yay authentication middleware is running!");
+  console.info("Middleware User ID:", userId);
+  console.info("Middleware Set:", set);
   // Check if userId is provided
   if (!userId) {
+    console.error("Unauthorized: No user ID provided");
     set.status = 401;
-    set.body = { error: "Unauthorized: No user ID provided" };
-    return;
+    return { error: "Unauthorized: No user ID provided" };
   }
 
   try {
     // Fetch user from database
     const user = await sql.selectUser(userId);
     if (!user) {
+      console.error("Unauthorized: User not found");
       set.status = 401;
-      set.body = { error: "Unauthorized: User not found" };
-      return;
+      return { error: "Unauthorized: User not found" };
     }
 
     // Check session expiration
     const now = new Date();
     const sessionDuration = 60 * 60 * 24 * 2 * 1000; // 2 days
     if (now.getTime() - user.lastLoginTime.getTime() > sessionDuration || user.needsToBeLoggedOut) {
+      console.error("Session expired, please log in again");
       set.status = 401;
-      set.body = { error: "Session expired, please log in again" };
-      return;
+      return { error: "Session expired, please log in again" };
     }
 
     // Update last login time
@@ -36,6 +40,10 @@ export const authMiddleware = async ({ set, userId })  => {
   } catch (error) {
     console.error("Error in authMiddleware:", error);
     set.status = 500;
-    set.body = { error: "Internal Server Error" };
+    return { error: "Internal Server Error" };
   }
+
+  // Else just return
+  console.info("Middleware passed: User is authenticated");
+  return
 };

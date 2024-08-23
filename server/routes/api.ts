@@ -69,7 +69,11 @@ export const api = new Elysia({ prefix: "/api" })
       },
     },
   )
-  
+
+  .onBeforeHandle(async ({ set, userId }) => {
+    return await authMiddleware({ set, userId });
+  })
+
   .post(
     "/compile",
     async ({ log, set, body: { code }, userId }) => {
@@ -99,7 +103,6 @@ export const api = new Elysia({ prefix: "/api" })
       body: t.Object({
         code: t.String(),
       }),
-      beforeHandle: authMiddleware,
       response: t.Union([
         t.Object({ status: t.Literal("ok"), url: t.String() }),
         t.Object({ status: t.Literal("error"), errors: t.Array(t.Any()) }),
@@ -138,7 +141,6 @@ export const api = new Elysia({ prefix: "/api" })
       body: t.Object({
         code: t.String(),
       }),
-      beforeHandle: authMiddleware,
       response: t.Union([
         t.Object({ status: t.Literal("ok") }),
         t.Object({
@@ -158,7 +160,6 @@ export const api = new Elysia({ prefix: "/api" })
       return documents;
     },
     {
-      beforeHandle: authMiddleware,
       detail: {
         tags: ["api"],
         description: "Get all documents of a user by user ID",
@@ -198,7 +199,6 @@ export const api = new Elysia({ prefix: "/api" })
       body: t.Object({
         code: t.String(),
       }),
-      beforeHandle: authMiddleware,
       detail: { tags: ["api"] },
     },
   );
