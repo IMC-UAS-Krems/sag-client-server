@@ -144,7 +144,6 @@ const UsersEdit: Component = () => {
   });
 
   const validateForm = () => {
-    // TODO: Make a check such that at least something is changed
     if (!name() && !email() && !username() && !password() && !municipality() && !organization() && !userRole()) {
       return "No changes made";
     }

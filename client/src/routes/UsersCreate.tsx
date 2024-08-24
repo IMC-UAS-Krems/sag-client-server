@@ -132,7 +132,8 @@ const UsersCreate: Component = () => {
     console.log("Data to be submitted:", requestBody);
 
     try {
-      const response = await eden.admin.createUser.post(requestBody, {
+      const response = await eden.admin.createUser.post({
+        ...requestBody,
         $fetch: {
           mode: "cors",
           credentials: "include",

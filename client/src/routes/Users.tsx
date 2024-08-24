@@ -4,6 +4,7 @@ import { Menu, Item, useContextMenu, animation, Separator } from "solid-contextm
 import { eden } from "@client/api";
 import { useNavigate } from "@solidjs/router";
 import authStore from "@store/authStore";
+import { handleUnauthorized } from "@client/utils/authUtils";
 
 import Swal from "sweetalert2";
 // import authStore from "@store/authStore";
@@ -54,6 +55,12 @@ const Users: Component = () => {
           method: "GET",
         },
       });
+
+      // Unauthorized check - we are passing navigation function to handleUnauthorized
+      if (fetchedUsers.status === 401) {
+        handleUnauthorized(navigate);
+        return;
+      }
 
       if (fetchedUsers.data) {
         if (fetchedUsers.data.status === "error") {
@@ -132,7 +139,7 @@ const Users: Component = () => {
 
   const [_animation, setAnimation] = createSignal(animation.scale);
   const [_theme, setTheme] = createSignal<"light" | "dark">("light");
-  
+
   return (
     <Header>
       <main class={styles.usersMain}>
@@ -161,7 +168,7 @@ const Users: Component = () => {
             <tbody>
               {users().map((user) => {
                 const { show } = useContextMenu({ id: user.id });
- 
+
                 return (
                   // TODO: Highlighting the logged in user works, but it disappears on page reload
                   <tr class={user.email == loggedInUser ? styles.loggedInUser : ""}>
