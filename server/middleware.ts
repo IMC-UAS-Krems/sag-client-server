@@ -2,6 +2,10 @@ import { log } from "console";
 import { sql } from "./sql";
 import { Context } from "elysia";
 
+interface CustomContext {
+  set: any;
+  userId: string;
+}
 
 export const authMiddleware = async ({ set, userId }: CustomContext): Promise<void> => {
   console.info("Yay authentication middleware is running!");
@@ -47,3 +51,32 @@ export const authMiddleware = async ({ set, userId }: CustomContext): Promise<vo
   console.info("Middleware passed: User is authenticated");
   return
 };
+
+export const authAdminMiddleware = async (context: Context) => {
+  const { userId, set } = context;
+
+  if (!userId) {
+    set.status = 401;
+    context.body = { error: "Unauthorized: No user ID provided" };
+    return; 
+  }
+
+  const user = await sql.selectUser(userId);
+
+  if (!user) {
+    set.status = 401;
+    context.body = { error: "Unauthorized: User not found" };
+    return; 
+  }
+
+  // Check if the user is an admin
+  if (user.userRole !== "ADMIN") {
+    set.status = 403;
+    context.body = { error: "Access denied: Admins only" };
+    return;
+  }
+
+  (set as any).user = user;
+};
+
+

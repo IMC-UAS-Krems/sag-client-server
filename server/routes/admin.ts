@@ -2,6 +2,7 @@ import { authMiddleware } from "@server/middleware";
 import { Elysia, t } from "elysia";
 import { sql } from "@server/sql";
 import { UserRole } from "@server/prisma";
+import { authAdminMiddleware } from "@server/middleware";
 
 interface CreateUserRequestBody {
   username: string;
@@ -33,10 +34,7 @@ interface DeleteUserRequestBody {
 // }
 
 export const admin = new Elysia({ prefix: "/admin" })
-  .onBeforeHandle(async ({ set, userId }) => {
-    return await authMiddleware({ set, userId });
-  })
-
+  .onBeforeHandle(authAdminMiddleware)
   .get(
     "/users",
     async ({ set }) => {
