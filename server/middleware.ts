@@ -37,7 +37,10 @@ export const authMiddleware = async ({ set, userId }: CustomContext): Promise<vo
     }
 
     // Update last login time
-    await sql.updateUser(user.id, { lastLoginTime: now });
+    await sql.updateUser(user.id, { 
+      lastLoginTime: now , 
+      needsToBeLoggedOut: false 
+    });
 
     // Attach user to context
     (set as any).user = user;

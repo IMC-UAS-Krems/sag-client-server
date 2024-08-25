@@ -29,6 +29,10 @@ interface DeleteUserRequestBody {
   userId: string;
 }
 
+interface LogoutUserRequestBody {
+  userId: string;
+}
+
 // interface GetUserRequestBody {
 //   userId: string;
 // }
@@ -80,7 +84,6 @@ export const admin = new Elysia({ prefix: "/admin" })
     },
   )
 
-  // TODO: Specifically this is blocked by the authMiddleware for some reason
   .post(
     "/createUser",
     async ({ log, set, body }) => {
@@ -203,58 +206,28 @@ export const admin = new Elysia({ prefix: "/admin" })
 
   .post(
     "/logout-user",
-    async ({
-      log,
-      set,
-      body: { userId },
-      cookie,
-    }: {
-      log: any;
-      set: any;
-      body: { userId: string };
-      cookie: { access_token: any };
-    }) => {
+    async ({ log, set, body }: { log: any; set: any; body: LogoutUserRequestBody }) => {
+      log.info(`Request body: ${JSON.stringify(body)}`);
       try {
+        const userId = body.userId;
+
+        if (!userId) {
+          set.status = 400;
+          return { status: "error", message: "User ID is required." };
+        }
+
         log.info(`Admin attempting to log out user with ID: ${userId}`);
 
         const user = await sql.selectUser(userId);
-
-        // Ensure that only admins can access this endpoint
-        if (!access_token) {
-          set.status = 401;
-          return { status: "error", message: "Unauthorized" };
-        }
-
-        if (user.userRole !== UserRole.ADMIN) {
-          set.status = 403;
-          return { status: "error", message: "Forbidden for non admins" };
-        }
 
         if (!user) {
           set.status = 404;
           return { status: "error", message: "User not found." };
         }
 
-        await sql.updateUser(
-          userId,
-          undefined,
-          undefined,
-          undefined,
-          undefined,
-          undefined,
-          undefined,
-          undefined,
-          undefined,
-          true,
-        );
 
-        cookie.access_token.set({
-          httpOnly: true,
-          secure: true,
-          sameSite: "none",
-          path: "/",
-          value: "",
-          expires: new Date(0), // st the cookie to expire immediately to log out the user
+        await sql.updateUser(userId, {
+          needsToBeLoggedOut: true,
         });
 
         set.status = 200;
@@ -273,8 +246,6 @@ export const admin = new Elysia({ prefix: "/admin" })
       body: t.Object({
         userId: t.String(),
       }),
-      cookie: t.Cookie({
-        access_token: t.String(),
-      }),
     },
   );
+

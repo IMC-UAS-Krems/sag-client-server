@@ -12,6 +12,8 @@ import Swal from "sweetalert2";
 import "../../../node_modules/solid-contextmenu/dist/style.css";
 import styles from "@styles/Users.module.css";
 
+import { isUserOnline } from "@client/utils/authUtils";
+
 // User interface
 interface User {
   id: string;
@@ -22,7 +24,7 @@ interface User {
   organizationId: string;
   municipalityName: string;
   organizationName: string;
-  // loggedIn: boolean;
+  needsToBeLoggedOut: boolean;
 }
 
 // Response structure
@@ -34,7 +36,6 @@ interface UsersResponse {
   headers: Record<string, string>;
 }
 
-// TODO: If user is not an admin, they should not be able to access this page
 const Users: Component = () => {
   const navigate = useNavigate();
   const loggedInUser = authStore.state().user;
@@ -45,6 +46,7 @@ const Users: Component = () => {
   const [users, setUsers] = createSignal<User[]>([]);
   const [loading, setLoading] = createSignal(true);
   const [error, setError] = createSignal<string | null>(null);
+  const [onlineStatuses, setOnlineStatuses] = createSignal<Record<string, boolean>>({});
 
   onMount(async () => {
     try {
@@ -67,6 +69,7 @@ const Users: Component = () => {
           setError(fetchedUsers.data.error || "Unknown error");
         } else {
           setUsers(fetchedUsers.data);
+          await updateOnlineStatuses(fetchedUsers.data)
           console.log("Fetch:", fetchedUsers);
           console.log("Fetched users:", fetchedUsers.data);
         }
@@ -80,6 +83,16 @@ const Users: Component = () => {
       setLoading(false);
     }
   });
+
+  async function updateOnlineStatuses(users: User[]) {
+    const statuses: Record<string, boolean> = {};
+    for (const user of users) {
+      statuses[user.id] = await isUserOnline(user);
+    }
+    setOnlineStatuses(statuses);
+  }
+
+
 
   async function handleCreateUser() {
     // console.log("Creating user");
@@ -137,6 +150,68 @@ const Users: Component = () => {
     });
   }
 
+  async function handleLogOutUser(userId: string) {
+    console.log("Logging out user:", userId);
+    Swal.fire({
+      title: "Are you sure?",
+      text: "This will log out the user.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#3085d6",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "Yes, log out!",
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        try {
+
+          const requestBody = {
+            userId: userId,
+          }
+          const response = await eden.admin["logout-user"].post({
+            ...requestBody,
+            $fetch: {
+              mode: "cors",
+              credentials: "include",
+              method: "POST",
+            },
+          });
+          console.log("Response:", response);
+
+          if (!response.data || response.error) {
+            console.log("Failed to log out user:", response.error);
+            Swal.fire({
+              title: "Error",
+              text: "Couldn't log out the user",
+              icon: "error",
+            });
+            return;
+          }
+
+          if (response.status !== 200 || response.data.error) {
+            console.log("Failed to log out user:", response.data.error);
+            Swal.fire({
+              title: "Error",
+              text: "Couldn't log out the user",
+              icon: "error",
+            });
+            return;
+          } else {
+            Swal.fire("Logged out!", "The user has been logged out.", "success");
+            await updateOnlineStatuses(users());
+            setUsers([...users()]);
+          }
+        } catch (error) {
+          console.error("Failed to log out user:", error);
+          Swal.fire({
+            title: "Error",
+            text: "Couldn't log out the user",
+            icon: "error",
+          });
+        }
+      }
+    });
+  }
+
   const [_animation, setAnimation] = createSignal(animation.scale);
   const [_theme, setTheme] = createSignal<"light" | "dark">("light");
 
@@ -168,6 +243,7 @@ const Users: Component = () => {
             <tbody>
               {users().map((user) => {
                 const { show } = useContextMenu({ id: user.id });
+                const onlineStatus = onlineStatuses()[user.id];
 
                 return (
                   // TODO: Highlighting the logged in user works, but it disappears on page reload
@@ -177,8 +253,7 @@ const Users: Component = () => {
                     <td>{user.email}</td>
                     <td>{user.municipalityName}</td>
                     <td>{user.organizationName}</td>
-                    {/* <td>{user.loggedIn ? '🟢' : '🔴'}</td> */}
-                    <td>🔴</td>
+                    <td>{onlineStatus ? "🟢" : "🔴"}</td>
                     <td
                       onContextMenu={(e) => {
                         show(e, { props: user.id });
@@ -189,8 +264,7 @@ const Users: Component = () => {
                         <Item onClick={() => handleEditUser(user.id)}>✏️ Edit</Item>
                         <Item onClick={() => handleDeleteUser(user.id)}>🗑️ Delete</Item>
                         <Separator />
-                        <Item disabled>🚶 Log out</Item>
-                        {/* <Item disabled={!user.loggedIn}>🚶 Log out</Item> */}
+                        <Item onClick={() => handleLogOutUser(user.id)}>🚶 Log out</Item>
                       </Menu>
                     </td>
                   </tr>
