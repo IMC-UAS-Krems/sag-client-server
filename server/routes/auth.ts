@@ -107,6 +107,9 @@ export const auth = new Elysia({ prefix: "/auth" })
         return;
       }
 
+      // Reset the needsToBeLoggedOut flag
+      await sql.updateUser(userResult.id, { needsToBeLoggedOut: false });
+
       const { password, id, ...user } = userResult as UserDocument;
 
       const token = encrypt(id);
@@ -147,7 +150,7 @@ export const auth = new Elysia({ prefix: "/auth" })
 
   .post(
     "/logout",
-    async ({ log, set, cookie: { access_token } }) => {
+    async ({ log, set, cookie: { access_token }, request }) => {
       access_token.set({
         httpOnly: true,
         secure: true,
@@ -156,6 +159,11 @@ export const auth = new Elysia({ prefix: "/auth" })
         value: "",
         expires: new Date(0),
       });
+
+      const userId = request.user?.userId;
+      if (userId) {
+        await sql.updateUser(userId, { needsToBeLoggedOut: true });
+      }
 
       set.status = 200;
     },

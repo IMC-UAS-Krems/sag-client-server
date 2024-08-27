@@ -1,5 +1,5 @@
 import Header from "@client/components/Header";
-import { Component, createSignal, onMount } from "solid-js";
+import { Component, createSignal, onMount, createEffect } from "solid-js";
 import { Menu, Item, useContextMenu, animation, Separator } from "solid-contextmenu";
 import { eden } from "@client/api";
 import { useNavigate } from "@solidjs/router";
@@ -47,8 +47,20 @@ const Users: Component = () => {
   const [loading, setLoading] = createSignal(true);
   const [error, setError] = createSignal<string | null>(null);
   const [onlineStatuses, setOnlineStatuses] = createSignal<Record<string, boolean>>({});
+  const [reload, setReload] = createSignal(false);
+
 
   onMount(async () => {
+    await fetchUsers();
+  });
+
+  createEffect(() => {
+    reload();
+    fetchUsers();
+  });
+
+
+  async function fetchUsers() {
     try {
       const fetchedUsers: UsersResponse = await eden.admin.users.get({
         $fetch: {
@@ -69,7 +81,7 @@ const Users: Component = () => {
           setError(fetchedUsers.data.error || "Unknown error");
         } else {
           setUsers(fetchedUsers.data);
-          await updateOnlineStatuses(fetchedUsers.data)
+          await updateOnlineStatuses(fetchedUsers.data);
           console.log("Fetch:", fetchedUsers);
           console.log("Fetched users:", fetchedUsers.data);
         }
@@ -82,7 +94,7 @@ const Users: Component = () => {
     } finally {
       setLoading(false);
     }
-  });
+  }
 
   async function updateOnlineStatuses(users: User[]) {
     const statuses: Record<string, boolean> = {};
@@ -197,8 +209,14 @@ const Users: Component = () => {
             return;
           } else {
             Swal.fire("Logged out!", "The user has been logged out.", "success");
+
+
+            setUsers((prevUsers) =>
+              prevUsers.map((user) => (user.id === userId ? { ...user, needsToBeLoggedOut: true } : user)),
+            );
+
+            
             await updateOnlineStatuses(users());
-            setUsers([...users()]);
           }
         } catch (error) {
           console.error("Failed to log out user:", error);
@@ -210,6 +228,7 @@ const Users: Component = () => {
         }
       }
     });
+    setReload(!reload());
   }
 
   const [_animation, setAnimation] = createSignal(animation.scale);
