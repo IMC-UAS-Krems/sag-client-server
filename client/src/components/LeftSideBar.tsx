@@ -2,6 +2,7 @@ import { createSignal, onMount } from "solid-js";
 import { Menu, Item, useContextMenu, animation, Submenu } from "solid-contextmenu";
 import Swal from "sweetalert2";
 import "../../../node_modules/solid-contextmenu/dist/style.css";
+import styles from "@styles/LeftSideBar.module.css";
 import { eden } from "@client/api";
 
 interface File {
@@ -319,11 +320,11 @@ export function LeftSideBar(props: LeftSideBarProps) {
 
   function renderFiles(files: File[]) {
     return (
-      <ul style={{ "list-style": "none", "padding-left": "20px" }}>
+      <ul class={styles["files-list"]}>
         {files.map((file) => (
           <li>
-            <div style={{ display: "flex", "align-items": "center" }}>
-              <span style={{ cursor: "default" }}>{file.files ? (file.isExpanded ? "📂" : "📁") : "📄"}</span>
+            <div class={styles["item-container"]}>
+              <span>{file.files ? (file.isExpanded ? "📂" : "📁") : "📄"}</span>
               <span
                 onClick={() => {
                   handleClick(file);

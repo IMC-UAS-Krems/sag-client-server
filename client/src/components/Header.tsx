@@ -1,13 +1,16 @@
 import { onMount, type Component, JSX } from "solid-js";
+
 import { A, useNavigate } from "@solidjs/router";
 import { Image } from "@kobalte/core";
+
+import { eden } from "@client/api";
 import { theme } from "@store/index";
+import authStore from "@store/authStore";
 import styles from "@styles/Header.module.css";
-import ThemeToggle from "./ThemeToggle";
+
 import logoLight from "@assets/logos/sagittarius-logo-bnc.webp";
 import logoDark from "@assets/logos/sagittarius-logo-blk.webp";
-import { eden } from "@client/api";
-import authStore from "@store/authStore";
+import ThemeToggle from "./ThemeToggle";
 
 const Header: Component<{ children: JSX.Element }> = (props) => {
   const navigate = useNavigate();
@@ -53,10 +56,14 @@ const Header: Component<{ children: JSX.Element }> = (props) => {
 
   return (
     <>
-      <header class={styles.headerMainContianer}>
+      <header class={styles["header-main-container"]}>
         <Image.Root fallbackDelay={600} class={styles.img}>
-          <Image.Img class={styles.imgImg} src={theme() === "light" ? logoDark : logoLight} alt="Sagittarius Logo" />
-          <Image.Fallback class={styles.imgFallback}>Sagittarius Logo</Image.Fallback>
+          <Image.Img
+            class={styles["img-img"]}
+            src={theme() === "light" ? logoDark : logoLight}
+            alt="Sagittarius Logo"
+          />
+          <Image.Fallback class={styles["img-fallback"]}>Sagittarius Logo</Image.Fallback>
         </Image.Root>
 
         <nav>

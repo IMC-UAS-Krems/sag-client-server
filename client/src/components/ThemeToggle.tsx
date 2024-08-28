@@ -1,7 +1,8 @@
 import { type Component, onMount } from "solid-js";
-import { theme, setTheme } from "@store/index";
+
 import { FaSolidSun, FaSolidMoon } from "solid-icons/fa";
 
+import { theme, setTheme } from "@store/index";
 import styles from "@styles/Toggle.module.css";
 
 const ThemeToggle: Component = () => {
@@ -27,7 +28,7 @@ const ThemeToggle: Component = () => {
   return (
     <>
       {/* <Button.Root onClick={() => { toggleTheme() }}>Prova</Button.Root> */}
-      <label class={styles.toggleContainer}>
+      <label class={styles["toggle-container"]}>
         <input
           id="themeCheckbox"
           type="checkbox"

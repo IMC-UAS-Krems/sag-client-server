@@ -1,13 +1,12 @@
-import { type Component, createSignal, createEffect } from "solid-js";
-import type { Accessor, Setter } from "solid-js";
+import { createSignal, createEffect } from "solid-js";
+import type { Component, Accessor, Setter } from "solid-js";
+
 import { useNavigate, useParams } from "@solidjs/router";
 import { TextField, Button } from "@kobalte/core";
-import { eden } from "@client/api";
-
 import Swal from "sweetalert2";
-// import authStore from "@store/authStore";
+
+import { eden } from "@client/api";
 import Header from "@client/components/Header";
-// import { UserRole } from "../../../server/prisma";
 import styles from "@styles/Signin.module.css";
 
 const FormField: Component<{
@@ -20,9 +19,13 @@ const FormField: Component<{
 }> = ({ getter, setter, labelText, oldValue, password }) => {
   console.log(`Rendering FormField for ${labelText} with oldValue: ${oldValue}`);
   return (
-    <TextField.Root class={styles.textField} value={getter()} onChange={setter}>
-      <TextField.Label class={styles.textFieldLabel}>{labelText}</TextField.Label>
-      <TextField.Input class={styles.textFieldInput} type={password ? "password" : "text"} placeholder={oldValue} />
+    <TextField.Root class={styles["text-field"]} value={getter()} onChange={setter}>
+      <TextField.Label class={styles["text-field-label"]}>{labelText}</TextField.Label>
+      <TextField.Input
+        class={styles["text-field-input"]}
+        type={password ? "password" : "text"}
+        placeholder={oldValue}
+      />
     </TextField.Root>
   );
 };
@@ -229,35 +232,35 @@ const UsersEdit: Component = () => {
 
   return (
     <Header>
-      <main class={styles.signinMainContainer}>
-        <div class={styles.signinCardContainer}>
+      <main class={styles["signin-main-container"]}>
+        <div class={styles["signin-card-container"]}>
           <h1>Edit User</h1>
           {loading() ? (
             <div class={styles.loader}></div>
           ) : userFetchError() ? (
             <div>
-              <p class={styles.errorText}>
+              <p class={styles["error-text"]}>
                 {userFetchError()} for user with id: {userId}
               </p>
-              <div class={styles.signinButtons}>
+              <div class={styles["signin-buttons"]}>
                 <Button.Root onClick={() => navigate("/users", { replace: true })}>Go Back</Button.Root>
               </div>
             </div>
           ) : (
             <div style="width: 100%">
-              <form class={styles.signinFormContainer}>
+              <form class={styles["signin-form-container"]}>
                 <FormField getter={name} setter={setName} labelText="Name" oldValue={oldName()} />
-                {errors().name && <p class={styles.errorText}>{errors().name}</p>}
+                {errors().name && <p class={styles["error-text"]}>{errors().name}</p>}
                 <FormField getter={email} setter={setEmail} labelText="Email" oldValue={oldEmail()} />
-                {errors().email && <p class={styles.errorText}>{errors().email}</p>}
+                {errors().email && <p class={styles["error-text"]}>{errors().email}</p>}
                 <FormField getter={username} setter={setUsername} labelText="Username" oldValue={oldUsername()} />
-                {errors().username && <p class={styles.errorText}>{errors().username}</p>}
+                {errors().username && <p class={styles["error-text"]}>{errors().username}</p>}
                 <FormField getter={password} setter={setPassword} labelText="Password" oldValue="" password={true} />
-                {errors().password && <p class={styles.errorText}>{errors().password}</p>}
+                {errors().password && <p class={styles["error-text"]}>{errors().password}</p>}
                 {/* TODO: Preselect the oldMunicipality */}
-                <div class={styles.textField}>
-                  <label class={styles.textFieldLabel}>Municipality</label>
-                  <select class={styles.textFieldInput} onChange={(e) => setMunicipality(e.currentTarget.value)}>
+                <div class={styles["text-field"]}>
+                  <label class={styles["text-field-label"]}>Municipality</label>
+                  <select class={styles["text-field-input"]} onChange={(e) => setMunicipality(e.currentTarget.value)}>
                     <option value="none" selected disabled hidden>
                       Select an Option
                     </option>
@@ -266,7 +269,7 @@ const UsersEdit: Component = () => {
                     ))}
                   </select>
                 </div>
-                {errors().municipality && <p class={styles.errorText}>{errors().municipality}</p>}
+                {errors().municipality && <p class={styles["error-text"]}>{errors().municipality}</p>}
                 {/* TODO: Preselect the Organization */}
 
                 {/* <FormField
@@ -275,9 +278,13 @@ const UsersEdit: Component = () => {
                   labelText="Organization"
                   oldValue={oldOrganization()}
                 /> */}
-                <div class={styles.textField}>
-                  <label class={styles.textFieldLabel}>Organisation</label>
-                  <select class={styles.textFieldInput} value={organization() ?? ""} onChange={(e) => setOrganization(e.currentTarget.value)}>
+                <div class={styles["text-field"]}>
+                  <label class={styles["text-field-label"]}>Organisation</label>
+                  <select
+                    class={styles["text-field-input"]}
+                    value={organization() ?? ""}
+                    onChange={(e) => setOrganization(e.currentTarget.value)}
+                  >
                     <option value="" disabled hidden>
                       Select an Option
                     </option>
@@ -288,12 +295,12 @@ const UsersEdit: Component = () => {
                     )}
                   </select>
                 </div>
-                {errors().organization && <p class={styles.errorText}>{errors().organization}</p>}
+                {errors().organization && <p class={styles["error-text"]}>{errors().organization}</p>}
                 {/* TODO: Preselect the userRole */}
-                <div class={styles.textField}>
-                  <label class={styles.textFieldLabel}>User Role</label>
+                <div class={styles["text-field"]}>
+                  <label class={styles["text-field-label"]}>User Role</label>
                   <select
-                    class={styles.textFieldInput}
+                    class={styles["text-field-input"]}
                     onChange={(e) => setUserRole(e.currentTarget.value as UserRole)}
                   >
                     <option value="" selected disabled hidden>
@@ -303,9 +310,9 @@ const UsersEdit: Component = () => {
                     <option value={UserRole.ADMIN}>Admin</option>
                   </select>
                 </div>
-                {errors().userRole && <p class={styles.errorText}>{errors().userRole}</p>}
+                {errors().userRole && <p class={styles["error-text"]}>{errors().userRole}</p>}
               </form>
-              <div class={styles.signinButtons}>
+              <div class={styles["signin-buttons"]}>
                 <Button.Root onClick={submit}>Submit</Button.Root>
                 <Button.Root onClick={() => navigate("/users", { replace: true })}>Cancel</Button.Root>
               </div>

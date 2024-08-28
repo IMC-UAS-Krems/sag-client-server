@@ -1,16 +1,17 @@
 import { JSX, Component, createSignal, Show, createEffect } from "solid-js";
-import { linter, Diagnostic, lintGutter } from "@codemirror/lint";
+
 import { createCodeMirror, createEditorControlledValue } from "solid-codemirror";
-import { EditorView, lineNumbers } from "@codemirror/view";
+import { linter, Diagnostic, lintGutter } from "@codemirror/lint";
+import { EditorView, lineNumbers, keymap } from "@codemirror/view";
+import { Button, Alert } from "@kobalte/core";
+
+import Header from "@client/components/Header";
+import { errors, setErrors, Error } from "@store/index";
 import { eden } from "@client/api";
 import "../styles/Editor.css";
-import { Button } from "@kobalte/core";
-import { Alert } from "@kobalte/core";
-import { errors, setErrors, Error } from "@store/index";
+
 import { RightSideBar } from "../components/RightSideBar";
-import { keymap } from "@codemirror/view";
 import { LeftSideBar } from "../components/LeftSideBar";
-import Header from "@client/components/Header";
 
 const DEPLOYER_URL = import.meta.env.VITE_DEPLOYER_URL || "http://localhost:9000";
 

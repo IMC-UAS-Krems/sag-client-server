@@ -1,17 +1,14 @@
-import { type Component, createSignal, createEffect } from "solid-js";
-import { TextField, Button } from "@kobalte/core";
-import { eden } from "@client/api";
-import type { Accessor, Setter } from "solid-js";
-
-import styles from "@styles/Signin.module.css";
-
-import Swal from "sweetalert2";
-
-import authStore from "@store/authStore";
+import { createSignal, createEffect } from "solid-js";
+import type { Component, Accessor, Setter } from "solid-js";
 
 import { useNavigate } from "@solidjs/router";
-import { setUser } from "@client/store";
+import { TextField, Button } from "@kobalte/core";
+import Swal from "sweetalert2";
+
+import { eden } from "@client/api";
+import authStore from "@store/authStore";
 import Header from "@client/components/Header";
+import styles from "@styles/Signin.module.css";
 
 const FormField: Component<{
   getter: Accessor<string | undefined>;
@@ -20,17 +17,14 @@ const FormField: Component<{
   password?: boolean;
 }> = ({ getter, setter, labelText, password }) => {
   return (
-    <TextField.Root class={styles.textField} value={getter()} onChange={setter}>
-      <TextField.Label class={styles.textFieldLabel}>{labelText}</TextField.Label>
-      <TextField.Input class={styles.textFieldInput} type={password ? "password" : "text"} />
+    <TextField.Root class={styles["text-field"]} value={getter()} onChange={setter}>
+      <TextField.Label class={styles["text-field-label"]}>{labelText}</TextField.Label>
+      <TextField.Input class={styles["text-field-input"]} type={password ? "password" : "text"} />
     </TextField.Root>
   );
 };
 
-// TODO: Update such that it utilizes the same improvements as createUser, updateUser
 const Register: Component = () => {
-  // const [t, { add, locale, dict }] = useI18n();
-
   const [name, setName] = createSignal<string | undefined>(undefined);
   const [email, setEmail] = createSignal<string | undefined>(undefined);
   const [username, setUsername] = createSignal<string | undefined>(undefined);
@@ -146,19 +140,19 @@ const Register: Component = () => {
 
   return (
     <>
-      <div style={{ padding: "50px 0 50px 0", "margin-bottom": "30px" }} class={styles.signinCardContainer}>
-        <form class={styles.signinFormContainer}>
+      <div style={{ padding: "50px 0 50px 0", "margin-bottom": "30px" }} class={styles["signin-card-container"]}>
+        <form class={styles["signin-form-container"]}>
           <FormField getter={name} setter={setName} labelText="Name" />
-          {registerErrors().name && <p class={styles.errorText}>{registerErrors().name}</p>}
+          {registerErrors().name && <p class={styles["error-text"]}>{registerErrors().name}</p>}
           <FormField getter={email} setter={setEmail} labelText="Email" />
-          {registerErrors().email && <p class={styles.errorText}>{registerErrors().email}</p>}
+          {registerErrors().email && <p class={styles["error-text"]}>{registerErrors().email}</p>}
           <FormField getter={username} setter={setUsername} labelText="Username" />
-          {registerErrors().username && <p class={styles.errorText}>{registerErrors().username}</p>}
+          {registerErrors().username && <p class={styles["error-text"]}>{registerErrors().username}</p>}
           <FormField getter={password} setter={setPassword} labelText="Password" password={true} />
-          {registerErrors().password && <p class={styles.errorText}>{registerErrors().password}</p>}
-          <div class={styles.textField}>
-            <label class={styles.textFieldLabel}>Municipality</label>
-            <select class={styles.textFieldInput} onChange={(e) => setMunicipality(e.currentTarget.value)}>
+          {registerErrors().password && <p class={styles["error-text"]}>{registerErrors().password}</p>}
+          <div class={styles["text-field"]}>
+            <label class={styles["text-field-label"]}>Municipality</label>
+            <select class={styles["text-field-input"]} onChange={(e) => setMunicipality(e.currentTarget.value)}>
               <option value="none" selected disabled hidden>
                 Select an Option
               </option>
@@ -167,11 +161,11 @@ const Register: Component = () => {
               ))}
             </select>
           </div>
-          {registerErrors().municipality && <p class={styles.errorText}>{registerErrors().municipality}</p>}
-          <div class={styles.textField}>
-            <label class={styles.textFieldLabel}>Organization</label>
+          {registerErrors().municipality && <p class={styles["error-text"]}>{registerErrors().municipality}</p>}
+          <div class={styles["text-field"]}>
+            <label class={styles["text-field-label"]}>Organization</label>
             <select
-              class={styles.textFieldInput}
+              class={styles["text-field-input"]}
               value={organization() ?? ""}
               onChange={(e) => setOrganization(e.currentTarget.value)}
             >
@@ -185,7 +179,7 @@ const Register: Component = () => {
               )}
             </select>
           </div>
-          {registerErrors().organization && <p class={styles.errorText}>{registerErrors().organization}</p>}
+          {registerErrors().organization && <p class={styles["error-text"]}>{registerErrors().organization}</p>}
           {/* <FormField getter={organization} setter={setOrganization} labelText="Organization" /> */}
         </form>
         <Button.Root onClick={submit}>Submit</Button.Root>
@@ -274,12 +268,12 @@ const Login: Component = () => {
 
   return (
     <>
-      <div class={styles.signinCardContainer}>
-        <form class={styles.signinFormContainer}>
+      <div class={styles["signin-card-container"]}>
+        <form class={styles["signin-form-container"]}>
           <FormField getter={username} setter={setUsername} labelText="Username" />
-          {loginErrors().username && <p class={styles.errorText}>{loginErrors().username}</p>}
+          {loginErrors().username && <p class={styles["error-text"]}>{loginErrors().username}</p>}
           <FormField getter={password} setter={setPassword} labelText="Password" password={true} />
-          {loginErrors().password && <p class={styles.errorText}>{loginErrors().password}</p>}
+          {loginErrors().password && <p class={styles["error-text"]}>{loginErrors().password}</p>}
         </form>
         <Button.Root onClick={submit}>Submit</Button.Root>
       </div>
@@ -293,22 +287,30 @@ const SignIn: Component = () => {
 
   return (
     <Header>
-      <main class={styles.signinMainContainer}>
-        {mode() === "login" ? <Login /> : <Register />}
-        <nav class={styles.submenuContainer}>
-          <Button.Root
-            onClick={() => setMode("login")}
-            class={mode() === "login" ? styles.activeButton : styles.navButton}
-          >
-            Login
-          </Button.Root>
-          <Button.Root
-            onClick={() => setMode("register")}
-            class={mode() === "register" ? styles.activeButton : styles.navButton}
-          >
-            Register
-          </Button.Root>
-        </nav>
+      <main class={styles["signin-main-container"]}>
+        {authStore.state().isAuthenticated ? (
+          <div class={styles["signin-card-container"]}>
+            <h1>You are already logged in as {authStore.state().user}</h1>
+          </div>
+        ) : (
+          <>
+            {mode() === "login" ? <Login /> : <Register />}
+            <nav class={styles["submenu-container"]}>
+              <Button.Root
+                onClick={() => setMode("login")}
+                class={mode() === "login" ? styles["active-button"] : styles["nav-button"]}
+              >
+                Login
+              </Button.Root>
+              <Button.Root
+                onClick={() => setMode("register")}
+                class={mode() === "register" ? styles["active-button"] : styles["nav-button"]}
+              >
+                Register
+              </Button.Root>
+            </nav>
+          </>
+        )}
       </main>
     </Header>
   );

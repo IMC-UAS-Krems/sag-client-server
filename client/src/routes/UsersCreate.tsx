@@ -1,16 +1,14 @@
-import { type Component, createSignal, createEffect } from "solid-js";
-import type { Accessor, Setter } from "solid-js";
+import { createSignal, createEffect } from "solid-js";
+import type { Component, Accessor, Setter } from "solid-js";
+
 import { useNavigate } from "@solidjs/router";
 import { TextField, Button } from "@kobalte/core";
-import { eden } from "@client/api";
-
 import Swal from "sweetalert2";
-// import authStore from "@store/authStore";
-import Header from "@client/components/Header";
-// import { UserRole } from "../../../server/prisma";
 
+import { eden } from "@client/api";
+import Header from "@client/components/Header";
 import styles from "@styles/Signin.module.css";
-import { JSCallback } from "bun:ffi";
+// import { JSCallback } from "bun:ffi";
 
 const FormField: Component<{
   getter: Accessor<string | undefined>;
@@ -20,9 +18,9 @@ const FormField: Component<{
   error?: string;
 }> = ({ getter, setter, labelText, password }) => {
   return (
-    <TextField.Root class={styles.textField} value={getter()} onChange={setter}>
-      <TextField.Label class={styles.textFieldLabel}>{labelText}</TextField.Label>
-      <TextField.Input class={styles.textFieldInput} type={password ? "password" : "text"} />
+    <TextField.Root class={styles["text-field"]} value={getter()} onChange={setter}>
+      <TextField.Label class={styles["text-field-label"]}>{labelText}</TextField.Label>
+      <TextField.Input class={styles["text-field-input"]} type={password ? "password" : "text"} />
     </TextField.Root>
   );
 };
@@ -172,21 +170,21 @@ const UsersCreate: Component = () => {
 
   return (
     <Header>
-      <main class={styles.signinMainContainer}>
-        <div class={styles.signinCardContainer}>
+      <main class={styles["signin-main-container"]}>
+        <div class={styles["signin-card-container"]}>
           <h1>Create User</h1>
-          <form class={styles.signinFormContainer}>
+          <form class={styles["signin-form-container"]}>
             <FormField getter={name} setter={setName} labelText="Name" />
-            {errors().name && <p class={styles.errorText}>{errors().name}</p>}
+            {errors().name && <p class={styles["error-text"]}>{errors().name}</p>}
             <FormField getter={email} setter={setEmail} labelText="Email" />
-            {errors().email && <p class={styles.errorText}>{errors().email}</p>}
+            {errors().email && <p class={styles["error-text"]}>{errors().email}</p>}
             <FormField getter={username} setter={setUsername} labelText="Username" />
-            {errors().username && <p class={styles.errorText}>{errors().username}</p>}
+            {errors().username && <p class={styles["error-text"]}>{errors().username}</p>}
             <FormField getter={password} setter={setPassword} labelText="Password" password={true} />
-            {errors().password && <p class={styles.errorText}>{errors().password}</p>}
-            <div class={styles.textField}>
-              <label class={styles.textFieldLabel}>Municipality</label>
-              <select class={styles.textFieldInput} onChange={(e) => setMunicipality(e.currentTarget.value)}>
+            {errors().password && <p class={styles["error-text"]}>{errors().password}</p>}
+            <div class={styles["text-field"]}>
+              <label class={styles["text-field-label"]}>Municipality</label>
+              <select class={styles["text-field-input"]} onChange={(e) => setMunicipality(e.currentTarget.value)}>
                 <option value="none" selected disabled hidden>
                   Select an Option
                 </option>
@@ -195,11 +193,11 @@ const UsersCreate: Component = () => {
                 ))}
               </select>
             </div>
-            {errors().municipality && <p class={styles.errorText}>{errors().municipality}</p>}
-            <div class={styles.textField}>
-              <label class={styles.textFieldLabel}>Organization</label>
+            {errors().municipality && <p class={styles["error-text"]}>{errors().municipality}</p>}
+            <div class={styles["text-field"]}>
+              <label class={styles["text-field-label"]}>Organization</label>
               <select
-                class={styles.textFieldInput}
+                class={styles["text-field-input"]}
                 value={organization() ?? ""}
                 onChange={(e) => setOrganization(e.currentTarget.value)}
               >
@@ -213,10 +211,10 @@ const UsersCreate: Component = () => {
                 )}
               </select>
             </div>
-            {errors().organization && <p class={styles.errorText}>{errors().organization}</p>}
-            <div class={styles.textField}>
-              <label class={styles.textFieldLabel}>User Role</label>
-              <select class={styles.textFieldInput} onChange={(e) => setUserRole(e.currentTarget.value as UserRole)}>
+            {errors().organization && <p class={styles["error-text"]}>{errors().organization}</p>}
+            <div class={styles["text-field"]}>
+              <label class={styles["text-field-label"]}>User Role</label>
+              <select class={styles["text-field-input"]} onChange={(e) => setUserRole(e.currentTarget.value as UserRole)}>
                 <option value="" selected disabled hidden>
                   Select an Option
                 </option>
@@ -224,9 +222,9 @@ const UsersCreate: Component = () => {
                 <option value={UserRole.ADMIN}>Admin</option>
               </select>
             </div>
-            {errors().userRole && <p class={styles.errorText}>{errors().userRole}</p>}
+            {errors().userRole && <p class={styles["error-text"]}>{errors().userRole}</p>}
           </form>
-          <div class={styles.signinButtons}>
+          <div class={styles["signin-buttons"]}>
             <Button.Root onClick={submit}>Submit</Button.Root>
             <Button.Root onClick={() => navigate("/users", { replace: true })}>Cancel</Button.Root>
           </div>

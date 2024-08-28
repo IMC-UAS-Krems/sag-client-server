@@ -1,5 +1,7 @@
-import { Router, Route, Navigate, useNavigate } from "@solidjs/router";
 import { type Component } from "solid-js";
+
+import { Router, Route, Navigate, useNavigate } from "@solidjs/router";
+
 import Home from "@client/routes/Home";
 import About from "@client/routes/About";
 import Editor from "@client/routes/Editor";
@@ -7,9 +9,7 @@ import SignIn from "@client/routes/SignIn";
 import Users from "@client/routes/Users";
 import UsersCreate from "@client/routes/UsersCreate";
 import UsersEdit from "@client/routes/UsersEdit";
-
 import authStore from "@store/authStore";
-
 
 interface ProtectedRouteProps {
   component: Component;

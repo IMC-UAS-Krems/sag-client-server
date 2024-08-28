@@ -1,26 +1,27 @@
 import { Component, createSignal, For } from "solid-js";
+
 import MapGL, { Viewport, Marker, Popup } from "solid-map-gl";
+
+import Header from "@client/components/Header";
 import { theme } from "@client/store";
+import styles from "@styles/Home.module.css";
+
 import "mapbox-gl/dist/mapbox-gl.css";
 
-const t = (s: string) => s;
-
-import styles from "@styles/Home.module.css";
-import Header from "@client/components/Header";
+// const t = (s: string) => s;
+// const [style, setStyle] = createSignal("basic");
 
 const [viewport, setViewport] = createSignal({
   center: [0, 52],
   zoom: 11,
 } as Viewport);
 
-const [style, setStyle] = createSignal("basic");
-
 const Home: Component = () => {
   return (
     <Header>
-      <main class={styles.mainHomeContainer}>
-        <article class={styles.mainArticleContainer}>
-          <section class={styles.introSection}>
+      <main class={styles["main-home-container"]}>
+        <article class={styles["main-article-container"]}>
+          <section class={styles["intro-section"]}>
             <h1>Sagittarius</h1>
             <p>
               The main goal of such research will be to asses how much can development be democratised by designing,
@@ -51,12 +52,12 @@ const Home: Component = () => {
               infrastructure, sustainability, and livability within the city.
             </p>
           </section>
-          <section class={styles.mapSectionContainer}>
+          <section class={styles["map-section-container"]}>
             <h1>Navigate the map</h1>
-            <div class={styles.mapContainer}>
+            <div class={styles["map-container"]}>
               <MapGL
                 // style={{ border: '3px solid red', position: 'absolute', inset: 0, "z-index": -1, "border-radius": "8px" }}
-                class={styles.mapClass}
+                class={styles.map}
                 options={{ style: `esri:${theme() === "dark" ? "world_street_night" : "world_street"}` }}
                 viewport={viewport()}
                 onViewportChange={(evt: Viewport) => setViewport(evt)}
@@ -100,15 +101,3 @@ const Home: Component = () => {
 };
 
 export default Home;
-
-/*Serve per displayare una mappa con sopra i pin che rappresentano un sistema distribuito iot (es: smart park e se ha un sensore), deve avere un tooltip di infos
-infos: position, type of sys (smart coccos), provider, nome attività, (serie di bottoni per ricevere cose)
-
-Inserire tutte le route in route protetta tramite isAllowed()
-
-aggiungere router dello user
-
-about us -> roba di uni (Nino manda il paper)
-
-integrare sia light che dark mode
- */

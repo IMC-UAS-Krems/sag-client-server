@@ -1,18 +1,16 @@
-import Header from "@client/components/Header";
 import { Component, createSignal, onMount, createEffect } from "solid-js";
+
 import { Menu, Item, useContextMenu, animation, Separator } from "solid-contextmenu";
-import { eden } from "@client/api";
 import { useNavigate } from "@solidjs/router";
-import authStore from "@store/authStore";
-import { handleUnauthorized } from "@client/utils/authUtils";
-
 import Swal from "sweetalert2";
-// import authStore from "@store/authStore";
 
-import "../../../node_modules/solid-contextmenu/dist/style.css";
+import { eden } from "@client/api";
+import { handleUnauthorized, isUserOnline } from "@client/utils/authUtils";
+import Header from "@client/components/Header";
+import authStore from "@store/authStore";
 import styles from "@styles/Users.module.css";
 
-import { isUserOnline } from "@client/utils/authUtils";
+import "../../../node_modules/solid-contextmenu/dist/style.css";
 
 // User interface
 interface User {
@@ -49,7 +47,6 @@ const Users: Component = () => {
   const [onlineStatuses, setOnlineStatuses] = createSignal<Record<string, boolean>>({});
   const [reload, setReload] = createSignal(false);
 
-
   onMount(async () => {
     await fetchUsers();
   });
@@ -58,7 +55,6 @@ const Users: Component = () => {
     reload();
     fetchUsers();
   });
-
 
   async function fetchUsers() {
     try {
@@ -103,8 +99,6 @@ const Users: Component = () => {
     }
     setOnlineStatuses(statuses);
   }
-
-
 
   async function handleCreateUser() {
     // console.log("Creating user");
@@ -175,10 +169,9 @@ const Users: Component = () => {
     }).then(async (result) => {
       if (result.isConfirmed) {
         try {
-
           const requestBody = {
             userId: userId,
-          }
+          };
           const response = await eden.admin["logout-user"].post({
             ...requestBody,
             $fetch: {
@@ -210,12 +203,10 @@ const Users: Component = () => {
           } else {
             Swal.fire("Logged out!", "The user has been logged out.", "success");
 
-
             setUsers((prevUsers) =>
               prevUsers.map((user) => (user.id === userId ? { ...user, needsToBeLoggedOut: true } : user)),
             );
 
-            
             await updateOnlineStatuses(users());
           }
         } catch (error) {
@@ -236,61 +227,63 @@ const Users: Component = () => {
 
   return (
     <Header>
-      <main class={styles.usersMain}>
+      <main class={styles["users-main"]}>
         <h1>Admin users page</h1>
-        <button onClick={handleCreateUser} class={styles.navButton}>
+        <button onClick={handleCreateUser} class={styles["nav-button"]}>
           Create new user
         </button>
         {loading() ? (
           <div class={styles.loader}></div>
         ) : error() ? (
-          <p class={styles.errorText}>Error: {error()}</p>
+          <p class={styles["error-text"]}>Error: {error()}</p>
         ) : (
-          <table>
-            <thead>
-              <tr>
-                <th>Username</th>
-                <th>Name</th>
-                <th>E-mail address</th>
-                <th>Municipality</th>
-                <th>Organisation</th>
-                <th>Logged in</th>
-                <th>Actions (right click)</th>
-              </tr>
-            </thead>
+          <div class={styles["table-wrapper"]}>
+            <table>
+              <thead>
+                <tr>
+                  <th>Username</th>
+                  <th>Name</th>
+                  <th>E-mail address</th>
+                  <th>Municipality</th>
+                  <th>Organisation</th>
+                  <th>Logged in</th>
+                  <th>Actions (right click)</th>
+                </tr>
+              </thead>
 
-            <tbody>
-              {users().map((user) => {
-                const { show } = useContextMenu({ id: user.id });
-                const onlineStatus = onlineStatuses()[user.id];
+              <tbody>
+                {users().map((user) => {
+                  const { show } = useContextMenu({ id: user.id });
+                  const onlineStatus = onlineStatuses()[user.id];
 
-                return (
-                  // TODO: Highlighting the logged in user works, but it disappears on page reload
-                  <tr class={user.email == loggedInUser ? styles.loggedInUser : ""}>
-                    <td>{user.username}</td>
-                    <td>{user.name}</td>
-                    <td>{user.email}</td>
-                    <td>{user.municipalityName}</td>
-                    <td>{user.organizationName}</td>
-                    <td>{onlineStatus ? "🟢" : "🔴"}</td>
-                    <td
-                      onContextMenu={(e) => {
-                        show(e, { props: user.id });
-                      }}
-                    >
-                      ...
-                      <Menu id={user.id} animation={_animation()} theme={_theme()}>
-                        <Item onClick={() => handleEditUser(user.id)}>✏️ Edit</Item>
-                        <Item onClick={() => handleDeleteUser(user.id)}>🗑️ Delete</Item>
-                        <Separator />
-                        <Item onClick={() => handleLogOutUser(user.id)}>🚶 Log out</Item>
-                      </Menu>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                  return (
+                    // TODO: Highlighting the logged in user works, but it disappears on page reload
+                    <tr class={user.email == loggedInUser ? styles["logged-in-user"] : ""}>
+                      <td>{user.username}</td>
+                      <td>{user.name}</td>
+                      <td>{user.email}</td>
+                      <td>{user.municipalityName}</td>
+                      <td>{user.organizationName}</td>
+                      <td>{onlineStatus ? "🟢" : "🔴"}</td>
+                      <td
+                        onContextMenu={(e) => {
+                          show(e, { props: user.id });
+                        }}
+                      >
+                        ...
+                        <Menu id={user.id} animation={_animation()} theme={_theme()}>
+                          <Item onClick={() => handleEditUser(user.id)}>✏️ Edit</Item>
+                          <Item onClick={() => handleDeleteUser(user.id)}>🗑️ Delete</Item>
+                          <Separator />
+                          <Item onClick={() => handleLogOutUser(user.id)}>🚶 Log out</Item>
+                        </Menu>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         )}
       </main>
     </Header>
