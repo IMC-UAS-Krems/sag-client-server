@@ -38,7 +38,9 @@ interface LogoutUserRequestBody {
 // }
 
 export const admin = new Elysia({ prefix: "/admin" })
-  .onBeforeHandle(authAdminMiddleware)
+  .onBeforeHandle(async ({ set, userId }) => {
+    return await authAdminMiddleware({ set, userId });
+  })
   .get(
     "/users",
     async ({ set }) => {
@@ -225,7 +227,6 @@ export const admin = new Elysia({ prefix: "/admin" })
           return { status: "error", message: "User not found." };
         }
 
-
         await sql.updateUser(userId, {
           needsToBeLoggedOut: true,
         });
@@ -248,4 +249,3 @@ export const admin = new Elysia({ prefix: "/admin" })
       }),
     },
   );
-

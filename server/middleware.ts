@@ -7,7 +7,7 @@ interface CustomContext {
   userId: string;
 }
 
-export const authMiddleware = async ({ set, userId }: CustomContext): Promise<void> => {
+export const authMiddleware = async ({ set, userId }: CustomContext): Promise<void | { error: string }> => {
   console.info("Yay authentication middleware is running!");
   console.info("Middleware User ID:", userId);
   console.info("Middleware Set:", set);
@@ -37,9 +37,9 @@ export const authMiddleware = async ({ set, userId }: CustomContext): Promise<vo
     }
 
     // Update last login time
-    await sql.updateUser(user.id, { 
-      lastLoginTime: now , 
-      needsToBeLoggedOut: false 
+    await sql.updateUser(user.id, {
+      lastLoginTime: now,
+      needsToBeLoggedOut: false,
     });
 
     // Attach user to context
@@ -52,34 +52,29 @@ export const authMiddleware = async ({ set, userId }: CustomContext): Promise<vo
 
   // Else just return
   console.info("Middleware passed: User is authenticated");
-  return
+  return;
 };
 
-export const authAdminMiddleware = async (context: Context) => {
-  const { userId, set } = context;
+export const authAdminMiddleware = async ({ set, userId }: CustomContext): Promise<void | { error: string }> => {
+  // const { userId, set } = context;
 
   if (!userId) {
     set.status = 401;
-    context.body = { error: "Unauthorized: No user ID provided" };
-    return; 
+    return { error: "Unauthorized: No user ID provided" };
   }
 
   const user = await sql.selectUser(userId);
 
   if (!user) {
     set.status = 401;
-    context.body = { error: "Unauthorized: User not found" };
-    return; 
+    return { error: "Unauthorized: User not found" };
   }
 
   // Check if the user is an admin
   if (user.userRole !== "ADMIN") {
     set.status = 403;
-    context.body = { error: "Access denied: Admins only" };
-    return;
+    return { error: "Access denied: Admins only" };
   }
 
   (set as any).user = user;
 };
-
-
