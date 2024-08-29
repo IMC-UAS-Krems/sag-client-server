@@ -27,6 +27,7 @@
   min-height: 50vh;
   min-width: 45vw;
   margin-bottom: 30px;
+  padding: 1rem 0 2rem 0;
 }
 
 .signin-form-container {
@@ -71,6 +72,35 @@
   align-items: center;
   justify-content: center;
   gap: 20px;
+}
+
+@media (max-width: 1000px) {
+  .signin-card-container {
+    width: 70%;
+  }
+}
+
+@media (max-width: 800px) {
+  .signin-main-container {
+    flex-direction: column-reverse;
+    align-items: center;
+  }
+
+  .signin-card-container {
+    width: 90%;
+  }
+
+  .submenu-container {
+    width: 90%;
+  }
+
+  .nav-button {
+    margin: 10%;
+  }
+
+  .active-button {
+    margin: 10%;
+  }
 }
 
 /* BUTTONS */

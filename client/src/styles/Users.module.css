@@ -77,6 +77,15 @@ td {
   background-color: var(--secondary-color);
 }
 
+.actions {
+  font-size: 2rem;
+}
+
+.actions:hover {
+  cursor: pointer;
+  background-color: var(--secondary-color);
+}
+
 .loader {
   width: 50px;
   aspect-ratio: 1;

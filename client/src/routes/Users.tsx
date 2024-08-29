@@ -1,5 +1,6 @@
 import { Component, createSignal, onMount, createEffect } from "solid-js";
 
+import { FaSolidEllipsis } from "solid-icons/fa";
 import { Menu, Item, useContextMenu, animation, Separator } from "solid-contextmenu";
 import { useNavigate } from "@solidjs/router";
 import Swal from "sweetalert2";
@@ -23,6 +24,7 @@ interface User {
   municipalityName: string;
   organizationName: string;
   needsToBeLoggedOut: boolean;
+  userRole: string;
 }
 
 // Response structure
@@ -67,7 +69,8 @@ const Users: Component = () => {
       });
 
       // Unauthorized check - we are passing navigation function to handleUnauthorized
-      if (fetchedUsers.status === 401) {
+      if (fetchedUsers.status === 401 || fetchedUsers.status === 403) {
+        console.log("User is not authorized for this request:", fetchedUsers);
         handleUnauthorized(navigate);
         return;
       }
@@ -247,7 +250,7 @@ const Users: Component = () => {
                   <th>Municipality</th>
                   <th>Organisation</th>
                   <th>Logged in</th>
-                  <th>Actions (right click)</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
 
@@ -265,16 +268,21 @@ const Users: Component = () => {
                       <td>{user.organizationName}</td>
                       <td>{onlineStatus ? "🟢" : "🔴"}</td>
                       <td
-                        onContextMenu={(e) => {
+                        onClick={(e) => {
                           show(e, { props: user.id });
                         }}
+                        class={styles.actions}
                       >
-                        ...
+                        <FaSolidEllipsis />
                         <Menu id={user.id} animation={_animation()} theme={_theme()}>
                           <Item onClick={() => handleEditUser(user.id)}>✏️ Edit</Item>
-                          <Item onClick={() => handleDeleteUser(user.id)}>🗑️ Delete</Item>
+                          <Item onClick={() => handleDeleteUser(user.id)} disabled={user.userRole === "ADMIN"}>
+                            🗑️ Delete
+                          </Item>
                           <Separator />
-                          <Item onClick={() => handleLogOutUser(user.id)}>🚶 Log out</Item>
+                          <Item onClick={() => handleLogOutUser(user.id)} disabled={user.userRole === "ADMIN"}>
+                            🚶 Log out
+                          </Item>
                         </Menu>
                       </td>
                     </tr>

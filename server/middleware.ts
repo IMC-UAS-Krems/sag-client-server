@@ -6,6 +6,9 @@ interface CustomContext {
 }
 
 export const authMiddleware = async ({ set, userId }: CustomContext): Promise<void | { error: string }> => {
+  // console.info("Yay authentication middleware is running!");
+  // console.info("Middleware User ID:", userId);
+  // console.info("Middleware Set:", set);
   // Check if userId is provided
   if (!userId) {
     console.error("Unauthorized: No user ID provided");
@@ -47,7 +50,7 @@ export const authMiddleware = async ({ set, userId }: CustomContext): Promise<vo
   }
 
   // Else just return
-  console.info("Middleware passed: User is authenticated");
+  // console.info("Middleware passed: User is authenticated");
   return;
 };
 
@@ -71,7 +74,21 @@ export const authAdminMiddleware = async ({ set, userId }: CustomContext): Promi
     return { error: "Access denied: Admins only" };
   }
 
+  // Check session expiration
+  const now = new Date();
+  const sessionDuration = 60 * 60 * 24 * 2 * 1000; // 2 days
+  if (now.getTime() - user.lastLoginTime.getTime() > sessionDuration || user.needsToBeLoggedOut) {
+    console.error("Session expired, please log in again");
+    set.status = 401;
+    return { error: "Session expired, please log in again" };
+  }
+
+  // Update last login time
+  await sql.updateUser(user.id, {
+    lastLoginTime: now,
+    needsToBeLoggedOut: false,
+  });
+
   (set as any).user = user;
-  console.info("Middleware passed: User is authenticated as admin");
   return;
 };

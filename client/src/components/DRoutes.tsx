@@ -19,6 +19,9 @@ const ProtectedRoute: Component<ProtectedRouteProps> = (props) => {
   const navigate = useNavigate();
   const isAuthenticated = authStore.state().isAuthenticated;
 
+  console.log("ProtectedRoute user:", authStore.state().user);
+  console.log("ProtectedRoute userRole:", authStore.state().userRole);
+  console.log("ProtectedRoute isAuthenticated:", isAuthenticated);
   if (!isAuthenticated) {
     navigate("/sign-in");
     return null;
@@ -31,13 +34,13 @@ const DRoutes: Component = () => {
   return (
     <>
       <Router>
+        <Route path="/home" component={Home} />
+        <Route path="/about" component={About} />
         <Route path="/sign-in" component={SignIn} />
         <Route path="/editor" component={() => <ProtectedRoute component={Editor} />} />
-        <Route path="/about" component={() => <ProtectedRoute component={About} />} />
         <Route path="/users" component={() => <ProtectedRoute component={Users} />} />
         <Route path="/users/create" component={() => <ProtectedRoute component={UsersCreate} />} />
         <Route path="/users/edit/:userId" component={() => <ProtectedRoute component={UsersEdit} />} />
-        <Route path="/home" component={Home} />
         <Route path="*" component={() => <Navigate href="/home" />} />
       </Router>
     </>

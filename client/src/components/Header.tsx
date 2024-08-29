@@ -71,7 +71,7 @@ const Header: Component<{ children: JSX.Element }> = (props) => {
             <li>
               <A href="/home">Home</A>
             </li>
-            {authStore.state().userRole !== "ADMIN" && (
+            {authStore.state().userRole === "USER" && (
               <li>
                 <A href="/editor">Editor</A>
               </li>
