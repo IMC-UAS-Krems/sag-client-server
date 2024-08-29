@@ -1,6 +1,4 @@
-import { log } from "console";
 import { sql } from "./sql";
-import { Context } from "elysia";
 
 interface CustomContext {
   set: any;
@@ -8,9 +6,6 @@ interface CustomContext {
 }
 
 export const authMiddleware = async ({ set, userId }: CustomContext): Promise<void | { error: string }> => {
-  console.info("Yay authentication middleware is running!");
-  console.info("Middleware User ID:", userId);
-  console.info("Middleware Set:", set);
   // Check if userId is provided
   if (!userId) {
     console.error("Unauthorized: No user ID provided");
@@ -44,6 +39,7 @@ export const authMiddleware = async ({ set, userId }: CustomContext): Promise<vo
 
     // Attach user to context
     (set as any).user = user;
+
   } catch (error) {
     console.error("Error in authMiddleware:", error);
     set.status = 500;
@@ -56,7 +52,6 @@ export const authMiddleware = async ({ set, userId }: CustomContext): Promise<vo
 };
 
 export const authAdminMiddleware = async ({ set, userId }: CustomContext): Promise<void | { error: string }> => {
-  // const { userId, set } = context;
 
   if (!userId) {
     set.status = 401;
@@ -77,4 +72,6 @@ export const authAdminMiddleware = async ({ set, userId }: CustomContext): Promi
   }
 
   (set as any).user = user;
+  console.info("Middleware passed: User is authenticated as admin");
+  return;
 };

@@ -1,10 +1,8 @@
 import { createSignal, createEffect } from "solid-js";
 import type { Component, Accessor, Setter } from "solid-js";
-
 import { useNavigate, useParams } from "@solidjs/router";
 import { TextField, Button } from "@kobalte/core";
 import Swal from "sweetalert2";
-
 import { eden } from "@client/api";
 import Header from "@client/components/Header";
 import styles from "@styles/Signin.module.css";
@@ -14,25 +12,50 @@ const FormField: Component<{
   setter: Setter<string | undefined>;
   labelText: string;
   oldValue: string | undefined;
+  options?: string[]; // Optional prop for select field options
   password?: boolean;
   error?: string;
-}> = ({ getter, setter, labelText, oldValue, password }) => {
-  console.log(`Rendering FormField for ${labelText} with oldValue: ${oldValue}`);
+}> = ({ getter, setter, labelText, oldValue, options, password, error }) => {
   return (
-    <TextField.Root class={styles["text-field"]} value={getter()} onChange={setter}>
-      <TextField.Label class={styles["text-field-label"]}>{labelText}</TextField.Label>
-      <TextField.Input
-        class={styles["text-field-input"]}
-        type={password ? "password" : "text"}
-        placeholder={oldValue}
-      />
-    </TextField.Root>
+    <div class={styles["text-field"]}>
+      <label class={styles["text-field-label"]}>{labelText}</label>
+      {options ? (
+        <select
+          class={styles["text-field-input"]}
+          value={getter() || ""}
+          onChange={(e) => {
+            console.log("Selected Organization:", e.currentTarget.value);
+            setter(e.currentTarget.value); // Ensure the setter is called with the selected value
+          }}
+        >
+          <option value="" disabled hidden>
+            Select an Option
+          </option>
+          {options.map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
+      ) : (
+        <TextField.Root>
+          <TextField.Input
+            class={styles["text-field-input"]}
+            type={password ? "password" : "text"}
+            value={getter() || ""}
+            onInput={(e) => setter(e.currentTarget.value)}
+            placeholder={oldValue}
+          />
+        </TextField.Root>
+      )}
+      {error && <p class={styles["error-text"]}>{error}</p>}
+    </div>
   );
 };
 
-const UsersEdit: Component = () => {
-  // const [t, { add, locale, dict }] = useI18n();
 
+
+const UsersEdit: Component = () => {
   enum UserRole {
     USER = "USER",
     ADMIN = "ADMIN",
@@ -50,27 +73,23 @@ const UsersEdit: Component = () => {
   const [errors, setErrors] = createSignal<{ [key: string]: string }>({});
 
   const navigate = useNavigate();
-
   const userId = useParams().userId;
-  console.log(userId);
 
   const [oldName, setOldName] = createSignal<string | undefined>(undefined);
   const [oldEmail, setOldEmail] = createSignal<string | undefined>(undefined);
   const [oldUsername, setOldUsername] = createSignal<string | undefined>(undefined);
-  // const [oldPassword, setOldPassword] = createSignal<string | undefined>(undefined);
   const [oldMunicipality, setOldMunicipality] = createSignal<string | undefined>(undefined);
   const [oldOrganization, setOldOrganization] = createSignal<string | undefined>(undefined);
   const [oldUserRole, setOldUserRole] = createSignal<UserRole | undefined>(undefined);
-  //   const [userFetchError, setUserFetchErrors] = createSignal<{ [key: string]: string }>({});
   const [userFetchError, setUserFetchErrors] = createSignal<string | null>(null);
   const [loading, setLoading] = createSignal(true);
 
-  const fetchUserData = async () => {
-    // TODO: Fetch user data here using the userId
-    try {
-      // const url = new URL(eden.admin["update-user"].getUrl());
-      // url.searchParams.append("userId", userId);
+  // Manage the loading state of the municipalities and organizations
+  const [isMunicipalitiesLoading, setIsMunicipalitiesLoading] = createSignal(true);
+  const [isOrganizationsLoading, setIsOrganizationsLoading] = createSignal(true);
 
+  const fetchUserData = async () => {
+    try {
       const oldUserData = await eden.admin["update-user"].get({
         $fetch: {
           mode: "cors",
@@ -85,28 +104,23 @@ const UsersEdit: Component = () => {
         },
       });
 
-      console.log("Old user fetch:", oldUserData);
-
       if (!oldUserData.data || oldUserData.error) {
         setLoading(false);
         setUserFetchErrors("User not found");
-        console.warn("Error is:", userFetchError());
         return;
       } else {
-        console.log("Old user data:", oldUserData.data);
         setOldName(oldUserData.data.name);
         setOldEmail(oldUserData.data.email);
         setOldUsername(oldUserData.data.username);
-        // TODO: Municipality and Organisation are IDs, change API such that names are also returned
-        setOldMunicipality(oldUserData.data.municipalityId);
-        setOldOrganization(oldUserData.data.organizationId);
+        setOldMunicipality(oldUserData.data.municipality.name);
+        setOldOrganization(oldUserData.data.organization.name);
         setOldUserRole(oldUserData.data.userRole);
-        setLoading(false);
+        setMunicipality(oldUserData.data.municipality.name);
       }
     } catch (error) {
-      setLoading(false);
-      console.error("Error fetching user data:", error);
       setUserFetchErrors("Error fetching user data");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -115,9 +129,12 @@ const UsersEdit: Component = () => {
       const response = await eden.api.municipalities.get();
       if (response.data) {
         setMunicipalities(response.data);
+        console.log("Fetched municipalities:", response.data);
       }
     } catch (error) {
       console.error("Error fetching municipalities:", error);
+    } finally {
+      setIsMunicipalitiesLoading(false);
     }
   };
 
@@ -126,23 +143,27 @@ const UsersEdit: Component = () => {
       const response = await eden.api.organizationsByMunicipality.post({ municipalityName });
       if (response.data) {
         setOrganizations(response.data);
-        if (organization()) {
-          setOrganization(undefined);
-        }
+        console.log("Fetched organizations:", response.data);
       }
     } catch (error) {
       console.error("Error fetching organizations:", error);
+    } finally {
+      setIsOrganizationsLoading(false);
     }
   };
 
   createEffect(() => {
-    fetchUserData();
-    fetchMunicipalities();
+    fetchUserData().then(() => {
+      fetchMunicipalities();
+    });
   });
 
   createEffect(() => {
-    if (municipality()) {
-      fetchOrganizationsByMunicipality(municipality()!);
+    const currentMunicipality = municipality();
+    if (currentMunicipality) {
+      setOrganization(undefined); // Reset organization selection
+      setIsOrganizationsLoading(true);
+      fetchOrganizationsByMunicipality(currentMunicipality);
     }
   });
 
@@ -180,24 +201,16 @@ const UsersEdit: Component = () => {
       return;
     }
 
-    // Creating the request body - only sending the fields that have been changed
-    const formName = name();
-    const formEmail = email();
-    const formUsername = username();
-    const formPassword = password();
-    const formMunicipality = municipality();
-    const formOrganization = organization();
-    const formUserRole = userRole();
-
     const requestBody: any = { userId: userId };
 
-    if (formName) requestBody.name = formName;
-    if (formEmail) requestBody.email = formEmail;
-    if (formUsername) requestBody.username = formUsername;
-    if (formPassword) requestBody.password = formPassword;
-    if (formMunicipality) requestBody.municipality = formMunicipality;
-    if (formOrganization) requestBody.organization = formOrganization;
-    if (formUserRole) requestBody.userRole = formUserRole;
+    if (name()) requestBody.name = name();
+    if (email()) requestBody.email = email();
+    if (username()) requestBody.username = username();
+    if (password()) requestBody.password = password();
+    if (municipality()) requestBody.municipality = municipality();
+    console.log("Organization to be updated:", organization());
+    if (organization()) requestBody.organization = organization();
+    if (userRole()) requestBody.userRole = userRole();
 
     const updated = await eden.admin["update-user"].post({
       ...requestBody,
@@ -208,9 +221,7 @@ const UsersEdit: Component = () => {
       },
     });
 
-    // TODO: Handle error
     if (!updated.data || updated.error) {
-      console.log(updated.error);
       Swal.fire({
         title: "Error",
         text: `Error updating user.`,
@@ -227,7 +238,7 @@ const UsersEdit: Component = () => {
       icon: "success",
     });
 
-    console.log(`User update successful.`);
+    console.log("User updated successfully:", updated.data);
   };
 
   return (
@@ -235,7 +246,7 @@ const UsersEdit: Component = () => {
       <main class={styles["signin-main-container"]}>
         <div class={styles["signin-card-container"]}>
           <h1>Edit User</h1>
-          {loading() ? (
+          {loading() || isMunicipalitiesLoading() || isOrganizationsLoading() ? (
             <div class={styles.loader}></div>
           ) : userFetchError() ? (
             <div>
@@ -250,67 +261,30 @@ const UsersEdit: Component = () => {
             <div style="width: 100%">
               <form class={styles["signin-form-container"]}>
                 <FormField getter={name} setter={setName} labelText="Name" oldValue={oldName()} />
-                {errors().name && <p class={styles["error-text"]}>{errors().name}</p>}
                 <FormField getter={email} setter={setEmail} labelText="Email" oldValue={oldEmail()} />
-                {errors().email && <p class={styles["error-text"]}>{errors().email}</p>}
                 <FormField getter={username} setter={setUsername} labelText="Username" oldValue={oldUsername()} />
-                {errors().username && <p class={styles["error-text"]}>{errors().username}</p>}
                 <FormField getter={password} setter={setPassword} labelText="Password" oldValue="" password={true} />
-                {errors().password && <p class={styles["error-text"]}>{errors().password}</p>}
-                {/* TODO: Preselect the oldMunicipality */}
-                <div class={styles["text-field"]}>
-                  <label class={styles["text-field-label"]}>Municipality</label>
-                  <select class={styles["text-field-input"]} onChange={(e) => setMunicipality(e.currentTarget.value)}>
-                    <option value="none" selected disabled hidden>
-                      Select an Option
-                    </option>
-                    {municipalities().map((municipality) => (
-                      <option value={municipality}>{municipality}</option>
-                    ))}
-                  </select>
-                </div>
-                {errors().municipality && <p class={styles["error-text"]}>{errors().municipality}</p>}
-                {/* TODO: Preselect the Organization */}
-
-                {/* <FormField
+                <FormField
+                  getter={municipality}
+                  setter={setMunicipality}
+                  labelText="Municipality"
+                  oldValue={oldMunicipality()}
+                  options={municipalities()}
+                />
+                <FormField
                   getter={organization}
                   setter={setOrganization}
-                  labelText="Organization"
+                  labelText="Organisation"
                   oldValue={oldOrganization()}
-                /> */}
-                <div class={styles["text-field"]}>
-                  <label class={styles["text-field-label"]}>Organisation</label>
-                  <select
-                    class={styles["text-field-input"]}
-                    value={organization() ?? ""}
-                    onChange={(e) => setOrganization(e.currentTarget.value)}
-                  >
-                    <option value="" disabled hidden>
-                      Select an Option
-                    </option>
-                    {organizations().length > 0 ? (
-                      organizations().map((organization) => <option value={organization}>{organization}</option>)
-                    ) : (
-                      <option disabled>No organizations available</option>
-                    )}
-                  </select>
-                </div>
-                {errors().organization && <p class={styles["error-text"]}>{errors().organization}</p>}
-                {/* TODO: Preselect the userRole */}
-                <div class={styles["text-field"]}>
-                  <label class={styles["text-field-label"]}>User Role</label>
-                  <select
-                    class={styles["text-field-input"]}
-                    onChange={(e) => setUserRole(e.currentTarget.value as UserRole)}
-                  >
-                    <option value="" selected disabled hidden>
-                      Select an Option
-                    </option>
-                    <option value={UserRole.USER}>User</option>
-                    <option value={UserRole.ADMIN}>Admin</option>
-                  </select>
-                </div>
-                {errors().userRole && <p class={styles["error-text"]}>{errors().userRole}</p>}
+                  options={organizations()}
+                />
+                <FormField
+                  getter={userRole}
+                  setter={setUserRole}
+                  labelText="User Role"
+                  oldValue={oldUserRole()}
+                  options={Object.values(UserRole)}
+                />
               </form>
               <div class={styles["signin-buttons"]}>
                 <Button.Root onClick={submit}>Submit</Button.Root>

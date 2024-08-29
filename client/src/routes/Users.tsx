@@ -123,7 +123,7 @@ const Users: Component = () => {
     }).then(async (result) => {
       if (result.isConfirmed) {
         try {
-          const deletedUser = await eden.admin.users.delete({
+          const deletedUser = await eden.admin["delete-user"].delete({
             userId: userId,
             $fetch: {
               mode: "cors",
@@ -257,7 +257,6 @@ const Users: Component = () => {
                   const onlineStatus = onlineStatuses()[user.id];
 
                   return (
-                    // TODO: Highlighting the logged in user works, but it disappears on page reload
                     <tr class={user.email == loggedInUser ? styles["logged-in-user"] : ""}>
                       <td>{user.username}</td>
                       <td>{user.name}</td>

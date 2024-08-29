@@ -75,7 +75,7 @@ export async function createUser(data: {
   organizationName: string;
   municipalityName: string;
   userRole: "USER" | "ADMIN";
-}){
+}) {
   try {
     const user = await prisma.user.create({
       data: {
@@ -113,18 +113,42 @@ export async function selectUser(
   let user: User | null = null;
   if (userId !== undefined) {
     user = await prisma.user.findUnique({
+      include: {
+        municipality: {
+          select: { name: true },
+        },
+        organization: {
+          select: { name: true },
+        },
+      },
       where: {
         id: userId,
       },
     });
   } else if (email !== undefined) {
     user = await prisma.user.findUnique({
+      include: {
+        municipality: {
+          select: { name: true },
+        },
+        organization: {
+          select: { name: true },
+        },
+      },
       where: {
         email,
       },
     });
   } else {
     user = await prisma.user.findUnique({
+      include: {
+        municipality: {
+          select: { name: true },
+        },
+        organization: {
+          select: { name: true },
+        },
+      },
       where: {
         username,
       },
@@ -142,18 +166,17 @@ export async function selectUser(
 export async function getAllUsers(): Promise<UserDocument[]> {
   const users = await prisma.user.findMany({
     include: {
-      municipality: true, 
-      organization: true, 
+      municipality: true,
+      organization: true,
     },
   });
 
   return users.map((user) => ({
     ...user,
-    municipalityName: user.municipality?.name, 
-    organizationName: user.organization?.name, 
+    municipalityName: user.municipality?.name,
+    organizationName: user.organization?.name,
   }));
 }
-
 
 export async function updateUser(
   userId: string,
@@ -222,8 +245,6 @@ export async function deleteUser(userId: string): Promise<User> {
   }
   return user;
 }
-
-//TODO: add func to log out a user
 
 export async function createDocument(
   name: string,

@@ -1,18 +1,7 @@
-import { authMiddleware } from "@server/middleware";
 import { Elysia, t } from "elysia";
 import { sql } from "@server/sql";
 import { UserRole } from "@server/prisma";
 import { authAdminMiddleware } from "@server/middleware";
-
-interface CreateUserRequestBody {
-  username: string;
-  password: string;
-  name: string;
-  email: string;
-  organizationName: string;
-  municipalityName: string;
-  userRole: UserRole;
-}
 
 interface UpdateUserRequestBody {
   userId: string;
@@ -25,17 +14,10 @@ interface UpdateUserRequestBody {
   userRole?: UserRole;
 }
 
-interface DeleteUserRequestBody {
-  userId: string;
-}
-
 interface LogoutUserRequestBody {
   userId: string;
 }
 
-// interface GetUserRequestBody {
-//   userId: string;
-// }
 
 export const admin = new Elysia({ prefix: "/admin" })
   .onBeforeHandle(async ({ set, userId }) => {
@@ -62,7 +44,7 @@ export const admin = new Elysia({ prefix: "/admin" })
   )
 
   .delete(
-    "/users",
+    "/delete-user",
     async ({ log, set, body: { userId } }) => {
       try {
         log.info("Trying to delete user");
@@ -87,11 +69,9 @@ export const admin = new Elysia({ prefix: "/admin" })
   )
 
   .post(
-    "/createUser",
+    "/create-user",
     async ({ log, set, body }) => {
       try {
-        console.log("Received request to create user with body:", body);
-
         const { username, password, name, email, organizationName, municipalityName, userRole } = body;
         if (!username || !password || !name || !email || !organizationName || !municipalityName || !userRole) {
           set.status = 422;
@@ -168,6 +148,7 @@ export const admin = new Elysia({ prefix: "/admin" })
     async ({ log, set, body }: { log: any; set: any; body: UpdateUserRequestBody }) => {
       try {
         log.info("Trying to update user");
+        log.info(`Request body: ${JSON.stringify(body)}`);
         const user = await sql.updateUser(body.userId, {
           username: body.username,
           password: body.password,
@@ -217,8 +198,6 @@ export const admin = new Elysia({ prefix: "/admin" })
           set.status = 400;
           return { status: "error", message: "User ID is required." };
         }
-
-        log.info(`Admin attempting to log out user with ID: ${userId}`);
 
         const user = await sql.selectUser(userId);
 
