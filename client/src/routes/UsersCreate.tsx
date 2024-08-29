@@ -14,24 +14,56 @@ const FormField: Component<{
   getter: Accessor<string | undefined>;
   setter: Setter<string | undefined>;
   labelText: string;
+  options?: string[];
   password?: boolean;
-  error?: string;
-}> = ({ getter, setter, labelText, password }) => {
+}> = ({ getter, setter, labelText, options, password }) => {
   return (
-    <TextField.Root class={styles["text-field"]} value={getter()} onChange={setter}>
-      <TextField.Label class={styles["text-field-label"]}>{labelText}</TextField.Label>
-      <TextField.Input class={styles["text-field-input"]} type={password ? "password" : "text"} />
-    </TextField.Root>
+    <div class={styles["text-field"]}>
+      <label class={styles["text-field-label"]}>{labelText}</label>
+      {options ? (
+        <select
+          class={styles["text-field-input"]}
+          value={getter() || ""}
+          onChange={(e) => {
+            setter(e.currentTarget.value);
+          }}
+        >
+          <option value="" disabled hidden>
+            Select an Option
+          </option>
+          {options.length === 0 ? (
+            <option value="" disabled>
+              No options available
+            </option>
+          ) : (
+            options.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))
+          )}
+        </select>
+      ) : (
+        <TextField.Root>
+          <TextField.Input
+            class={styles["text-field-input"]}
+            type={password ? "password" : "text"}
+            value={getter() || ""}
+            onInput={(e) => setter(e.currentTarget.value)}
+          />
+        </TextField.Root>
+      )}
+    </div>
   );
 };
 
 const UsersCreate: Component = () => {
-  // const [t, { add, locale, dict }] = useI18n();
-
   enum UserRole {
     USER = "USER",
     ADMIN = "ADMIN",
   }
+
+  const navigate = useNavigate();
 
   const [name, setName] = createSignal<string | undefined>(undefined);
   const [email, setEmail] = createSignal<string | undefined>(undefined);
@@ -44,7 +76,8 @@ const UsersCreate: Component = () => {
   const [userRole, setUserRole] = createSignal<UserRole | undefined>(undefined);
   const [errors, setErrors] = createSignal<{ [key: string]: string }>({});
 
-  const navigate = useNavigate();
+  const [isMunicipalitiesLoading, setIsMunicipalitiesLoading] = createSignal(true);
+  const [isOrganizationsLoading, setIsOrganizationsLoading] = createSignal(false);
 
   const fetchMunicipalities = async () => {
     try {
@@ -54,10 +87,13 @@ const UsersCreate: Component = () => {
       }
     } catch (error) {
       console.error("Error fetching municipalities:", error);
+    } finally {
+      setIsMunicipalitiesLoading(false);
     }
   };
 
   const fetchOrganizationsByMunicipality = async (municipalityName: string) => {
+    setIsOrganizationsLoading(true);
     try {
       const response = await eden.api.organizationsByMunicipality.post({ municipalityName });
       if (response.data) {
@@ -68,6 +104,8 @@ const UsersCreate: Component = () => {
       }
     } catch (error) {
       console.error("Error fetching organizations:", error);
+    } finally {
+      setIsOrganizationsLoading(false);
     }
   };
 
@@ -109,22 +147,14 @@ const UsersCreate: Component = () => {
       return;
     }
 
-    const formName = name() ?? "";
-    const formEmail = email() ?? "";
-    const formUsername = username() ?? "";
-    const formPassword = password() ?? "";
-    const formMunicipality = municipality() ?? "";
-    const formOrganization = organization() ?? "";
-    const formUserRole = userRole() ?? UserRole.USER;
-
     const requestBody = {
-      name: formName,
-      email: formEmail,
-      username: formUsername,
-      password: formPassword,
-      municipalityName: formMunicipality,
-      organizationName: formOrganization,
-      userRole: formUserRole,
+      name: name() ?? "",
+      email: email() ?? "",
+      username: username() ?? "",
+      password: password() ?? "",
+      municipalityName: municipality() ?? "",
+      organizationName: organization() ?? "",
+      userRole: userRole() ?? UserRole.USER,
     };
 
     console.log("Data to be submitted:", requestBody);
@@ -182,46 +212,33 @@ const UsersCreate: Component = () => {
             {errors().username && <p class={styles["error-text"]}>{errors().username}</p>}
             <FormField getter={password} setter={setPassword} labelText="Password" password={true} />
             {errors().password && <p class={styles["error-text"]}>{errors().password}</p>}
-            <div class={styles["text-field"]}>
-              <label class={styles["text-field-label"]}>Municipality</label>
-              <select class={styles["text-field-input"]} onChange={(e) => setMunicipality(e.currentTarget.value)}>
-                <option value="none" selected disabled hidden>
-                  Select an Option
-                </option>
-                {municipalities().map((municipality) => (
-                  <option value={municipality}>{municipality}</option>
-                ))}
-              </select>
-            </div>
-            {errors().municipality && <p class={styles["error-text"]}>{errors().municipality}</p>}
-            <div class={styles["text-field"]}>
-              <label class={styles["text-field-label"]}>Organization</label>
-              <select
-                class={styles["text-field-input"]}
-                value={organization() ?? ""}
-                onChange={(e) => setOrganization(e.currentTarget.value)}
-              >
-                <option value="" disabled hidden>
-                  Select an Option
-                </option>
-                {organizations().length > 0 ? (
-                  organizations().map((organization) => <option value={organization}>{organization}</option>)
-                ) : (
-                  <option disabled>No organizations available</option>
-                )}
-              </select>
-            </div>
-            {errors().organization && <p class={styles["error-text"]}>{errors().organization}</p>}
-            <div class={styles["text-field"]}>
-              <label class={styles["text-field-label"]}>User Role</label>
-              <select class={styles["text-field-input"]} onChange={(e) => setUserRole(e.currentTarget.value as UserRole)}>
-                <option value="" selected disabled hidden>
-                  Select an Option
-                </option>
-                <option value={UserRole.USER}>User</option>
-                <option value={UserRole.ADMIN}>Admin</option>
-              </select>
-            </div>
+            {isMunicipalitiesLoading() ? (
+              <div class={styles.loader}></div>
+            ) : (
+              <>
+                <FormField
+                  getter={municipality}
+                  setter={setMunicipality}
+                  labelText="Municipality"
+                  options={municipalities()}
+                />
+                {errors().municipality && <p class={styles["error-text"]}>{errors().municipality}</p>}
+              </>
+            )}
+            {isOrganizationsLoading() ? (
+              <div class={styles.loader}></div>
+            ) : (
+              <>
+                <FormField
+                  getter={organization}
+                  setter={setOrganization}
+                  labelText="Organization"
+                  options={organizations()}
+                />
+                {errors().organization && <p class={styles["error-text"]}>{errors().organization}</p>}
+              </>
+            )}
+            <FormField getter={userRole} setter={setUserRole} labelText="User Role" options={Object.values(UserRole)} />
             {errors().userRole && <p class={styles["error-text"]}>{errors().userRole}</p>}
           </form>
           <div class={styles["signin-buttons"]}>

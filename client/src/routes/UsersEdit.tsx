@@ -14,8 +14,7 @@ const FormField: Component<{
   oldValue: string | undefined;
   options?: string[]; // Optional prop for select field options
   password?: boolean;
-  error?: string;
-}> = ({ getter, setter, labelText, oldValue, options, password, error }) => {
+}> = ({ getter, setter, labelText, oldValue, options, password }) => {
   return (
     <div class={styles["text-field"]}>
       <label class={styles["text-field-label"]}>{labelText}</label>
@@ -24,18 +23,24 @@ const FormField: Component<{
           class={styles["text-field-input"]}
           value={getter() || ""}
           onChange={(e) => {
-            console.log("Selected Organization:", e.currentTarget.value);
-            setter(e.currentTarget.value); // Ensure the setter is called with the selected value
+            setter(e.currentTarget.value);
           }}
+          style={{ opacity: getter() ? 1 : 0.5 }}
         >
           <option value="" disabled hidden>
-            Select an Option
+            {oldValue}
           </option>
-          {options.map((option) => (
-            <option key={option} value={option}>
-              {option}
+          {options.length === 0 ? (
+            <option value="" disabled>
+              No options available
             </option>
-          ))}
+          ) : (
+            options.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))
+          )}
         </select>
       ) : (
         <TextField.Root>
@@ -48,18 +53,18 @@ const FormField: Component<{
           />
         </TextField.Root>
       )}
-      {error && <p class={styles["error-text"]}>{error}</p>}
     </div>
   );
 };
-
-
 
 const UsersEdit: Component = () => {
   enum UserRole {
     USER = "USER",
     ADMIN = "ADMIN",
   }
+
+  const navigate = useNavigate();
+  const userId = useParams().userId;
 
   const [name, setName] = createSignal<string | undefined>(undefined);
   const [email, setEmail] = createSignal<string | undefined>(undefined);
@@ -72,9 +77,6 @@ const UsersEdit: Component = () => {
   const [userRole, setUserRole] = createSignal<UserRole | undefined>(undefined);
   const [errors, setErrors] = createSignal<{ [key: string]: string }>({});
 
-  const navigate = useNavigate();
-  const userId = useParams().userId;
-
   const [oldName, setOldName] = createSignal<string | undefined>(undefined);
   const [oldEmail, setOldEmail] = createSignal<string | undefined>(undefined);
   const [oldUsername, setOldUsername] = createSignal<string | undefined>(undefined);
@@ -82,11 +84,10 @@ const UsersEdit: Component = () => {
   const [oldOrganization, setOldOrganization] = createSignal<string | undefined>(undefined);
   const [oldUserRole, setOldUserRole] = createSignal<UserRole | undefined>(undefined);
   const [userFetchError, setUserFetchErrors] = createSignal<string | null>(null);
-  const [loading, setLoading] = createSignal(true);
 
-  // Manage the loading state of the municipalities and organizations
+  const [loading, setLoading] = createSignal(true);
   const [isMunicipalitiesLoading, setIsMunicipalitiesLoading] = createSignal(true);
-  const [isOrganizationsLoading, setIsOrganizationsLoading] = createSignal(true);
+  const [isOrganizationsLoading, setIsOrganizationsLoading] = createSignal(false);
 
   const fetchUserData = async () => {
     try {
@@ -115,7 +116,6 @@ const UsersEdit: Component = () => {
         setOldMunicipality(oldUserData.data.municipality.name);
         setOldOrganization(oldUserData.data.organization.name);
         setOldUserRole(oldUserData.data.userRole);
-        setMunicipality(oldUserData.data.municipality.name);
       }
     } catch (error) {
       setUserFetchErrors("Error fetching user data");
@@ -129,7 +129,6 @@ const UsersEdit: Component = () => {
       const response = await eden.api.municipalities.get();
       if (response.data) {
         setMunicipalities(response.data);
-        console.log("Fetched municipalities:", response.data);
       }
     } catch (error) {
       console.error("Error fetching municipalities:", error);
@@ -139,7 +138,9 @@ const UsersEdit: Component = () => {
   };
 
   const fetchOrganizationsByMunicipality = async (municipalityName: string) => {
+    setIsOrganizationsLoading(true);
     try {
+      console.log("Fetching organizations for municipality:", municipalityName);
       const response = await eden.api.organizationsByMunicipality.post({ municipalityName });
       if (response.data) {
         setOrganizations(response.data);
@@ -162,7 +163,6 @@ const UsersEdit: Component = () => {
     const currentMunicipality = municipality();
     if (currentMunicipality) {
       setOrganization(undefined); // Reset organization selection
-      setIsOrganizationsLoading(true);
       fetchOrganizationsByMunicipality(currentMunicipality);
     }
   });
@@ -170,6 +170,10 @@ const UsersEdit: Component = () => {
   const validateForm = () => {
     if (!name() && !email() && !username() && !password() && !municipality() && !organization() && !userRole()) {
       return "No changes made";
+    }
+
+    if ((municipality() && !organization()) || (!municipality() && organization())) {
+      return "Please select both municipality and organization.";
     }
 
     const newErrors: { [key: string]: string } = {};
@@ -185,10 +189,10 @@ const UsersEdit: Component = () => {
 
   const submit = async () => {
     const formValidate = validateForm();
-    if (formValidate === "No changes made") {
+    if (typeof formValidate === "string") {
       Swal.fire({
         title: "Error",
-        text: "No changes made.",
+        text: formValidate,
         icon: "error",
       });
       return;
@@ -208,7 +212,6 @@ const UsersEdit: Component = () => {
     if (username()) requestBody.username = username();
     if (password()) requestBody.password = password();
     if (municipality()) requestBody.municipality = municipality();
-    console.log("Organization to be updated:", organization());
     if (organization()) requestBody.organization = organization();
     if (userRole()) requestBody.userRole = userRole();
 
@@ -246,7 +249,7 @@ const UsersEdit: Component = () => {
       <main class={styles["signin-main-container"]}>
         <div class={styles["signin-card-container"]}>
           <h1>Edit User</h1>
-          {loading() || isMunicipalitiesLoading() || isOrganizationsLoading() ? (
+          {loading() ? (
             <div class={styles.loader}></div>
           ) : userFetchError() ? (
             <div>
@@ -261,23 +264,40 @@ const UsersEdit: Component = () => {
             <div style="width: 100%">
               <form class={styles["signin-form-container"]}>
                 <FormField getter={name} setter={setName} labelText="Name" oldValue={oldName()} />
+                {errors().name && <p class={styles["error-text"]}>{errors().name}</p>}
                 <FormField getter={email} setter={setEmail} labelText="Email" oldValue={oldEmail()} />
+                {errors().email && <p class={styles["error-text"]}>{errors().email}</p>}
                 <FormField getter={username} setter={setUsername} labelText="Username" oldValue={oldUsername()} />
+                {errors().username && <p class={styles["error-text"]}>{errors().username}</p>}
                 <FormField getter={password} setter={setPassword} labelText="Password" oldValue="" password={true} />
-                <FormField
-                  getter={municipality}
-                  setter={setMunicipality}
-                  labelText="Municipality"
-                  oldValue={oldMunicipality()}
-                  options={municipalities()}
-                />
-                <FormField
-                  getter={organization}
-                  setter={setOrganization}
-                  labelText="Organisation"
-                  oldValue={oldOrganization()}
-                  options={organizations()}
-                />
+                {isMunicipalitiesLoading() ? (
+                  <div class={styles.loader}></div>
+                ) : (
+                  <>
+                    <FormField
+                      getter={municipality}
+                      setter={setMunicipality}
+                      labelText="Municipality"
+                      oldValue={oldMunicipality()}
+                      options={municipalities()}
+                    />
+                    {errors().password && <p class={styles["error-text"]}>{errors().password}</p>}
+                  </>
+                )}
+                {isOrganizationsLoading() ? (
+                  <div class={styles.loader}></div>
+                ) : (
+                  <>
+                    <FormField
+                      getter={organization}
+                      setter={setOrganization}
+                      labelText="Organization"
+                      oldValue={oldOrganization()}
+                      options={organizations()}
+                    />
+                    {errors().organization && <p class={styles["error-text"]}>{errors().organization}</p>}
+                  </>
+                )}
                 <FormField
                   getter={userRole}
                   setter={setUserRole}
@@ -285,6 +305,7 @@ const UsersEdit: Component = () => {
                   oldValue={oldUserRole()}
                   options={Object.values(UserRole)}
                 />
+                {errors().userRole && <p class={styles["error-text"]}>{errors().userRole}</p>}
               </form>
               <div class={styles["signin-buttons"]}>
                 <Button.Root onClick={submit}>Submit</Button.Root>
