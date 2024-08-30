@@ -253,11 +253,7 @@ const Login: Component = () => {
     console.log(`Login successful. Welcome ${logged.data.name}.`);
     authStore.setState({ isAuthenticated: true, user: formUsername, userRole: logged.data.userRole });
 
-    if (logged.data.userRole === "ADMIN") {
-      navigate("/users", { replace: true });
-    } else {
-      navigate("/editor", { replace: true });
-    }
+    navigate("/home", { replace: true });
 
     Swal.fire({
       title: "Success",

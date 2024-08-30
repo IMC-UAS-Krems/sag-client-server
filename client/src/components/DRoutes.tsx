@@ -1,6 +1,5 @@
 import { type Component } from "solid-js";
-
-import { Router, Route, Navigate, useNavigate } from "@solidjs/router";
+import { Router, Route, Navigate } from "@solidjs/router";
 
 import Home from "@client/routes/Home";
 import About from "@client/routes/About";
@@ -9,41 +8,55 @@ import SignIn from "@client/routes/SignIn";
 import Users from "@client/routes/Users";
 import UsersCreate from "@client/routes/UsersCreate";
 import UsersEdit from "@client/routes/UsersEdit";
-import authStore from "@store/authStore";
-
-interface ProtectedRouteProps {
-  component: Component;
-}
-
-const ProtectedRoute: Component<ProtectedRouteProps> = (props) => {
-  const navigate = useNavigate();
-  const isAuthenticated = authStore.state().isAuthenticated;
-
-  console.log("ProtectedRoute user:", authStore.state().user);
-  console.log("ProtectedRoute userRole:", authStore.state().userRole);
-  console.log("ProtectedRoute isAuthenticated:", isAuthenticated);
-  if (!isAuthenticated) {
-    navigate("/sign-in");
-    return null;
-  }
-
-  return <props.component />;
-};
+import Unauthorized from "@client/routes/Unauthorized";
+import AuthGuard from "@client/guard/authGuard";
 
 const DRoutes: Component = () => {
   return (
-    <>
-      <Router>
-        <Route path="/home" component={Home} />
-        <Route path="/about" component={About} />
-        <Route path="/sign-in" component={SignIn} />
-        <Route path="/editor" component={() => <ProtectedRoute component={Editor} />} />
-        <Route path="/users" component={() => <ProtectedRoute component={Users} />} />
-        <Route path="/users/create" component={() => <ProtectedRoute component={UsersCreate} />} />
-        <Route path="/users/edit/:userId" component={() => <ProtectedRoute component={UsersEdit} />} />
-        <Route path="*" component={() => <Navigate href="/home" />} />
-      </Router>
-    </>
+    <Router>
+      <Route path="/home" component={Home} />
+      <Route path="/about" component={About} />
+      <Route path="/sign-in" component={SignIn} />
+      <Route path="/unauthorized" component={Unauthorized} />
+
+      <Route
+        path="/editor"
+        component={() => (
+          <AuthGuard role="USER">
+            <Editor />
+          </AuthGuard>
+        )}
+      />
+
+      <Route
+        path="/users/create"
+        component={() => (
+          <AuthGuard role="ADMIN">
+            <UsersCreate />
+          </AuthGuard>
+        )}
+      />
+
+      <Route
+        path="/users/edit/:userId"
+        component={() => (
+          <AuthGuard role="ADMIN">
+            <UsersEdit />
+          </AuthGuard>
+        )}
+      />
+
+      <Route
+        path="/users"
+        component={() => (
+          <AuthGuard role="ADMIN">
+            <Users />
+          </AuthGuard>
+        )}
+      />
+
+      <Route path="*" component={() => <Navigate href="/home" />} />
+    </Router>
   );
 };
 

@@ -21,7 +21,7 @@ const app = new Elysia()
     cors({
       credentials: true,
       // methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-      allowedHeaders: ["Content-Type", "*"],
+      allowedHeaders: ["Content-Type", "Authorization", "*"],
       origin: true,
     }),
   )
@@ -40,13 +40,20 @@ const app = new Elysia()
       },
     }),
   )
-  .resolve(({ cookie: { access_token } }) => {
-    if (access_token.value == null) {
-      return { userId: null };
-    }
-    const id = decrypt(access_token.value) as string;
+  .resolve(({ cookie }) => {
+  if (!cookie || !cookie.access_token) {
+    console.warn("No access token found in cookies");
+    return { userId: null };
+  }
+
+  try {
+    const id = decrypt(cookie.access_token.value) as string;
     return { userId: id };
-  })
+  } catch (error) {
+    console.error("Failed to decrypt token:", error);
+    return { userId: null };
+  }
+})
   .use(api)
   .use(auth)
   .use(admin)

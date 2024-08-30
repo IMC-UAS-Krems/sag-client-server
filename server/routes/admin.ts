@@ -1,7 +1,7 @@
 import { Elysia, t } from "elysia";
 import { sql } from "@server/sql";
 import { UserRole } from "@server/prisma";
-import { authAdminMiddleware } from "@server/middleware";
+import { authMiddleware } from "@server/middleware";
 
 interface UpdateUserRequestBody {
   userId: string;
@@ -20,8 +20,8 @@ interface LogoutUserRequestBody {
 
 
 export const admin = new Elysia({ prefix: "/admin" })
-  .onBeforeHandle(async ({ set, userId }) => {
-    return await authAdminMiddleware({ set, userId });
+  .onBeforeHandle(async ({ set, cookie }) => {
+    return await authMiddleware({ set, cookie }, {requireAdmin: true});
   })
   .get(
     "/users",

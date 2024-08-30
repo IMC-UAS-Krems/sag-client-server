@@ -8,6 +8,7 @@ import { Button, Alert } from "@kobalte/core";
 import Header from "@client/components/Header";
 import { errors, setErrors, Error } from "@store/index";
 import { eden } from "@client/api";
+import authStore from "@store/authStore";
 import "../styles/Editor.css";
 
 import { RightSideBar } from "../components/RightSideBar";
@@ -134,7 +135,9 @@ export const Editor: Component = () => {
   };
 
   createEffect(() => {
-    check(code());
+    if (authStore.state().isAuthenticated){
+      check(code());
+    }
   });
 
   const {

@@ -1,4 +1,4 @@
-import { onMount, type Component, JSX } from "solid-js";
+import { onMount, type Component, JSX, Show } from "solid-js";
 
 import { A, useNavigate } from "@solidjs/router";
 import { Image } from "@kobalte/core";
@@ -14,45 +14,50 @@ import ThemeToggle from "./ThemeToggle";
 
 const Header: Component<{ children: JSX.Element }> = (props) => {
   const navigate = useNavigate();
-  const handleLogout = async () => {
-    await eden.auth.logout.post({
-      $fetch: {
-        mode: "cors",
-        credentials: "include",
-        method: "POST",
-      },
-    });
-    authStore.setState({ isAuthenticated: false, user: "", userRole: "" });
-    navigate("/sign-in");
-  };
 
-  const checkIfUserIsAuthenticated = async () => {
+  const handleLogout = async () => {
     try {
-      const response = await eden.auth["check-if-logged-in"].get({
+      await eden.auth.logout.post({
         $fetch: {
           mode: "cors",
           credentials: "include",
-          method: "GET",
+          method: "POST",
         },
       });
-      console.log("response");
-      console.log(response);
-      console.log(typeof response.data);
-      if (response.status === 200 && response.data) {
-        authStore.setState({ isAuthenticated: true, user: response.data.email, userRole: response.data.userRole });
-        console.log("here");
-        console.log(authStore.state());
-      } else {
-        authStore.setState({ isAuthenticated: false, user: "", userRole: "" });
-      }
     } catch (error) {
-      console.error("Error checking authentication status", error);
+      console.error("Failed to log out:", error);
+    } finally {
+      authStore.resetAuth();
+      navigate("/home", { replace: true });
     }
   };
+  //   try {
+  //     const response = await eden.auth["check-if-logged-in"].get({
+  //       $fetch: {
+  //         mode: "cors",
+  //         credentials: "include",
+  //         method: "GET",
+  //       },
+  //     });
+  //     console.log("response");
+  //     console.log(response);
+  //     console.log(typeof response.data);
+  //     if (response.status === 200 && response.data) {
+  //       authStore.setState({ isAuthenticated: true, user: response.data.email, userRole: response.data.userRole });
+  //       console.log("here");
+  //       console.log(authStore.state());
+  //     } else {
+  //       authStore.setState({ isAuthenticated: false, user: "", userRole: "" });
+  //     }
+  //   } catch (error) {
+  //     console.error("Error checking authentication status", error);
+  //   }
+  // };
 
-  onMount(() => {
-    checkIfUserIsAuthenticated();
-  });
+  // onMount(() => {
+  //   checkIfUserIsAuthenticated();
+  // });
+
 
   return (
     <>
@@ -71,30 +76,31 @@ const Header: Component<{ children: JSX.Element }> = (props) => {
             <li>
               <A href="/home">Home</A>
             </li>
-            {authStore.state().userRole === "USER" && (
+            <Show when={authStore.state().userRole === "USER"}>
               <li>
                 <A href="/editor">Editor</A>
               </li>
-            )}
+            </Show>
             <li>
               <A href="/about">About Us</A>
             </li>
-            {authStore.state().userRole === "ADMIN" && (
+            <Show when={authStore.state().userRole === "ADMIN"}>
               <li>
                 <A href="/users">Users</A>
               </li>
-            )}
-            {authStore.state().user ? (
+            </Show>
+            <Show when={authStore.state().isAuthenticated}>
               <li>
                 <a href="#" onClick={handleLogout}>
                   Logout ({authStore.state().user})
                 </a>
               </li>
-            ) : (
+            </Show>
+            <Show when={!authStore.state().isAuthenticated}>
               <li>
                 <A href="/sign-in">Sign In</A>
               </li>
-            )}
+            </Show>
             <li>
               <ThemeToggle />
             </li>

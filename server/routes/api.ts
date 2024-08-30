@@ -70,8 +70,8 @@ export const api = new Elysia({ prefix: "/api" })
     },
   )
 
-  .onBeforeHandle(async ({ set, userId }) => {
-    return await authMiddleware({ set, userId });
+  .onBeforeHandle(async ({ set, cookie }) => {
+    return await authMiddleware({ set, cookie }, { requireAdmin: true });
   })
 
   .post(
