@@ -68,7 +68,7 @@ const Users: Component = () => {
         },
       });
 
-      // Unauthorized check - we are passing navigation function to handleUnauthorized
+      // Unauthorized check
       if (fetchedUsers.status === 401 || fetchedUsers.status === 403) {
         console.log("User is not authorized for this request:", fetchedUsers);
         handleUnauthorized(navigate);
@@ -135,6 +135,13 @@ const Users: Component = () => {
             },
           });
 
+          // Unauthorized check
+          if (deletedUser.status === 401 || deletedUser.status === 403) {
+            console.log("User is not authorized for this request:", deletedUser);
+            handleUnauthorized(navigate);
+            return;
+          }
+
           if (!deletedUser.data || deletedUser.error) {
             console.log("Failed to delete user:", deletedUser.error);
             Swal.fire({
@@ -184,6 +191,13 @@ const Users: Component = () => {
             },
           });
           console.log("Response:", response);
+
+          // Unauthorized check
+          if (response.status === 401 || response.status === 403) {
+            console.log("User is not authorized for this request:", fetchedUsers);
+            handleUnauthorized(navigate);
+            return;
+          }
 
           if (!response.data || response.error) {
             console.log("Failed to log out user:", response.error);

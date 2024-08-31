@@ -6,6 +6,7 @@ import { Button } from "@kobalte/core";
 import Swal from "sweetalert2";
 
 import { eden } from "@client/api";
+import { handleUnauthorized } from "@client/utils/authUtils";
 import Header from "@client/components/Header";
 import FormField from "@client/components/FormField";
 import styles from "@styles/Signin.module.css";
@@ -68,6 +69,13 @@ const UsersEdit: Component = () => {
           userId: userId,
         },
       });
+
+      // Unauthorized check
+      if (oldUserData.status === 401 || oldUserData.status === 403) {
+        console.log("User is not authorized for this request:", oldUserData);
+        handleUnauthorized(navigate);
+        return;
+      }
 
       if (!oldUserData.data || oldUserData.error) {
         setLoading(false);
@@ -187,6 +195,13 @@ const UsersEdit: Component = () => {
         method: "POST",
       },
     });
+
+    // Unauthorized check
+    if (updated.status === 401 || updated.status === 403) {
+      console.log("User is not authorized for this request:", updated);
+      handleUnauthorized(navigate);
+      return;
+    }
 
     if (!updated.data || updated.error) {
       Swal.fire({

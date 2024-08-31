@@ -6,6 +6,7 @@ import { Button } from "@kobalte/core";
 import Swal from "sweetalert2";
 
 import { eden } from "@client/api";
+import { handleUnauthorized } from "@client/utils/authUtils";
 import Header from "@client/components/Header";
 import FormField from "@client/components/FormField";
 import styles from "@styles/Signin.module.css";
@@ -121,6 +122,13 @@ const UsersCreate: Component = () => {
           method: "POST",
         },
       });
+
+      // Unauthorized check
+      if (response.status === 401 || response.status === 403) {
+        console.log("User is not authorized for this request:", response);
+        handleUnauthorized(navigate);
+        return;
+      }
 
       if (response.error || response.data?.error) {
         console.error(response.error || response.data?.error);

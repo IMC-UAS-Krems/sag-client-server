@@ -69,12 +69,13 @@ export const api = new Elysia({ prefix: "/api" })
       },
       body: t.Object({
         municipalityName: t.String(),
-      })
+      }),
     },
   )
 
+  // TODO: Should make sure that user is NOT ADMIN
   .onBeforeHandle(async ({ set, cookie }) => {
-    return await authMiddleware({ set, cookie }, { requireAdmin: true });
+    return await authMiddleware({ set, cookie }, { requireAdmin: false });
   })
 
   .post(
