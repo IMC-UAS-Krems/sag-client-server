@@ -163,6 +163,32 @@ export async function selectUser(
   return user;
 }
 
+export async function getUserDataById(userId: string): Promise<User> {
+  return await prisma.user.findUnique({
+    where: {
+      id: userId,
+    },
+    select: {
+      id: true,
+      username: true,
+      password: true,
+      name: true,
+      email: true,
+      municipality: {
+        select: {
+          name: true,
+        },
+      },
+      organization: {
+        select: {
+          name: true,
+        },
+      },
+      userRole: true,
+    },
+  });
+}
+
 export async function getAllUsers(): Promise<UserDocument[]> {
   const users = await prisma.user.findMany({
     include: {

@@ -1,66 +1,30 @@
 import { createSignal, createEffect } from "solid-js";
-import type { Component, Accessor, Setter } from "solid-js";
+import type { Component } from "solid-js";
+
 import { useNavigate, useParams } from "@solidjs/router";
-import { TextField, Button } from "@kobalte/core";
+import { Button } from "@kobalte/core";
 import Swal from "sweetalert2";
+
 import { eden } from "@client/api";
 import Header from "@client/components/Header";
+import FormField from "@client/components/FormField";
 import styles from "@styles/Signin.module.css";
-
-const FormField: Component<{
-  getter: Accessor<string | undefined>;
-  setter: Setter<string | undefined>;
-  labelText: string;
-  oldValue: string | undefined;
-  options?: string[]; // Optional prop for select field options
-  password?: boolean;
-}> = ({ getter, setter, labelText, oldValue, options, password }) => {
-  return (
-    <div class={styles["text-field"]}>
-      <label class={styles["text-field-label"]}>{labelText}</label>
-      {options ? (
-        <select
-          class={styles["text-field-input"]}
-          value={getter() || ""}
-          onChange={(e) => {
-            setter(e.currentTarget.value);
-          }}
-          style={{ opacity: getter() ? 1 : 0.5 }}
-        >
-          <option value="" disabled hidden>
-            {oldValue}
-          </option>
-          {options.length === 0 ? (
-            <option value="" disabled>
-              No options available
-            </option>
-          ) : (
-            options.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))
-          )}
-        </select>
-      ) : (
-        <TextField.Root>
-          <TextField.Input
-            class={styles["text-field-input"]}
-            type={password ? "password" : "text"}
-            value={getter() || ""}
-            onInput={(e) => setter(e.currentTarget.value)}
-            placeholder={oldValue}
-          />
-        </TextField.Root>
-      )}
-    </div>
-  );
-};
 
 const UsersEdit: Component = () => {
   enum UserRole {
     USER = "USER",
     ADMIN = "ADMIN",
+  }
+
+  interface UpdateUserRequestBody {
+    userId: string;
+    username?: string;
+    password?: string;
+    name?: string;
+    email?: string;
+    organization?: string;
+    municipality?: string;
+    userRole?: UserRole;
   }
 
   const navigate = useNavigate();
@@ -91,7 +55,7 @@ const UsersEdit: Component = () => {
 
   const fetchUserData = async () => {
     try {
-      const oldUserData = await eden.admin["update-user"].get({
+      const oldUserData = await eden.admin["user-details"].get({
         $fetch: {
           mode: "cors",
           credentials: "include",
@@ -205,7 +169,7 @@ const UsersEdit: Component = () => {
       return;
     }
 
-    const requestBody: any = { userId: userId };
+    const requestBody: UpdateUserRequestBody = { userId: userId };
 
     if (name()) requestBody.name = name();
     if (email()) requestBody.email = email();

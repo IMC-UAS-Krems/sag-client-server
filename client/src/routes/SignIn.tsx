@@ -1,30 +1,19 @@
 import { createSignal, createEffect } from "solid-js";
-import type { Component, Accessor, Setter } from "solid-js";
+import type { Component } from "solid-js";
 
 import { useNavigate } from "@solidjs/router";
-import { TextField, Button } from "@kobalte/core";
+import { Button } from "@kobalte/core";
 import Swal from "sweetalert2";
 
 import { eden } from "@client/api";
 import authStore from "@store/authStore";
 import Header from "@client/components/Header";
+import FormField from "@client/components/FormField";
 import styles from "@styles/Signin.module.css";
 
-const FormField: Component<{
-  getter: Accessor<string | undefined>;
-  setter: Setter<string | undefined>;
-  labelText: string;
-  password?: boolean;
-}> = ({ getter, setter, labelText, password }) => {
-  return (
-    <TextField.Root class={styles["text-field"]} value={getter()} onChange={setter}>
-      <TextField.Label class={styles["text-field-label"]}>{labelText}</TextField.Label>
-      <TextField.Input class={styles["text-field-input"]} type={password ? "password" : "text"} />
-    </TextField.Root>
-  );
-};
-
 const Register: Component = () => {
+  const navigate = useNavigate();
+
   const [name, setName] = createSignal<string | undefined>(undefined);
   const [email, setEmail] = createSignal<string | undefined>(undefined);
   const [username, setUsername] = createSignal<string | undefined>(undefined);
@@ -34,7 +23,8 @@ const Register: Component = () => {
   const [municipalities, setMunicipalities] = createSignal<string[]>([]);
   const [organizations, setOrganizations] = createSignal<string[]>([]);
 
-  const navigate = useNavigate();
+  const [isMunicipalitiesLoading, setIsMunicipalitiesLoading] = createSignal(true);
+  const [isOrganizationsLoading, setIsOrganizationsLoading] = createSignal(false);
 
   const fetchMunicipalities = async () => {
     try {
@@ -44,10 +34,13 @@ const Register: Component = () => {
       }
     } catch (error) {
       console.error("Error fetching municipalities:", error);
+    } finally {
+      setIsMunicipalitiesLoading(false);
     }
   };
 
   const fetchOrganizationsByMunicipality = async (municipalityName: string) => {
+    setIsOrganizationsLoading(true);
     try {
       const response = await eden.api.organizationsByMunicipality.post({ municipalityName });
       if (response.data) {
@@ -58,6 +51,8 @@ const Register: Component = () => {
       }
     } catch (error) {
       console.error("Error fetching organizations:", error);
+    } finally {
+      setIsOrganizationsLoading(false);
     }
   };
 
@@ -125,8 +120,7 @@ const Register: Component = () => {
       return;
     }
 
-    authStore.setState({ isAuthenticated: true, user: formEmail });
-
+    authStore.setState({ isAuthenticated: true, user: formEmail, userRole: "USER" });
     navigate("/editor", { replace: true });
 
     Swal.fire({
@@ -150,37 +144,32 @@ const Register: Component = () => {
           {registerErrors().username && <p class={styles["error-text"]}>{registerErrors().username}</p>}
           <FormField getter={password} setter={setPassword} labelText="Password" password={true} />
           {registerErrors().password && <p class={styles["error-text"]}>{registerErrors().password}</p>}
-          <div class={styles["text-field"]}>
-            <label class={styles["text-field-label"]}>Municipality</label>
-            <select class={styles["text-field-input"]} onChange={(e) => setMunicipality(e.currentTarget.value)}>
-              <option value="none" selected disabled hidden>
-                Select an Option
-              </option>
-              {municipalities().map((municipality) => (
-                <option value={municipality}>{municipality}</option>
-              ))}
-            </select>
-          </div>
-          {registerErrors().municipality && <p class={styles["error-text"]}>{registerErrors().municipality}</p>}
-          <div class={styles["text-field"]}>
-            <label class={styles["text-field-label"]}>Organization</label>
-            <select
-              class={styles["text-field-input"]}
-              value={organization() ?? ""}
-              onChange={(e) => setOrganization(e.currentTarget.value)}
-            >
-              <option value="" disabled hidden>
-                Select an Option
-              </option>
-              {organizations().length > 0 ? (
-                organizations().map((organization) => <option value={organization}>{organization}</option>)
-              ) : (
-                <option disabled>No organizations available</option>
-              )}
-            </select>
-          </div>
-          {registerErrors().organization && <p class={styles["error-text"]}>{registerErrors().organization}</p>}
-          {/* <FormField getter={organization} setter={setOrganization} labelText="Organization" /> */}
+          {isMunicipalitiesLoading() ? (
+            <div class={styles.loader}></div>
+          ) : (
+            <>
+              <FormField
+                getter={municipality}
+                setter={setMunicipality}
+                labelText="Municipality"
+                options={municipalities()}
+              />
+              {registerErrors().municipality && <p class={styles["error-text"]}>{registerErrors().municipality}</p>}
+            </>
+          )}
+          {isOrganizationsLoading() ? (
+            <div class={styles.loader}></div>
+          ) : (
+            <>
+              <FormField
+                getter={organization}
+                setter={setOrganization}
+                labelText="Organization"
+                options={organizations()}
+              />
+              {registerErrors().organization && <p class={styles["error-text"]}>{registerErrors().organization}</p>}
+            </>
+          )}
         </form>
         <Button.Root onClick={submit}>Submit</Button.Root>
       </div>
@@ -189,7 +178,6 @@ const Register: Component = () => {
 };
 
 const Login: Component = () => {
-  // const [t, { add, locale, dict }] = useI18n();
   const navigate = useNavigate();
 
   const [username, setUsername] = createSignal<string | undefined>(undefined);
@@ -279,7 +267,6 @@ const Login: Component = () => {
 
 const SignIn: Component = () => {
   const [mode, setMode] = createSignal<"login" | "register">("login");
-  // const [t, { add, locale, dict }] = useI18n();
 
   return (
     <Header>

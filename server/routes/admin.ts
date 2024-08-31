@@ -114,12 +114,12 @@ export const admin = new Elysia({ prefix: "/admin" })
   )
 
   .get(
-    "/update-user",
+    "/user-details",
     async ({ log, set, query }: { log: any; set: any; query: { userId: string } }) => {
       try {
         log.info("Trying to get user details for user");
         const { userId } = query;
-        const user = await sql.selectUser(userId);
+        const user = await sql.getUserDataById(userId);
         if (!user) {
           throw new Error("User not found");
         } else {

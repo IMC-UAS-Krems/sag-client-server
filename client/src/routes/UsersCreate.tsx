@@ -1,61 +1,14 @@
 import { createSignal, createEffect } from "solid-js";
-import type { Component, Accessor, Setter } from "solid-js";
+import type { Component } from "solid-js";
 
 import { useNavigate } from "@solidjs/router";
-import { TextField, Button } from "@kobalte/core";
+import { Button } from "@kobalte/core";
 import Swal from "sweetalert2";
 
 import { eden } from "@client/api";
 import Header from "@client/components/Header";
+import FormField from "@client/components/FormField";
 import styles from "@styles/Signin.module.css";
-// import { JSCallback } from "bun:ffi";
-
-const FormField: Component<{
-  getter: Accessor<string | undefined>;
-  setter: Setter<string | undefined>;
-  labelText: string;
-  options?: string[];
-  password?: boolean;
-}> = ({ getter, setter, labelText, options, password }) => {
-  return (
-    <div class={styles["text-field"]}>
-      <label class={styles["text-field-label"]}>{labelText}</label>
-      {options ? (
-        <select
-          class={styles["text-field-input"]}
-          value={getter() || ""}
-          onChange={(e) => {
-            setter(e.currentTarget.value);
-          }}
-        >
-          <option value="" disabled hidden>
-            Select an Option
-          </option>
-          {options.length === 0 ? (
-            <option value="" disabled>
-              No options available
-            </option>
-          ) : (
-            options.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))
-          )}
-        </select>
-      ) : (
-        <TextField.Root>
-          <TextField.Input
-            class={styles["text-field-input"]}
-            type={password ? "password" : "text"}
-            value={getter() || ""}
-            onInput={(e) => setter(e.currentTarget.value)}
-          />
-        </TextField.Root>
-      )}
-    </div>
-  );
-};
 
 const UsersCreate: Component = () => {
   enum UserRole {
@@ -169,30 +122,31 @@ const UsersCreate: Component = () => {
         },
       });
 
-      if (!response.data || response.error) {
-        console.error(response.error);
+      if (response.error || response.data?.error) {
+        console.error(response.error || response.data?.error);
+
+        const errorMessage = response.data?.error || response.error || "An unknown error occurred";
+
         Swal.fire({
           title: "Error",
-          text: `Error creating user: ${response.error}`,
+          text: `Error creating user: ${errorMessage}`,
           icon: "error",
         });
         return;
       }
 
-      navigate("/users", { replace: true });
-
-      Swal.fire({
+      await Swal.fire({
         title: "Success",
         text: `User created successfully.`,
         icon: "success",
       });
 
-      console.log(`Registration successful.`);
-    } catch (error) {
+      navigate("/users", { replace: true });
+    } catch (error: unknown) {
       console.error("Error submitting form:", error);
       Swal.fire({
         title: "Error",
-        text: `An unexpected error occurred: ${error.message}`,
+        text: `An unexpected error occurred: ${error instanceof Error ? error.message : String(error)}`,
         icon: "error",
       });
     }

@@ -46,7 +46,7 @@ export const api = new Elysia({ prefix: "/api" })
 
   .post(
     "/organizationsByMunicipality",
-    async ({ body: { municipalityName }, set }) => {
+    async ({ set, body: { municipalityName } }) => {
       try {
         const organizations = await prisma.organization.findMany({
           where: {
@@ -67,6 +67,9 @@ export const api = new Elysia({ prefix: "/api" })
         tags: ["api"],
         description: "Get all organizations of a given municipality via its name",
       },
+      body: t.Object({
+        municipalityName: t.String(),
+      })
     },
   )
 
