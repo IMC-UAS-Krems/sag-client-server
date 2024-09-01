@@ -8,7 +8,7 @@ const Unauthorized: Component = () => {
     <Header>
       <div class={styles["main-container"]}>
         <div class={styles.card}>
-          <h1>Unauthorized, Only for admins</h1>
+          <h1>You are not authorized for this website</h1>
           <button onClick={() => window.history.back()}>Go back</button>
         </div>
       </div>

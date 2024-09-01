@@ -16,8 +16,38 @@ const createAuthStore = () => {
 
   let isInitialized = false;
 
-  const loadAuthStateFromStorage = () => {
-    const storedAuth = localStorage.getItem("authStore");
+  const setCookie = (name: string, value: string, days: number) => {
+    const date = new Date();
+    date.setTime(date.getTime() + days * 24 * 60 * 60 * 1000);
+    const expires = "expires=" + date.toUTCString();
+
+    // TODO: In local development environment, we don't have HTTPS
+    // But on production, we should set Secure and HttpOnly flags
+    // let cookieString = `${name}=${value};${expires};path=/`;
+    // if (window.location.hostname !== "localhost") {
+    //   cookieString += ";Secure;HttpOnly;SameSite=None";
+    // }
+    const cookieString = `${name}=${value};${expires};path=/`;
+    document.cookie = cookieString;
+  };
+
+  const getCookie = (name: string) => {
+    const nameEQ = name + "=";
+    const ca = document.cookie.split(";");
+    for (let i = 0; i < ca.length; i++) {
+      let c = ca[i];
+      while (c.charAt(0) === " ") c = c.substring(1, c.length);
+      if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
+    }
+    return null;
+  };
+
+  const deleteCookie = (name: string) => {
+    document.cookie = name + "=; Max-Age=-99999999;";
+  };
+
+  const loadAuthStateFromCookie = () => {
+    const storedAuth = getCookie("authStore");
     if (storedAuth) {
       const parsedAuth = JSON.parse(storedAuth);
       setState(parsedAuth);
@@ -25,8 +55,8 @@ const createAuthStore = () => {
     }
   };
 
-  const saveAuthStateToStorage = (newState: AuthStore) => {
-    localStorage.setItem("authStore", JSON.stringify(newState));
+  const saveAuthStateToCookie = (newState: AuthStore) => {
+    setCookie("authStore", JSON.stringify(newState), 2); // Cookie expires in 2 days just like access_token
     console.log("saveAuthStateToStorage: newState =", newState);
   };
 
@@ -39,7 +69,7 @@ const createAuthStore = () => {
     });
 
     // Remove the auth state from local storage
-    localStorage.removeItem("authStore");
+    deleteCookie("authStore");
     isInitialized = false;
     console.log("resetAuth: Auth state reset", state());
   };
@@ -48,7 +78,7 @@ const createAuthStore = () => {
     if (isInitialized) return;
     isInitialized = true;
 
-    const storedAuth = localStorage.getItem("authStore");
+    const storedAuth = getCookie("authStore");
     if (storedAuth) {
       const parsedAuth = JSON.parse(storedAuth);
       setState(parsedAuth);
@@ -74,7 +104,7 @@ const createAuthStore = () => {
         userRole: response.data.userRole,
       };
       setState(newState);
-      saveAuthStateToStorage(newState);
+      saveAuthStateToCookie(newState);
       console.log("initializeAuth: Auth initialized", state());
     } catch (error) {
       console.error("Failed to initialize authentication:", error);
@@ -83,8 +113,7 @@ const createAuthStore = () => {
     }
   };
 
-
-  loadAuthStateFromStorage();
+  loadAuthStateFromCookie();
 
   return {
     state,

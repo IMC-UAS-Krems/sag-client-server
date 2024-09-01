@@ -1,7 +1,6 @@
 import { sql } from "./sql";
 import { decrypt } from "./routes/auth";
 
-
 interface CustomContext {
   set: any;
   cookie?: { access_token?: { value?: string } }; 
