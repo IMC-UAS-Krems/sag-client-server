@@ -263,6 +263,7 @@ const Users: Component = () => {
                   <th>E-mail address</th>
                   <th>Municipality</th>
                   <th>Organisation</th>
+                  <th>User Role</th>
                   <th>Logged in</th>
                   <th>Actions</th>
                 </tr>
@@ -280,6 +281,7 @@ const Users: Component = () => {
                       <td>{user.email}</td>
                       <td>{user.municipalityName}</td>
                       <td>{user.organizationName}</td>
+                      <td>{user.userRole}</td>
                       <td>{onlineStatus ? "🟢" : "🔴"}</td>
                       <td
                         onClick={(e) => {
@@ -290,11 +292,11 @@ const Users: Component = () => {
                         <FaSolidEllipsis />
                         <Menu id={user.id} animation={_animation()} theme={_theme()}>
                           <Item onClick={() => handleEditUser(user.id)}>✏️ Edit</Item>
-                          <Item onClick={() => handleDeleteUser(user.id)} disabled={user.userRole === "ADMIN"}>
+                          <Item onClick={() => handleDeleteUser(user.id)} disabled={user.userRole === "Administrator"}>
                             🗑️ Delete
                           </Item>
                           <Separator />
-                          <Item onClick={() => handleLogOutUser(user.id)} disabled={user.userRole === "ADMIN"}>
+                          <Item onClick={() => handleLogOutUser(user.id)} disabled={user.userRole === "Administrator"}>
                             🚶 Log out
                           </Item>
                         </Menu>

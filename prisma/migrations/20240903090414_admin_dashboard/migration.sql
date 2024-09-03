@@ -1,0 +1,21 @@
+/*
+  Warnings:
+
+  - The values [USER,ADMIN] on the enum `UserRole` will be removed. If these variants are still used in the database, this will fail.
+
+*/
+-- AlterEnum
+BEGIN;
+CREATE TYPE "UserRole_new" AS ENUM ('Developer', 'Manager', 'Administrator');
+ALTER TABLE "users" ALTER COLUMN "userRole" DROP DEFAULT;
+ALTER TABLE "users" ALTER COLUMN "userRole" TYPE "UserRole_new" USING ("userRole"::text::"UserRole_new");
+ALTER TYPE "UserRole" RENAME TO "UserRole_old";
+ALTER TYPE "UserRole_new" RENAME TO "UserRole";
+DROP TYPE "UserRole_old";
+ALTER TABLE "users" ALTER COLUMN "userRole" SET DEFAULT 'Developer';
+COMMIT;
+
+-- AlterTable
+ALTER TABLE "users" ADD COLUMN     "lastLoginTime" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ADD COLUMN     "needsToBeLoggedOut" BOOLEAN NOT NULL DEFAULT false,
+ALTER COLUMN "userRole" SET DEFAULT 'Developer';

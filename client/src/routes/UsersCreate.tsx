@@ -7,15 +7,12 @@ import Swal from "sweetalert2";
 
 import { eden } from "@client/api";
 import { handleUnauthorized } from "@client/utils/authUtils";
+import { UserRole } from "@client/shared/types";
 import Header from "@client/components/Header";
 import FormField from "@client/components/FormField";
 import styles from "@styles/Signin.module.css";
 
 const UsersCreate: Component = () => {
-  enum UserRole {
-    USER = "USER",
-    ADMIN = "ADMIN",
-  }
 
   const navigate = useNavigate();
 
@@ -108,7 +105,7 @@ const UsersCreate: Component = () => {
       password: password() ?? "",
       municipalityName: municipality() ?? "",
       organizationName: organization() ?? "",
-      userRole: userRole() ?? UserRole.USER,
+      userRole: userRole() ?? UserRole.DEV,
     };
 
     console.log("Data to be submitted:", requestBody);

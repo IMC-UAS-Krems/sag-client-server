@@ -4,7 +4,7 @@ import { createSignal } from "solid-js";
 interface AuthStore {
   isAuthenticated: boolean;
   user: string;
-  userRole: "USER" | "ADMIN" | "";
+  userRole: "Developer" | "Manager" | "Administrator" | "";
 }
 
 const createAuthStore = () => {

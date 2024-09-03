@@ -5,6 +5,7 @@ export const prisma = new PrismaClient({
 });
 
 export enum UserRole {
-  USER = "USER",
-  ADMIN = "ADMIN",
+  DEV = "Developer",
+  MAN = "Manager",
+  ADMIN = "Administrator",
 }

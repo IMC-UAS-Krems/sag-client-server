@@ -7,15 +7,13 @@ import Swal from "sweetalert2";
 
 import { eden } from "@client/api";
 import { handleUnauthorized } from "@client/utils/authUtils";
+import { UserRole } from "@client/shared/types";
 import Header from "@client/components/Header";
 import FormField from "@client/components/FormField";
 import styles from "@styles/Signin.module.css";
 
 const UsersEdit: Component = () => {
-  enum UserRole {
-    USER = "USER",
-    ADMIN = "ADMIN",
-  }
+  
 
   interface UpdateUserRequestBody {
     userId: string;

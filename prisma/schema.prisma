@@ -23,8 +23,9 @@ enum DocumentType {
 }
 
 enum UserRole {
-    USER
-    ADMIN
+    Developer
+    Manager
+    Administrator
 }
 
 enum UserType {
@@ -42,7 +43,7 @@ model User {
     username String   @unique
     email    String   @unique
     password String
-    userRole UserRole @default(USER)
+    userRole UserRole @default(Developer)
     userType UserType @default(DEFAULT)
 
     // Permissions

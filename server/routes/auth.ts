@@ -20,7 +20,7 @@ export const auth = new Elysia({ prefix: "/auth" })
       try {
         // log.info("Trying to create user");
 
-        const userRole = "USER";
+        const userRole = "Developer";
         const userResult = await sql.createUser({
           username,
           password: key,

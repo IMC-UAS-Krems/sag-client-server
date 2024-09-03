@@ -1,4 +1,4 @@
-import { onMount, type Component, JSX, Show } from "solid-js";
+import { type Component, JSX, Show } from "solid-js";
 
 import { A, useNavigate } from "@solidjs/router";
 import { Image } from "@kobalte/core";
@@ -31,32 +31,6 @@ const Header: Component<{ children: JSX.Element }> = (props) => {
       navigate("/home", { replace: true });
     }
   };
-  //   try {
-  //     const response = await eden.auth["check-if-logged-in"].get({
-  //       $fetch: {
-  //         mode: "cors",
-  //         credentials: "include",
-  //         method: "GET",
-  //       },
-  //     });
-  //     console.log("response");
-  //     console.log(response);
-  //     console.log(typeof response.data);
-  //     if (response.status === 200 && response.data) {
-  //       authStore.setState({ isAuthenticated: true, user: response.data.email, userRole: response.data.userRole });
-  //       console.log("here");
-  //       console.log(authStore.state());
-  //     } else {
-  //       authStore.setState({ isAuthenticated: false, user: "", userRole: "" });
-  //     }
-  //   } catch (error) {
-  //     console.error("Error checking authentication status", error);
-  //   }
-  // };
-
-  // onMount(() => {
-  //   checkIfUserIsAuthenticated();
-  // });
 
 
   return (
@@ -76,7 +50,7 @@ const Header: Component<{ children: JSX.Element }> = (props) => {
             <li>
               <A href="/home">Home</A>
             </li>
-            <Show when={authStore.state().userRole === "USER"}>
+            <Show when={(authStore.state().userRole === "Developer") || (authStore.state().userRole === "Manager")}>
               <li>
                 <A href="/editor">Editor</A>
               </li>
@@ -84,7 +58,7 @@ const Header: Component<{ children: JSX.Element }> = (props) => {
             <li>
               <A href="/about">About Us</A>
             </li>
-            <Show when={authStore.state().userRole === "ADMIN"}>
+            <Show when={authStore.state().userRole === "Administrator"}>
               <li>
                 <A href="/users">Users</A>
               </li>

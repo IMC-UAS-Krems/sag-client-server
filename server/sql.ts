@@ -74,7 +74,7 @@ export async function createUser(data: {
   email: string;
   organizationName: string;
   municipalityName: string;
-  userRole: "USER" | "ADMIN";
+  userRole: "Administrator" | "Developer" | "Manager";
 }) {
   try {
     const user = await prisma.user.create({

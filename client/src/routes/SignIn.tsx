@@ -120,7 +120,7 @@ const Register: Component = () => {
       return;
     }
 
-    authStore.setState({ isAuthenticated: true, user: formEmail, userRole: "USER" });
+    authStore.setState({ isAuthenticated: true, user: formEmail, userRole: "Developer" });
     navigate("/editor", { replace: true });
 
     Swal.fire({
