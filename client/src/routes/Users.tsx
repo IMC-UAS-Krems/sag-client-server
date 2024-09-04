@@ -40,8 +40,8 @@ interface UsersResponse {
 const Users: Component = () => {
   const navigate = useNavigate();
   const loggedInUser = authStore.state().user;
-  console.log("Auth store:", authStore.state());
-  console.log("Logged in user:", loggedInUser);
+  // console.log("Auth store:", authStore.state());
+  // console.log("Logged in user:", loggedInUser);
 
   // User data
   const [users, setUsers] = createSignal<User[]>([]);
@@ -82,8 +82,8 @@ const Users: Component = () => {
         } else {
           setUsers(fetchedUsers.data);
           await updateOnlineStatuses(fetchedUsers.data);
-          console.log("Fetch:", fetchedUsers);
-          console.log("Fetched users:", fetchedUsers.data);
+          // console.log("Fetch:", fetchedUsers);
+          // console.log("Fetched users:", fetchedUsers.data);
         }
       } else {
         setError(fetchedUsers.error || "Unknown error");
@@ -115,7 +115,7 @@ const Users: Component = () => {
   }
 
   async function handleDeleteUser(userId: string) {
-    console.log("Deleting user:", userId);
+    // console.log("Deleting user:", userId);
     Swal.fire({
       title: "Are you sure?",
       text: "You won't be able to revert this!",
@@ -168,7 +168,7 @@ const Users: Component = () => {
   }
 
   async function handleLogOutUser(userId: string, userName: string) {
-    console.log("Logging out user:", userId);
+    // console.log("Logging out user:", userId);
     Swal.fire({
       title: "Are you sure?",
       text: `This will log out the user: ${userName}.`,
@@ -191,7 +191,7 @@ const Users: Component = () => {
               method: "POST",
             },
           });
-          console.log("Response:", response);
+          // console.log("Response:", response);
 
           // Unauthorized check
           if (response.status === 401 || response.status === 403) {

@@ -129,7 +129,7 @@ const Register: Component = () => {
       icon: "success",
     });
 
-    console.log(`Registration successful. Welcome ${registered.data.name}.`);
+    // console.log(`Registration successful. Welcome ${registered.data.name}.`);
   };
 
   return (
@@ -238,7 +238,7 @@ const Login: Component = () => {
       return;
     }
 
-    console.log(`Login successful. Welcome ${logged.data.name}.`);
+    // console.log(`Login successful. Welcome ${logged.data.name}.`);
     authStore.setState({ isAuthenticated: true, user: formUsername, userRole: logged.data.userRole });
 
     navigate("/home", { replace: true });

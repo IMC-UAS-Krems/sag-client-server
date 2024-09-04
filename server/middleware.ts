@@ -11,7 +11,7 @@ export const authMiddleware = async (
   options = { requireAdmin: false },
 ): Promise<void | { error: string }> => {
   // idk why is returning access_token value as string === "undefined"
-  console.log("Detailed cookie in authMiddleware:", JSON.stringify(cookie, null, 2));
+  // console.log("Detailed cookie in authMiddleware:", JSON.stringify(cookie, null, 2));
 
   if (
     !cookie ||
@@ -20,19 +20,19 @@ export const authMiddleware = async (
     cookie.access_token.value === "undefined"
     
   ) {
-    console.log("cookie in authMiddleware:", cookie);
+    // console.log("cookie in authMiddleware:", cookie);
     console.warn("Unauthorized: No token provided or cookie is missing");
     set.status = 401;
     return { error: "Unauthorized: No token provided or cookie is missing" };
   }
 
   const accessToken = cookie.access_token.value;
-  console.log("accessToken in authMiddleware:", accessToken);
+  // console.log("accessToken in authMiddleware:", accessToken);
 
   try {
     
     const userId = decrypt(accessToken);
-    console.log("userId in authMiddleware:", userId);
+    // console.log("userId in authMiddleware:", userId);
 
     if (!userId) {
       console.error("Unauthorized: Failed to decrypt token");

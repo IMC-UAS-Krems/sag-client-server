@@ -2,6 +2,7 @@ import { Elysia, t } from "elysia";
 import { sql } from "@server/sql";
 import { UserRole } from "@server/prisma";
 import { authMiddleware } from "@server/middleware";
+import { password } from "bun";
 
 interface UpdateUserRequestBody {
   userId: string;
@@ -27,8 +28,18 @@ export const admin = new Elysia({ prefix: "/admin" })
     async ({ set }) => {
       try {
         const users = await sql.getAllUsers();
+        // exclude passwords
+        const usersWithoutPasswords = users.map((user) => {
+          let password = user.password;
+          if (!password) {
+            password = "";
+          }else{
+            delete user.password;
+          }
+          return user;
+        })
         set.status = 200;
-        return users;
+        return usersWithoutPasswords;
       } catch (error) {
         set.status = 500;
         return { error: "Failed to fetch users" };

@@ -108,7 +108,7 @@ const UsersCreate: Component = () => {
       userRole: userRole() ?? UserRole.DEV,
     };
 
-    console.log("Data to be submitted:", requestBody);
+    // console.log("Data to be submitted:", requestBody);
 
     try {
       const response = await eden.admin["create-user"].post({

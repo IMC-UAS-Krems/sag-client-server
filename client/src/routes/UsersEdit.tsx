@@ -70,7 +70,7 @@ const UsersEdit: Component = () => {
 
       // Unauthorized check
       if (oldUserData.status === 401 || oldUserData.status === 403) {
-        console.log("User is not authorized for this request:", oldUserData);
+        // console.log("User is not authorized for this request:", oldUserData);
         handleUnauthorized(navigate);
         return;
       }
@@ -110,11 +110,11 @@ const UsersEdit: Component = () => {
   const fetchOrganizationsByMunicipality = async (municipalityName: string) => {
     setIsOrganizationsLoading(true);
     try {
-      console.log("Fetching organizations for municipality:", municipalityName);
+      // console.log("Fetching organizations for municipality:", municipalityName);
       const response = await eden.api.organizationsByMunicipality.post({ municipalityName });
       if (response.data) {
         setOrganizations(response.data);
-        console.log("Fetched organizations:", response.data);
+        // console.log("Fetched organizations:", response.data);
       }
     } catch (error) {
       console.error("Error fetching organizations:", error);
@@ -218,7 +218,7 @@ const UsersEdit: Component = () => {
       icon: "success",
     });
 
-    console.log("User updated successfully:", updated.data);
+    // console.log("User updated successfully:", updated.data);
   };
 
   return (

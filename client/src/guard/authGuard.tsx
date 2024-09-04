@@ -14,17 +14,17 @@ const AuthGuard = (props) => {
   };
 
   onMount(async () => {
-    console.log("AuthGuard: Initializing auth");
+    // console.log("AuthGuard: Initializing auth");
 
     await authStore.initializeAuth();
-    console.log("AuthGuard: Auth initialized", authStore);
+    // console.log("AuthGuard: Auth initialized", authStore);
 
     const { isAuthenticated, userRole } = authStore.state();
     const currentPath = window.location.pathname;
 
-    console.log("AuthGuard: currentPath =", currentPath);
-    console.log("AuthGuard: isAuthenticated =", isAuthenticated);
-    console.log("AuthGuard: userRole =", userRole);
+    // console.log("AuthGuard: currentPath =", currentPath);
+    // console.log("AuthGuard: isAuthenticated =", isAuthenticated);
+    // console.log("AuthGuard: userRole =", userRole);
 
     const requiredRole = props.role;
 
@@ -32,13 +32,13 @@ const AuthGuard = (props) => {
     const mappedUserRole = roleMapping[userRole];
 
     if (isAuthenticated && currentPath === "/sign-in") {
-      console.log("AuthGuard: Already authenticated, redirecting to the home");
+      // console.log("AuthGuard: Already authenticated, redirecting to the home");
       navigate("/home", { replace: true });
     } else if (!isAuthenticated && currentPath !== "/sign-in") {
-      console.log("AuthGuard: Redirecting to /sign-in");
+      // console.log("AuthGuard: Redirecting to /sign-in");
       navigate("/sign-in", { replace: true });
     } else if (requiredRole && mappedUserRole !== requiredRole) {
-      console.log("AuthGuard: Redirecting to /unauthorized");
+      // console.log("AuthGuard: Redirecting to /unauthorized");
       navigate("/unauthorized", { replace: true });
     } else {
       setLoading(false);
