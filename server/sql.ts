@@ -253,23 +253,55 @@ interface UserUpdateInput {
   lastLoginTime?: Date;
 }
 
-export async function deleteUser(userId: string): Promise<User> {
-  // TODO: This could probably be done with a cascade delete - needed due to foreign constraints
-  await prisma.document.deleteMany({
-    where: {
-      authorId: userId,
-    },
-  });
+// export async function deleteUser(userId: string): Promise<User> {
+//   // TODO: This could probably be done with a cascade delete - needed due to foreign constraints
+//   await prisma.document.deleteMany({
+//     where: {
+//       authorId: userId,
+//     },
+//   });
 
-  const user = await prisma.user.delete({
+//   const user = await prisma.user.delete({
+//     where: {
+//       id: userId,
+//     },
+//   });
+//   if (user === null) {
+//     throw new Error(`User ${userId} does not exist`);
+//   }
+//   return user;
+// }
+
+export async function deleteUser(userId: string): Promise<void> {
+  const user = await prisma.user.findUnique({
     where: {
       id: userId,
     },
+    select: {
+      deleted: true,
+    },
   });
-  if (user === null) {
-    throw new Error(`User ${userId} does not exist`);
+
+  if (!user) {
+    const error = new Error(`User with ID ${userId} does not exist.`);
+    error.name = "UserNotFoundError";
+    throw error;
   }
-  return user;
+
+  if (user.deleted) {
+    const error = new Error(`User with ID ${userId} is already deleted.`);
+    error.name = "UserAlreadyDeletedError";
+    throw error;
+  }
+
+  await prisma.user.update({
+    where: {
+      id: userId,
+    },
+    data: {
+      deleted: true,
+    },
+  });
 }
 
 export async function createDocument(

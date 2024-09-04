@@ -101,6 +101,12 @@ export const auth = new Elysia({ prefix: "/auth" })
         return;
       }
 
+      if (userResult.deleted) {
+        set.status = 401; // Unauthorized
+        log.warn(`User is deleted: ${identifier}`);
+        return;
+      }
+
       if (userResult.password !== key) {
         set.status = 401; // Unauthorized
         log.warn(`Invalid password from user: ${identifier}`);

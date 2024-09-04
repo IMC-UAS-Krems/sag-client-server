@@ -65,6 +65,7 @@ model User {
     // Meta
     registered DateTime  @default(now())
     updatedAt  DateTime? @updatedAt
+    deleted Boolean @default(false)
 
     // Tracking user tokens
     lastLoginTime DateTime @default(now())

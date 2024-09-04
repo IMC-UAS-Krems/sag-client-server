@@ -18,10 +18,9 @@ interface LogoutUserRequestBody {
   userId: string;
 }
 
-
 export const admin = new Elysia({ prefix: "/admin" })
   .onBeforeHandle(async ({ set, cookie }) => {
-    return await authMiddleware({ set, cookie }, {requireAdmin: true});
+    return await authMiddleware({ set, cookie }, { requireAdmin: true });
   })
   .get(
     "/users",
@@ -43,18 +42,58 @@ export const admin = new Elysia({ prefix: "/admin" })
     },
   )
 
+  // .delete(
+  //   "/delete-user",
+  //   async ({ log, set, body: { userId } }) => {
+  //     try {
+  //       log.info("Trying to delete user");
+  //       const user = await sql.deleteUser(userId);
+  //       set.status = 200;
+  //       return user;
+  //     } catch (error) {
+  //       log.error(error);
+  //       set.status = 500;
+  //       return { error: "Failed to delete user" };
+  //     }
+  //   },
+  //   {
+  //     detail: {
+  //       tags: ["admin"],
+  //       description: "Delete a user from the database by ID",
+  //     },
+  //     body: t.Object({
+  //       userId: t.String(),
+  //     }),
+  //   },
+  // )
+
   .delete(
     "/delete-user",
     async ({ log, set, body: { userId } }) => {
       try {
         log.info("Trying to delete user");
-        const user = await sql.deleteUser(userId);
+        await sql.deleteUser(userId);
         set.status = 200;
-        return user;
+        return { message: "User deleted successfully" };
       } catch (error) {
         log.error(error);
-        set.status = 500;
-        return { error: "Failed to delete user" };
+
+        if (error instanceof Error) {
+          switch (error.name) {
+            case "UserNotFoundError":
+              set.status = 404;
+              return { error: error.message };
+            case "UserAlreadyDeletedError":
+              set.status = 400;
+              return { error: error.message };
+            default:
+              set.status = 500;
+              return { error: "Failed to delete user" };
+          }
+        } else {
+          set.status = 500;
+          return { error: "An unknown error occurred" };
+        }
       }
     },
     {
@@ -204,6 +243,11 @@ export const admin = new Elysia({ prefix: "/admin" })
         if (!user) {
           set.status = 404;
           return { status: "error", message: "User not found." };
+        }
+
+        if (user.needsToBeLoggedOut) {
+          set.status = 400;
+          return { status: "error", message: "User is already set to be logged out." };
         }
 
         await sql.updateUser(userId, {

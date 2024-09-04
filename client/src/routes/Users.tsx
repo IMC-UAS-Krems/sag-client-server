@@ -25,6 +25,7 @@ interface User {
   organizationName: string;
   needsToBeLoggedOut: boolean;
   userRole: string;
+  deleted: boolean;
 }
 
 // Response structure
@@ -166,11 +167,11 @@ const Users: Component = () => {
     });
   }
 
-  async function handleLogOutUser(userId: string) {
+  async function handleLogOutUser(userId: string, userName: string) {
     console.log("Logging out user:", userId);
     Swal.fire({
       title: "Are you sure?",
-      text: "This will log out the user.",
+      text: `This will log out the user: ${userName}.`,
       icon: "warning",
       showCancelButton: true,
       confirmButtonColor: "#3085d6",
@@ -270,40 +271,45 @@ const Users: Component = () => {
               </thead>
 
               <tbody>
-                {users().map((user) => {
-                  const { show } = useContextMenu({ id: user.id });
-                  const onlineStatus = onlineStatuses()[user.id];
+                {users()
+                  .filter((user) => !user.deleted)
+                  .map((user) => {
+                    const { show } = useContextMenu({ id: user.id });
+                    const onlineStatus = onlineStatuses()[user.id];
 
-                  return (
-                    <tr class={user.email == loggedInUser ? styles["logged-in-user"] : ""}>
-                      <td>{user.username}</td>
-                      <td>{user.name}</td>
-                      <td>{user.email}</td>
-                      <td>{user.municipalityName}</td>
-                      <td>{user.organizationName}</td>
-                      <td>{user.userRole}</td>
+                    return (
+                      <tr class={user.email == loggedInUser ? styles["logged-in-user"] : ""}>
+                        <td>{user.username}</td>
+                        <td>{user.name}</td>
+                        <td>{user.email}</td>
+                        <td>{user.municipalityName}</td>
+                        <td>{user.organizationName}</td>
+                        <td>{user.userRole}</td>
                       <td>{onlineStatus ? "🟢" : "🔴"}</td>
-                      <td
-                        onClick={(e) => {
-                          show(e, { props: user.id });
-                        }}
-                        class={styles.actions}
-                      >
-                        <FaSolidEllipsis />
-                        <Menu id={user.id} animation={_animation()} theme={_theme()}>
-                          <Item onClick={() => handleEditUser(user.id)}>✏️ Edit</Item>
-                          <Item onClick={() => handleDeleteUser(user.id)} disabled={user.userRole === "Administrator"}>
-                            🗑️ Delete
-                          </Item>
-                          <Separator />
-                          <Item onClick={() => handleLogOutUser(user.id)} disabled={user.userRole === "Administrator"}>
-                            🚶 Log out
-                          </Item>
-                        </Menu>
-                      </td>
-                    </tr>
-                  );
-                })}
+                        <td
+                          onClick={(e) => {
+                            show(e, { props: user.id });
+                          }}
+                          class={styles.actions}
+                        >
+                          <FaSolidEllipsis />
+                          <Menu id={user.id} animation={_animation()} theme={_theme()}>
+                            <Item onClick={() => handleEditUser(user.id)}>✏️ Edit</Item>
+                            <Item onClick={() => handleDeleteUser(user.id)} disabled={user.userRole === "Administrator"}>
+                              🗑️ Delete
+                            </Item>
+                            <Separator />
+                            <Item
+                              onClick={() => handleLogOutUser(user.id, user.username)}
+                              disabled={user.userRole === "Administrator" || !onlineStatus}
+                            >
+                              🚶 Log out
+                            </Item>
+                          </Menu>
+                        </td>
+                      </tr>
+                    );
+                  })}
               </tbody>
             </table>
           </div>
