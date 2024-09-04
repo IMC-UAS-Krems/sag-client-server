@@ -76,6 +76,26 @@ export async function createUser(data: {
   municipalityName: string;
   userRole: "Administrator" | "Developer" | "Manager";
 }) {
+  const userWithEmail = await prisma.user.findUnique({
+    where: {
+      email: data.email,
+    },
+  });
+  if (userWithEmail) {
+    throw new Error(`User with email "${data.email}" already exists`);
+  }
+
+  const userWithUsername = await prisma.user.findUnique({
+    where: {
+      username: data.username,
+    },
+  });
+  if (userWithUsername) {
+    throw new Error(`User with username "${data.username}" already exists`);
+  }
+
+  console.warn("Creating user with data:", data);
+
   try {
     const user = await prisma.user.create({
       data: {

@@ -11,9 +11,11 @@ import Header from "@client/components/Header";
 import FormField from "@client/components/FormField";
 import styles from "@styles/Signin.module.css";
 
-const Register: Component = () => {
-  const navigate = useNavigate();
+interface NavigateProps {
+  navigate: ReturnType<typeof useNavigate>;
+}
 
+const Register: Component<NavigateProps> = ({ navigate }) => {
   const [name, setName] = createSignal<string | undefined>(undefined);
   const [email, setEmail] = createSignal<string | undefined>(undefined);
   const [username, setUsername] = createSignal<string | undefined>(undefined);
@@ -101,35 +103,42 @@ const Register: Component = () => {
     const formMunicipality = municipality() ?? "";
     const formOrganization = organization() ?? "";
 
-    const registered = await eden.auth.register.post({
-      name: formName,
-      email: formEmail,
-      username: formUsername,
-      key: formPassword,
-      municipalityName: formMunicipality,
-      organizationName: formOrganization,
-      $fetch: {
-        mode: "cors",
-        credentials: "include",
-        method: "POST",
-      },
-    });
+    try {
+      const registered = await eden.auth.register.post({
+        name: formName,
+        email: formEmail,
+        username: formUsername,
+        key: formPassword,
+        municipalityName: formMunicipality,
+        organizationName: formOrganization,
+        $fetch: {
+          mode: "cors",
+          credentials: "include",
+          method: "POST",
+        },
+      });
 
-    if (!registered.data || registered.error) {
-      console.log(registered.error);
+      // console.log("Response registered:", registered);
+      if (registered.error) {
+        throw new Error(registered.data.message);
+      }
+
+      authStore.setState({ isAuthenticated: true, user: formEmail, userRole: "Developer" });
+      navigate("/editor", { replace: true });
+
+      Swal.fire({
+        title: "Success",
+        text: `Registration successful.`,
+        icon: "success",
+      });
+    } catch (error) {
+      Swal.fire({
+        title: "Error",
+        text: `${error.message}`,
+        icon: "error",
+      });
       return;
     }
-
-    authStore.setState({ isAuthenticated: true, user: formEmail, userRole: "Developer" });
-    navigate("/editor", { replace: true });
-
-    Swal.fire({
-      title: "Success",
-      text: `Registration successful.`,
-      icon: "success",
-    });
-
-    // console.log(`Registration successful. Welcome ${registered.data.name}.`);
   };
 
   return (
@@ -177,9 +186,7 @@ const Register: Component = () => {
   );
 };
 
-const Login: Component = () => {
-  const navigate = useNavigate();
-
+const Login: Component<NavigateProps> = ({ navigate }) => {
   const [username, setUsername] = createSignal<string | undefined>(undefined);
   const [password, setPassword] = createSignal<string | undefined>(undefined);
   const [loginErrors, setLoginErrors] = createSignal<{ [key: string]: string }>({});
@@ -266,6 +273,7 @@ const Login: Component = () => {
 };
 
 const SignIn: Component = () => {
+  const navigate = useNavigate();
   const [mode, setMode] = createSignal<"login" | "register">("login");
 
   return (
@@ -277,7 +285,7 @@ const SignIn: Component = () => {
           </div>
         ) : (
           <>
-            {mode() === "login" ? <Login /> : <Register />}
+            {mode() === "login" ? <Login navigate={navigate} /> : <Register navigate={navigate} />}
             <nav class={styles["submenu-container"]}>
               <Button.Root
                 onClick={() => setMode("login")}

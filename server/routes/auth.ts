@@ -18,8 +18,6 @@ export const auth = new Elysia({ prefix: "/auth" })
       cookie: { access_token },
     }): Promise<ReturnUser | undefined> => {
       try {
-        // log.info("Trying to create user");
-
         const userRole = "Developer";
         const userResult = await sql.createUser({
           username,
@@ -30,21 +28,11 @@ export const auth = new Elysia({ prefix: "/auth" })
           organizationName,
           municipalityName,
         });
-        if (!userResult) {
-          set.status = 409; // Conflict
-          log.warn(`Error creating user, user is ${userResult}`);
-          return;
-        }
 
         const { id, password, ...user } = userResult;
 
-        log.info("Trying to create user done");
-        set.status = 201;
-
         const token = encrypt(id);
-
         log.info(`Producing token: ${token}`);
-
         access_token.set({
           httpOnly: true,
           secure: true,
@@ -56,15 +44,17 @@ export const auth = new Elysia({ prefix: "/auth" })
 
         log.info(`User ${user.name} registered.`);
 
+        set.status = 201;
         return user;
       } catch (error) {
-        if (error instanceof Prisma.PrismaClientKnownRequestError) {
-          log.error(`PRISMA ERROR: ${error.message}. CODE: ${error.code}`);
-          set.status = 400; // Bad Request
-        } else {
-          log.error(error);
-          set.status = 500; // Internal Server Error
+        if (error.message.includes("already exists")) {
+          log.warn(error.message);
+          set.status = 409; // Conflict
+          throw error;
         }
+        log.error(error);
+        set.status = 500; // Internal Server Error
+        throw error;
       }
     },
     {
