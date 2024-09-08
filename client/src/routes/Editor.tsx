@@ -1,4 +1,4 @@
-import { JSX, Component, createSignal, Show, createEffect } from "solid-js";
+import { JSX, Component, createSignal, Show, createContext, useContext } from "solid-js";
 import { linter, Diagnostic, lintGutter } from "@codemirror/lint";
 import { createCodeMirror, createEditorControlledValue } from "solid-codemirror";
 import { EditorView, lineNumbers } from "@codemirror/view";
@@ -9,10 +9,9 @@ import { Alert } from "@kobalte/core";
 import { errors, setErrors, Error } from "@store/index";
 import { RightSideBar } from "../components/RightSideBar";
 import { keymap } from "@codemirror/view";
-import { LeftSideBar } from "../components/LeftSideBar";
 import Header from "@client/components/Header";
-
-const DEPLOYER_URL = import.meta.env.VITE_DEPLOYER_URL || "http://localhost:9000";
+import { LeftSideBar } from "@client/components/LeftSideBar";
+import { IEditorContext } from "@client/types";
 
 type CompileResult = {
   error: string | undefined;
@@ -105,36 +104,20 @@ const checkErrors = () => {
   return errorMap;
 };
 
-export const Editor: Component = () => {
-  const [code, setCode] = createSignal("");
-  // const [t, { add, locale, dict }] = useI18n();
-  const [url, setUrl] = createSignal<JSX.Element | undefined>(undefined);
-  const handleFileClick = (content: string | undefined) => {
-    if (content && content.length > 0) {
-      console.log("content: ", content);
-      setCode(content);
-      editorView().dispatch({
-        changes: {
-          from: 0,
-          to: editorView().state.doc.length,
-          insert: content,
-        },
-      });
-    } else if (content === "") {
-      setCode("");
-      editorView().dispatch({
-        changes: {
-          from: 0,
-          to: editorView().state.doc.length,
-          insert: "",
-        },
-      });
-    }
-  };
+export const EditorContext = createContext<IEditorContext>();
 
-  createEffect(() => {
-    check(code());
-  });
+export function EditorProvider(props) {
+  const [code, setCode] = createSignal("");
+
+  const handleFileClick = (content: string | undefined) => {
+    editorView().dispatch({
+      changes: {
+        from: 0,
+        to: editorView().state.doc.length,
+        insert: content,
+      },
+    });
+  };
 
   const {
     editorView,
@@ -145,12 +128,24 @@ export const Editor: Component = () => {
     onValueChange: (value) => {
       // console.log("value changed", value);
       setCode(value);
+      check(value);
     },
     // onModelViewUpdate: (modelView) =>
     //     console.log("modelView updated", modelView),
     // onTransactionDispatched: (tr: Transaction, view: EditorView) =>
     //     console.log("Transaction", tr),
   });
+
+  return (
+    <EditorContext.Provider value={{ editorView, editorRef, createExtension, handleFileClick, code, setCode }}>
+      {props.children}
+    </EditorContext.Provider>
+  );
+}
+
+const Editor: Component = () => {
+  const [url, setUrl] = createSignal<JSX.Element | undefined>(undefined);
+  const { editorView, editorRef, createExtension, code } = useContext(EditorContext) as IEditorContext;
 
   createEditorControlledValue(editorView, code);
 
@@ -324,7 +319,7 @@ export const Editor: Component = () => {
           Compile
         </Button.Root>
         <div class="editor-container">
-          <LeftSideBar onFileClick={handleFileClick} code={code()} />
+          <LeftSideBar />
           <div class="middle-column">
             <div ref={editorRef}></div>
           </div>

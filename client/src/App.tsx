@@ -1,6 +1,8 @@
 import type { Component } from "solid-js";
 
 import DRoutes from "./components/DRoutes";
+import { MenuProvider } from "./components/Menu";
+import { EditorProvider } from "./routes/Editor";
 
 const t = (s: string) => s;
 
@@ -23,8 +25,15 @@ const App: Component = () => {
   //   const newLocale = locale() === "en" ? "de" : "en";
   //   locale(newLocale);
   // };
-
-  return <DRoutes />;
+  return (
+    <>
+      <MenuProvider>
+        <EditorProvider>
+          <DRoutes />;
+        </EditorProvider>
+      </MenuProvider>
+    </>
+  );
 };
 
 export default App;

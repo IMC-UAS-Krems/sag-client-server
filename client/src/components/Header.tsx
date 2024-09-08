@@ -32,13 +32,8 @@ const Header: Component<{ children: JSX.Element }> = (props) => {
           method: "GET",
         },
       });
-      console.log("response");
-      console.log(response);
-      console.log(typeof response.data);
       if (response.status === 200 && response.data) {
         authStore.setState({ isAuthenticated: true, user: response.data });
-        console.log("here");
-        console.log(authStore.state());
       } else {
         authStore.setState({ isAuthenticated: false, user: "" });
       }
