@@ -3,13 +3,6 @@ import { EditorView } from "@codemirror/view";
 import { CompartmentReconfigurationCallback } from "solid-codemirror";
 import { Accessor, Setter } from "solid-js";
 
-export interface IMenuContext {
-  showMenu: (e: MouseEvent) => void;
-  hideMenu: () => void;
-  isVisible: Accessor<boolean>;
-  position: Accessor<{ x: number; y: number }>;
-}
-
 export interface IEditorContext {
   editorView: Accessor<EditorView>;
   editorRef: Setter<HTMLElement>;
