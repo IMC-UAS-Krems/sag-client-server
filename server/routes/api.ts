@@ -118,8 +118,8 @@ export const api = new Elysia({ prefix: "/api" })
       set,
       body: { name, projectName, organizationName, municipalityName, path, documentType },
       userId,
-    }): Promise<Document[] | string> => {
-      let result: number;
+    }): Promise<string> => {
+      let result: string | null;
 
       try {
         result = await sql.createDocument(
@@ -143,13 +143,13 @@ export const api = new Elysia({ prefix: "/api" })
         return "An error occurred";
       }
 
-      if (result === null || result < 1) {
+      if (result === null) {
         set.status = 400;
         return "Could not create document";
       }
 
       set.status = 200;
-      return sql.getDocuments(userId);
+      return result;
     },
     {
       body: t.Object({
@@ -164,7 +164,31 @@ export const api = new Elysia({ prefix: "/api" })
       detail: { tags: ["api"], description: "Create a new document" },
     },
   )
-  .post(
+  .put(
+    "/document",
+    async ({ log, set, body: { projectName, organizationName, municipalityName, path, newName }, userId }) => {
+      const result = await sql.renameDocument(userId, municipalityName, organizationName, projectName, path, newName);
+
+      if (result === null) {
+        set.status = 400;
+        return "Could not rename document";
+      }
+
+      set.status = 200;
+      return result;
+    },
+    {
+      body: t.Object({
+        projectName: t.String(),
+        organizationName: t.String(),
+        municipalityName: t.String(),
+        path: t.String(),
+        newName: t.String(),
+      }),
+      beforeHandle: authMiddleware,
+    },
+  )
+  .put(
     "/document_content",
     async ({ log, set, body: { projectName, organizationName, municipalityName, path, content }, userId }) => {
       const result = await sql.updateContent(userId, municipalityName, organizationName, projectName, path, content);
