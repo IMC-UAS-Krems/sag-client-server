@@ -283,41 +283,43 @@ const Editor: Component = () => {
   return (
     <Header>
       <main>
-        <Show when={url() !== undefined}>
-          <Alert.Root class="alert">{url()}</Alert.Root>
-        </Show>
-        <Button.Root
-          class="compile"
-          onClick={async () => {
-            setUrl("Compiling...");
+        <div class="flex flex-row justify-end mx-1">
+          <Show when={url() !== undefined}>
+            <Alert.Root class="alert">{url()}</Alert.Root>
+          </Show>
+          <Button.Root
+            class="bg-gray-900 hover:bg-black text-white font-bold py-1 px-5 rounded-xl focus:outline-none focus:shadow-outline text-lg w-32"
+            onClick={async () => {
+              setUrl("Compiling...");
 
-            const result = await compile(code());
+              const result = await compile(code());
 
-            if (result === undefined) {
-              setUrl("Something went wrong. Please try again.");
-            } else {
-              if (result.error) {
-                setUrl(<span>Error: {result.error}\nPlease check your code and try again.</span>);
+              if (result === undefined) {
+                setUrl("Something went wrong. Please try again.");
               } else {
-                setUrl(
-                  <span>
-                    Success! Navigate to{" "}
-                    <a href={result.url?.replaceAll('"', "")} target="_blank">
-                      {result.url}
-                    </a>{" "}
-                    to visualize the dashboard.
-                  </span>,
-                );
-              }
+                if (result.error) {
+                  setUrl(<span>Error: {result.error}\nPlease check your code and try again.</span>);
+                } else {
+                  setUrl(
+                    <span>
+                      Success! Navigate to{" "}
+                      <a href={result.url?.replaceAll('"', "")} target="_blank">
+                        {result.url}
+                      </a>{" "}
+                      to visualize the dashboard.
+                    </span>,
+                  );
+                }
 
-              setTimeout(() => {
-                setUrl(undefined);
-              }, 10000);
-            }
-          }}
-        >
-          Compile
-        </Button.Root>
+                setTimeout(() => {
+                  setUrl(undefined);
+                }, 10000);
+              }
+            }}
+          >
+            Compile
+          </Button.Root>
+        </div>
         <div class="editor-container">
           <LeftSideBar />
           <div class="middle-column">
