@@ -24,6 +24,11 @@ const Header: Component<{ children: JSX.Element }> = (props) => {
           method: "POST",
         },
       });
+      if (response.status === 200 && response.data) {
+        authStore.setState({ isAuthenticated: true, user: response.data });
+      } else {
+        authStore.setState({ isAuthenticated: false, user: "" });
+      }
     } catch (error) {
       console.error("Failed to log out:", error);
     } finally {
