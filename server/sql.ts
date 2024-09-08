@@ -372,6 +372,12 @@ export async function getDocumentFolderPath(
     `;
 }
 
+function joinPath(path: string, name: string): string {
+  path =
+    path.length == 0 ? name.toLowerCase().replaceAll(" ", "-") : `${path}.${name.toLowerCase().replaceAll(" ", "-")}`;
+  return path;
+}
+
 /**
  * throws an error if path is wrong
  * throws an error if user does not have permissions to create document
@@ -384,7 +390,7 @@ export async function createDocument(
   municipalityName: string,
   path: string,
   documentType: DocumentType,
-): Promise<number> {
+): Promise<string | null> {
   if (
     path.length > 0 &&
     (await getDocumentFolderPath(path, projectName, organizationName, municipalityName)).length < 1
@@ -394,16 +400,16 @@ export async function createDocument(
     );
   }
 
-  path =
-    path.length == 0 ? name.toLowerCase().replaceAll(" ", "-") : `${path}.${name.toLowerCase().replaceAll(" ", "-")}`;
+  path = joinPath(path, name);
 
   // @ts-ignore
   const user: User | UserDocument = await selectUser(authorId);
+  let result = 0;
 
   try {
     switch (user.userType) {
       case UserType.DEFAULT: {
-        return await prisma.$executeRaw`
+        result = await prisma.$executeRaw`
             INSERT INTO documents (id, name, content, "authorId", "projectId", path, "documentType")
             VALUES (${createId()}, ${name}, '', ${authorId},
               (SELECT id FROM projects WHERE projects.name = ${projectName}
@@ -417,7 +423,7 @@ export async function createDocument(
             `;
       }
       case UserType.SUPERUSER_MUNICIPALITY: {
-        return await prisma.$executeRaw`
+        result = await prisma.$executeRaw`
             INSERT INTO documents (id, name, content, "authorId", "projectId", path, "documentType")
             VALUES (${createId()}, ${name}, '', ${authorId},
               (SELECT id FROM projects WHERE projects.name = ${projectName}
@@ -430,7 +436,7 @@ export async function createDocument(
             `;
       }
       case UserType.SUPERUSER_GLOBAL: {
-        return await prisma.$executeRaw`
+        result = await prisma.$executeRaw`
             INSERT INTO documents (id, name, content, "authorId", "projectId", path, "documentType")
             VALUES (${createId()}, ${name}, '', ${authorId},
               (SELECT id FROM projects WHERE projects.name = ${projectName}
@@ -442,6 +448,10 @@ export async function createDocument(
             `;
       }
     }
+    if (result === 1) {
+      return path;
+    }
+    return null;
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError) {
       if (e.code == "P2010") {
@@ -634,7 +644,7 @@ export async function deleteDocument(
             WHERE municipalities.name = ${municipalityName} AND municipalities.id = (SELECT "municipalityId" FROM users WHERE id = ${userId})
             AND organisations.name = ${orgName} AND organisations.id = (SELECT "organizationId" FROM users WHERE id = ${userId})
             AND projects.name = ${projectName}
-            AND documents.path = text2ltree(${documentPath}) AND documents."projectId" = projects.id
+            AND text2ltree(${documentPath}) @> documents.path AND documents."projectId" = projects.id
             `;
     }
     case UserType.SUPERUSER_MUNICIPALITY: {
@@ -645,7 +655,7 @@ export async function deleteDocument(
             INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
             WHERE municipalities.name = ${municipalityName} AND municipalities.id = (SELECT "municipalityId" FROM users WHERE id = ${userId})
             AND organisations.name = ${orgName} AND projects.name = ${projectName}
-            AND documents.path = text2ltree(${documentPath}) AND documents."projectId" = projects.id
+            AND text2ltree(${documentPath}) @> documents.path AND documents."projectId" = projects.id
             `;
     }
     case UserType.SUPERUSER_GLOBAL: {
@@ -655,9 +665,95 @@ export async function deleteDocument(
             INNER JOIN organisations ON organisations.id = projects."organizationId"
             INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
             WHERE municipalities.name = ${municipalityName} AND organisations.name = ${orgName} AND projects.name = ${projectName}
+            AND text2ltree(${documentPath}) @> documents.path AND documents."projectId" = projects.id
+            `;
+    }
+  }
+}
+
+export async function renameDocument(
+  userId: string,
+  municipalityName: string,
+  orgName: string,
+  projectName: string,
+  documentPath: string,
+  newName: string,
+): Promise<string | null> {
+  // @ts-ignore
+  const user: User | UserDocument = await selectUser(userId);
+  const splitIndex = (documentPath as string).lastIndexOf(".");
+  const path = splitIndex === -1 ? joinPath("", newName) : joinPath(documentPath.substring(0, splitIndex), newName);
+
+  let result = -1;
+
+  switch (user.userType) {
+    case UserType.DEFAULT: {
+      result = await prisma.$executeRaw`
+            UPDATE documents
+            SET name = ${newName}, path = text2ltree(${path})
+            FROM projects
+            INNER JOIN organisations ON organisations.id = projects."organizationId"
+            INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
+            WHERE municipalities.name = ${municipalityName} AND municipalities.id = (SELECT "municipalityId" FROM users WHERE id = ${userId})
+            AND organisations.name = ${orgName} AND organisations.id = (SELECT "organizationId" FROM users WHERE id = ${userId})
+            AND projects.name = ${projectName}
             AND documents.path = text2ltree(${documentPath}) AND documents."projectId" = projects.id
             `;
     }
+    case UserType.SUPERUSER_MUNICIPALITY: {
+      result = await prisma.$executeRaw`
+            UPDATE documents
+            SET name = ${newName}, path = text2ltree(${path})
+            FROM projects
+            INNER JOIN organisations ON organisations.id = projects."organizationId"
+            INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
+            WHERE municipalities.name = ${municipalityName} AND municipalities.id = (SELECT "municipalityId" FROM users WHERE id = ${userId})
+            AND organisations.name = ${orgName} AND projects.name = ${projectName}
+            AND documents.path = text2ltree(${documentPath}) AND documents."projectId" = projects.id
+            `;
+    }
+    case UserType.SUPERUSER_GLOBAL: {
+      result = await prisma.$executeRaw`
+            UPDATE documents
+            SET name = ${newName}, path = text2ltree(${path})
+            FROM projects
+            INNER JOIN organisations ON organisations.id = projects."organizationId"
+            INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
+            WHERE municipalities.name = ${municipalityName} AND organisations.name = ${orgName} AND projects.name = ${projectName}
+            AND documents.path = text2ltree(${documentPath}) AND documents."projectId" = projects.id
+            `;
+    }
+  }
+  if (result === 1) {
+    await updateChildPaths(municipalityName, orgName, projectName, documentPath, path);
+    return path;
+  }
+  return null;
+}
+
+async function updateChildPaths(
+  municipalityName: string,
+  orgName: string,
+  projectName: string,
+  documentPath: string,
+  newPath: string,
+) {
+  const children = await prisma.$queryRaw<{ id: string; path: string }[]>`
+    SELECT documents.id as "id", path::text
+    FROM documents
+    INNER JOIN projects ON projects.id = documents."projectId"
+    INNER JOIN organisations ON organisations.id = projects."organizationId"
+    INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
+    WHERE projects.name = ${projectName} AND organisations.name = ${orgName} AND municipalities.name = ${municipalityName}
+    AND text2ltree(${documentPath}) @> documents.path AND documents.path != text2ltree(${documentPath})
+    `;
+  for (const child of children) {
+    const newPathChild = child.path.replace(documentPath, newPath);
+    await prisma.$executeRaw`
+      UPDATE documents
+      SET path = text2ltree(${newPathChild})
+      WHERE id = ${child.id}
+      `;
   }
 }
 
