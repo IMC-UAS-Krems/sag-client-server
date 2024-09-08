@@ -11,3 +11,8 @@ export interface IEditorContext {
   code: Accessor<string>;
   setCode: Setter<string>;
 }
+
+export interface IInputDialogContext {
+  showInputDialog: Accessor<boolean>;
+  setShowInputDialog: Setter<boolean>;
+}

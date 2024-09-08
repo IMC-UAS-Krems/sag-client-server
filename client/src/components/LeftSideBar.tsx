@@ -6,6 +6,8 @@ import { createMutable } from "solid-js/store";
 import { EditorContext } from "@client/routes/Editor";
 import { IEditorContext } from "@client/types";
 import { ContextMenu } from "@kobalte/core/context-menu";
+import { Dynamic } from "solid-js/web";
+import { InputDialog } from "./InputDialog";
 
 enum SagDocumentType {
   FILE = "FILE",
@@ -173,8 +175,7 @@ class TreeNode {
     }
   }
 
-  async renameDocument() {
-    const newName = prompt("Enter new name:");
+  async renameDocument(newName: string) {
     if (newName) {
       const resp = await eden.api.document.put({
         newName: newName,
@@ -318,22 +319,76 @@ function FileNode(props: { node: TreeNode }) {
 
 function FileContextMenu(props: { children: JSXElement }) {
   const { code } = useContext(EditorContext) as IEditorContext;
+  const [renameFormRef, renameFormRefSet]: [Accessor<HTMLFormElement>, Setter<HTMLFormElement>] = createSignal();
+  const [showInputDialog, setShowInputDialog] = createSignal(false);
+  const [dialogType, setDialogType] = createSignal("rename");
+
+  const RenameDialog = () => (
+    <InputDialog
+      onSubmit={onRenameSubmit}
+      label="Enter new name"
+      formRefSet={renameFormRefSet}
+      setShowInputDialog={setShowInputDialog}
+    />
+  );
+  const AddFileDialog = () => (
+    <InputDialog
+      onSubmit={onAddFileSubmit}
+      label="Enter file name"
+      formRefSet={renameFormRefSet}
+      setShowInputDialog={setShowInputDialog}
+    />
+  );
+  const AddFolderDialog = () => (
+    <InputDialog
+      onSubmit={onAddFolderSubmit}
+      label="Enter folder name"
+      formRefSet={renameFormRefSet}
+      setShowInputDialog={setShowInputDialog}
+    />
+  );
+
+  const dialogOptions = {
+    rename: RenameDialog,
+    addFile: AddFileDialog,
+    addFolder: AddFolderDialog,
+  };
+
+  function onRenameSubmit(e: SubmitEvent) {
+    e.preventDefault();
+    const node = selectedNode();
+    const data = new FormData(renameFormRef());
+    setShowInputDialog(false);
+    node?.renameDocument(data.get("name") as string);
+  }
+
+  function onAddFileSubmit(e: SubmitEvent) {
+    e.preventDefault();
+    const node = selectedNode();
+    const data = new FormData(renameFormRef());
+    setShowInputDialog(false);
+    node?.createDocument(data.get("name") as string, SagDocumentType.FILE, node?.path() as string);
+  }
+
+  function onAddFolderSubmit(e: SubmitEvent) {
+    e.preventDefault();
+    const node = selectedNode();
+    const data = new FormData(renameFormRef());
+    setShowInputDialog(false);
+    node?.createDocument(data.get("name") as string, SagDocumentType.FOLDER, node?.path() as string);
+  }
 
   function handleContextMenu(action: MenuOption) {
     const node = selectedNode();
     switch (action) {
       case MenuOption.AddFile: {
-        const name = prompt("Enter file name:");
-        if (name) {
-          node?.createDocument(name, SagDocumentType.FILE, node.path() as string);
-        }
+        setDialogType("addFile");
+        setShowInputDialog(true);
         break;
       }
       case MenuOption.AddFolder: {
-        const name = prompt("Enter folder name:");
-        if (name) {
-          node?.createDocument(name, SagDocumentType.FOLDER, node.path() as string);
-        }
+        setDialogType("addFolder");
+        setShowInputDialog(true);
         break;
       }
       case MenuOption.Delete: {
@@ -345,7 +400,8 @@ function FileContextMenu(props: { children: JSXElement }) {
         break;
       }
       case MenuOption.Rename: {
-        node?.renameDocument();
+        setDialogType("rename");
+        setShowInputDialog(true);
         break;
       }
     }
@@ -405,6 +461,9 @@ function FileContextMenu(props: { children: JSXElement }) {
         </ContextMenu.Content>
       </ContextMenu.Portal>
       {props.children}
+      <Show when={showInputDialog()}>
+        <Dynamic component={dialogOptions[dialogType()]} />
+      </Show>
     </ContextMenu>
   );
 }
