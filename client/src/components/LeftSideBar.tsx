@@ -1,9 +1,9 @@
-import { For, onMount, batch, createSignal, useContext, Show, Accessor, Suspense, Setter } from "solid-js";
+import { For, onMount, batch, createSignal, useContext, Show, Accessor, Suspense, Setter, JSXElement } from "solid-js";
 import { eden } from "@client/api";
 import { createMutable } from "solid-js/store";
-import ContextMenu, { Item, MenuContext } from "./Menu";
 import { EditorContext } from "@client/routes/Editor";
-import { IEditorContext, IMenuContext } from "@client/types";
+import { IEditorContext } from "@client/types";
+import { ContextMenu } from "@kobalte/core/context-menu";
 
 enum SagDocumentType {
   FILE = "FILE",
@@ -267,7 +267,6 @@ const [selectedNode, setSelectedNode] = createSignal<TreeNode | null>(null);
 
 function FileNode(props: { node: TreeNode }) {
   let expandDiv: HTMLDivElement;
-  const { showMenu } = useContext(MenuContext) as IMenuContext;
   const { handleFileClick } = useContext(EditorContext) as IEditorContext;
 
   function toggleExpanded() {
@@ -282,20 +281,24 @@ function FileNode(props: { node: TreeNode }) {
   return (
     <div class="flex flex-col">
       <Suspense>
-        <button
-          class="flex flex-row"
-          onClick={
-            props.node.docType === SagDocumentType.FILE
-              ? async () => handleFileClick(await props.node.getContent())
-              : toggleExpanded
-          }
-          onContextMenu={(e) => {
-            showMenu(e), setSelectedNode(props.node);
-          }}
-        >
-          <span class="mr-2">{props.node.icon()}</span>
-          <span>{props.node.name()}</span>
-        </button>
+        <ContextMenu.Trigger disabled={![SagDocumentType.FOLDER, SagDocumentType.FILE].includes(props.node.docType)}>
+          <button
+            class="flex flex-row"
+            onClick={
+              props.node.docType === SagDocumentType.FILE
+                ? async () => handleFileClick(await props.node.getContent())
+                : toggleExpanded
+            }
+            onContextMenu={() => {
+              if ([SagDocumentType.FOLDER, SagDocumentType.FILE].includes(props.node.docType)) {
+                setSelectedNode(props.node);
+              }
+            }}
+          >
+            <span class="mr-2">{props.node.icon()}</span>
+            <span>{props.node.name()}</span>
+          </button>
+        </ContextMenu.Trigger>
       </Suspense>
 
       <div
@@ -311,9 +314,7 @@ function FileNode(props: { node: TreeNode }) {
   );
 }
 
-export function LeftSideBar() {
-  const tree = createMutable(new FileTree());
-  const { hideMenu } = useContext(MenuContext) as IMenuContext;
+function FileContextMenu(props: { children: JSXElement }) {
   const { code } = useContext(EditorContext) as IEditorContext;
 
   function handleContextMenu(action: MenuOption) {
@@ -347,6 +348,67 @@ export function LeftSideBar() {
       }
     }
   }
+  return (
+    <ContextMenu>
+      <ContextMenu.Portal>
+        <ContextMenu.Content class="bg-white border border-gray-200 rounded shadow-lg">
+          <ul class="py-1">
+            <ContextMenu.Item
+              class="px-4 py-2 cursor-pointer hover:bg-gray-100"
+              onSelect={() => {
+                handleContextMenu(MenuOption.Rename);
+              }}
+            >
+              {MenuOption.Rename}
+            </ContextMenu.Item>
+            <Show when={selectedNode()?.docType === SagDocumentType.FILE}>
+              <ContextMenu.Item
+                class="px-4 py-2 cursor-pointer hover:bg-gray-100"
+                onSelect={() => {
+                  handleContextMenu(MenuOption.Save);
+                }}
+              >
+                {MenuOption.Save}
+              </ContextMenu.Item>
+            </Show>
+            <ContextMenu.Item
+              class="px-4 py-2 cursor-pointer hover:bg-gray-100"
+              onSelect={() => {
+                handleContextMenu(MenuOption.Delete);
+              }}
+            >
+              {MenuOption.Delete}
+            </ContextMenu.Item>
+            <Show when={selectedNode()?.docType === SagDocumentType.FOLDER}>
+              <ContextMenu.Item
+                class="px-4 py-2 cursor-pointer hover:bg-gray-100"
+                onSelect={() => {
+                  handleContextMenu(MenuOption.AddFile);
+                }}
+              >
+                {MenuOption.AddFile}
+              </ContextMenu.Item>
+            </Show>
+            <Show when={selectedNode()?.docType === SagDocumentType.FOLDER}>
+              <ContextMenu.Item
+                class="px-4 py-2 cursor-pointer hover:bg-gray-100"
+                onSelect={() => {
+                  handleContextMenu(MenuOption.AddFolder);
+                }}
+              >
+                {MenuOption.AddFolder}
+              </ContextMenu.Item>
+            </Show>
+          </ul>
+        </ContextMenu.Content>
+      </ContextMenu.Portal>
+      {props.children}
+    </ContextMenu>
+  );
+}
+
+export function LeftSideBar() {
+  const tree = createMutable(new FileTree());
 
   onMount(() => {
     eden.api.documents
@@ -367,67 +429,17 @@ export function LeftSideBar() {
 
   return (
     <>
-      <div class="w-1/4 max-h-screen overflow-auto">
-        <ContextMenu menuId="file-tree-context-menu">
-          <Show
-            when={[SagDocumentType.FILE, SagDocumentType.FOLDER].includes(selectedNode()?.docType)}
-            fallback={<div>Nothing</div>}
-          >
-            <ul class="py-1">
-              <Item
-                callback={() => {
-                  handleContextMenu(MenuOption.Rename);
-                  hideMenu();
-                }}
-              >
-                {MenuOption.Rename}
-              </Item>
-              <Show when={selectedNode()?.docType === SagDocumentType.FILE}>
-                <Item
-                  callback={() => {
-                    handleContextMenu(MenuOption.Save), hideMenu();
-                  }}
-                >
-                  {MenuOption.Save}
-                </Item>
-              </Show>
-              <Item
-                callback={() => {
-                  handleContextMenu(MenuOption.Delete), hideMenu();
-                }}
-              >
-                {MenuOption.Delete}
-              </Item>
-              <Show when={selectedNode()?.docType === SagDocumentType.FOLDER}>
-                <Item
-                  callback={() => {
-                    handleContextMenu(MenuOption.AddFile);
-                    hideMenu();
-                  }}
-                >
-                  {MenuOption.AddFile}
-                </Item>
-              </Show>
-              <Show when={selectedNode()?.docType === SagDocumentType.FOLDER}>
-                <Item
-                  callback={() => {
-                    handleContextMenu(MenuOption.AddFolder), hideMenu();
-                  }}
-                >
-                  {MenuOption.AddFolder}
-                </Item>
-              </Show>
-            </ul>
-          </Show>
-        </ContextMenu>
-        <For each={tree.getChildren()}>
-          {(child) => (
-            <div class="ml-4">
-              <FileNode node={child} />
-            </div>
-          )}
-        </For>
-      </div>
+      <FileContextMenu>
+        <div class="w-1/4 max-h-screen overflow-auto">
+          <For each={tree.getChildren()}>
+            {(child) => (
+              <div class="ml-4">
+                <FileNode node={child} />
+              </div>
+            )}
+          </For>
+        </div>
+      </FileContextMenu>
     </>
   );
 }
