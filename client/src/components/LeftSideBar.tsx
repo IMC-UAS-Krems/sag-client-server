@@ -1,9 +1,12 @@
 import { createSignal, onMount } from "solid-js";
+
 import { Menu, Item, useContextMenu, animation, Submenu } from "solid-contextmenu";
-import Swal from "sweetalert2";
 import "../../../node_modules/solid-contextmenu/dist/style.css";
+import Swal from "sweetalert2";
+
 import styles from "@styles/LeftSideBar.module.css";
 import { eden } from "@client/api";
+import { theme } from "@store/index";
 
 interface File {
   name: string;
@@ -23,7 +26,6 @@ interface LeftSideBarProps {
 export function LeftSideBar(props: LeftSideBarProps) {
   const [files, setFiles] = createSignal<File[]>([]);
   const [_animation, setAnimation] = createSignal(animation.scale);
-  const [_theme, setTheme] = createSignal<"light" | "dark">("light");
   const { show } = useContextMenu({ id: MENU_ID });
 
   let rightClickedFileOrFolder: File | null = null;
@@ -379,7 +381,7 @@ export function LeftSideBar(props: LeftSideBarProps) {
       }}
     >
       {renderFiles(files())}
-      <Menu id={MENU_ID} animation={_animation()} theme={_theme()}>
+      <Menu id={MENU_ID} animation={_animation()} theme={theme() ? theme() : "light"}>
         <Item onClick={() => handleMenuClick("Rename")}>✏️ Rename</Item>
         <Item onClick={() => handleMenuClick("Save")}>💾 Save</Item>
         <Item onClick={() => handleMenuClick("Delete")}>🗑️ Delete</Item>

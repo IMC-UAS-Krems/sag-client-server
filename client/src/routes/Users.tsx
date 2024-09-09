@@ -10,6 +10,7 @@ import { handleUnauthorized, isUserOnline } from "@client/utils/authUtils";
 import Header from "@client/components/Header";
 import authStore from "@store/authStore";
 import styles from "@styles/Users.module.css";
+import { theme } from "@store/index";
 
 import "../../../node_modules/solid-contextmenu/dist/style.css";
 
@@ -246,7 +247,7 @@ const Users: Component = () => {
   }
 
   const [_animation, setAnimation] = createSignal(animation.scale);
-  const [_theme, setTheme] = createSignal<"light" | "dark">("light");
+  // const [_theme, setTheme] = createSignal<"light" | "dark">("light");
 
   return (
     <Header>
@@ -304,7 +305,7 @@ const Users: Component = () => {
                         class={styles.actions}
                       >
                         <FaSolidEllipsis />
-                        <Menu id={user.id} animation={_animation()} theme={_theme()}>
+                        <Menu id={user.id} animation={_animation()} theme={theme() ? theme() : "light"}>
                           <Item onClick={() => handleEditUser(user.id)} disabled={user.userRole == "Administrator"}>
                             ✏️ Edit
                           </Item>
