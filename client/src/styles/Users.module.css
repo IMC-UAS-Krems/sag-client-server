@@ -44,26 +44,42 @@ td {
   background-color: var(--secondary-color);
 }
 
+.nav-button-container {
+  display: flex;
+  width: 80%;
+  gap: 2rem;
+}
+
 .nav-button {
   background-color: transparent;
   color: var(--primary-text);
   font-size: 18px;
   font-weight: 500;
-
-  width: 80%;
   height: 40px;
   border-radius: 6px;
   border: 1px solid var(--primary-text);
-
-  cursor: pointer;
-  margin: 0;
-
   transition: all 0.25s;
 }
 
 .nav-button:hover {
   background-color: var(--primary-text);
   color: var(--secondary-color);
+}
+
+.nav-button-inverse {
+  background-color: var(--primary-text);
+  color: var(--secondary-color);
+  font-size: 18px;
+  font-weight: 500;
+  height: 40px;
+  border-radius: 6px;
+  border: 1px solid var(--primary-text);
+  transition: all 0.25s;
+}
+
+.nav-button-inverse:hover {
+  background-color: var(--secondary-color);
+  color: var(--primary-text);
 }
 
 .error-text {
@@ -102,7 +118,7 @@ td {
 }
 
 @media (max-width: 1200px) {
-  .nav-button {
+  .nav-button-container {
     width: 90%;
   }
 

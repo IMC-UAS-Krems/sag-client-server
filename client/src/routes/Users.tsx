@@ -49,6 +49,7 @@ const Users: Component = () => {
   const [error, setError] = createSignal<string | null>(null);
   const [onlineStatuses, setOnlineStatuses] = createSignal<Record<string, boolean>>({});
   const [reload, setReload] = createSignal(false);
+  const [showDeleted, setShowDeleted] = createSignal(false);
 
   onMount(async () => {
     await fetchUsers();
@@ -58,6 +59,10 @@ const Users: Component = () => {
     reload();
     fetchUsers();
   });
+
+  const filteredUsers = () => {
+    return showDeleted() ? users() : users().filter((user) => !user.deleted);
+  };
 
   async function fetchUsers() {
     try {
@@ -153,7 +158,7 @@ const Users: Component = () => {
             return;
           } else {
             Swal.fire("Deleted!", "The user has been deleted.", "success");
-            setUsers((prev) => prev.filter((user) => user.id !== userId));
+            setUsers((prevUsers) => prevUsers.map((user) => (user.id === userId ? { ...user, deleted: true } : user)));
           }
         } catch (error) {
           console.error("Failed to delete user:", error);
@@ -247,9 +252,17 @@ const Users: Component = () => {
     <Header>
       <main class={styles["users-main"]}>
         <h1>Admin users page</h1>
-        <button onClick={handleCreateUser} class={styles["nav-button"]}>
-          Create new user
-        </button>
+        <div class={styles["nav-button-container"]}>
+          <button onClick={handleCreateUser} class={styles["nav-button"]}>
+            Create new user
+          </button>
+          <button
+            onClick={() => setShowDeleted(!showDeleted())}
+            class={showDeleted() ? styles["nav-button-inverse"] : styles["nav-button"]}
+          >
+            {showDeleted() ? "Hide deleted" : "Show deleted"}
+          </button>
+        </div>
         {loading() ? (
           <div class={styles.loader}></div>
         ) : error() ? (
@@ -271,45 +284,53 @@ const Users: Component = () => {
               </thead>
 
               <tbody>
-                {users()
-                  .filter((user) => !user.deleted)
-                  .map((user) => {
-                    const { show } = useContextMenu({ id: user.id });
-                    const onlineStatus = onlineStatuses()[user.id];
+                {filteredUsers().map((user) => {
+                  const { show } = useContextMenu({ id: user.id });
+                  const onlineStatus = onlineStatuses()[user.id];
 
-                    return (
-                      <tr class={user.email == loggedInUser ? styles["logged-in-user"] : ""}>
-                        <td>{user.username}</td>
-                        <td>{user.name}</td>
-                        <td>{user.email}</td>
-                        <td>{user.municipalityName}</td>
-                        <td>{user.organizationName}</td>
-                        <td>{user.userRole}</td>
-                      <td>{onlineStatus ? "🟢" : "🔴"}</td>
-                        <td
-                          onClick={(e) => {
-                            show(e, { props: user.id });
-                          }}
-                          class={styles.actions}
-                        >
-                          <FaSolidEllipsis />
-                          <Menu id={user.id} animation={_animation()} theme={_theme()}>
-                            <Item onClick={() => handleEditUser(user.id)}>✏️ Edit</Item>
-                            <Item onClick={() => handleDeleteUser(user.id)} disabled={user.userRole === "Administrator"}>
-                              🗑️ Delete
-                            </Item>
-                            <Separator />
-                            <Item
-                              onClick={() => handleLogOutUser(user.id, user.username)}
-                              disabled={user.userRole === "Administrator" || !onlineStatus}
-                            >
-                              🚶 Log out
-                            </Item>
-                          </Menu>
-                        </td>
-                      </tr>
-                    );
-                  })}
+                  return (
+                    <tr class={user.email == loggedInUser ? styles["logged-in-user"] : ""}>
+                      <td>{user.username}</td>
+                      <td>{user.name}</td>
+                      <td>{user.email}</td>
+                      <td>{user.municipalityName}</td>
+                      <td>{user.organizationName}</td>
+                      <td>{user.userRole}</td>
+                      <td>{user.deleted ? "🗑️" : onlineStatus ? "🟢" : "🔴"}</td>
+                      <td
+                        onClick={(e) => {
+                          show(e, { props: user.id });
+                        }}
+                        class={styles.actions}
+                      >
+                        <FaSolidEllipsis />
+                        <Menu id={user.id} animation={_animation()} theme={_theme()}>
+                          <Item onClick={() => handleEditUser(user.id)} disabled={user.userRole == "Administrator"}>
+                            ✏️ Edit
+                          </Item>
+                          <Item
+                            onClick={() => handleDeleteUser(user.id)}
+                            disabled={user.userRole === "Administrator" || user.deleted}
+                          >
+                            🗑️ Delete
+                          </Item>
+                          <Separator />
+                          <Item
+                            onClick={() => handleLogOutUser(user.id, user.username)}
+                            disabled={
+                              user.userRole === "Administrator" ||
+                              !onlineStatus ||
+                              user.needsToBeLoggedOut ||
+                              user.deleted
+                            }
+                          >
+                            🚶 Log out
+                          </Item>
+                        </Menu>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

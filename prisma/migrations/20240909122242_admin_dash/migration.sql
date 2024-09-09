@@ -2,8 +2,6 @@
   Warnings:
 
   - The values [USER,ADMIN] on the enum `UserRole` will be removed. If these variants are still used in the database, this will fail.
-  - A unique constraint covering the columns `[username,deleted]` on the table `users` will be added. If there are existing duplicate values, this will fail.
-  - A unique constraint covering the columns `[email,deleted]` on the table `users` will be added. If there are existing duplicate values, this will fail.
 
 */
 -- AlterEnum
@@ -23,8 +21,10 @@ ADD COLUMN     "lastLoginTime" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 ADD COLUMN     "needsToBeLoggedOut" BOOLEAN NOT NULL DEFAULT false,
 ALTER COLUMN "userRole" SET DEFAULT 'Developer';
 
--- CreateIndex
-CREATE UNIQUE INDEX "users_username_deleted_key" ON "users"("username", "deleted");
+-- DropIndex
+DROP INDEX "users_email_key";
+DROP INDEX "users_username_key";
 
--- CreateIndex
-CREATE UNIQUE INDEX "users_email_deleted_key" ON "users"("email", "deleted");
+-- Add Partial Unique Indexes
+CREATE UNIQUE INDEX "users_username_deleted_unique" ON "users" ("username") WHERE "deleted" = false;
+CREATE UNIQUE INDEX "users_email_deleted_unique" ON "users" ("email") WHERE "deleted" = false;

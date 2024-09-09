@@ -13,7 +13,6 @@ import FormField from "@client/components/FormField";
 import styles from "@styles/Signin.module.css";
 
 const UsersCreate: Component = () => {
-
   const navigate = useNavigate();
 
   const [name, setName] = createSignal<string | undefined>(undefined);
@@ -127,17 +126,8 @@ const UsersCreate: Component = () => {
         return;
       }
 
-      if (response.error || response.data?.error) {
-        console.error(response.error || response.data?.error);
-
-        const errorMessage = response.data?.error || response.error || "An unknown error occurred";
-
-        Swal.fire({
-          title: "Error",
-          text: `Error creating user: ${errorMessage}`,
-          icon: "error",
-        });
-        return;
+      if (response.error) {
+        throw new Error(response.data.message);
       }
 
       await Swal.fire({
@@ -147,11 +137,11 @@ const UsersCreate: Component = () => {
       });
 
       navigate("/users", { replace: true });
-    } catch (error: unknown) {
-      console.error("Error submitting form:", error);
+    } catch (error) {
+      console.error("Error creating user:", error);
       Swal.fire({
         title: "Error",
-        text: `An unexpected error occurred: ${error instanceof Error ? error.message : String(error)}`,
+        text: `${error.message}`,
         icon: "error",
       });
     }

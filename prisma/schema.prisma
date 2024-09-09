@@ -40,8 +40,8 @@ model User {
 
     // Personal Data
     name     String
-    username String   @unique
-    email    String   @unique
+    username String
+    email    String
     password String
     userRole UserRole @default(Developer)
     userType UserType @default(DEFAULT)
@@ -70,9 +70,6 @@ model User {
     // Tracking user tokens
     lastLoginTime DateTime @default(now())
     needsToBeLoggedOut Boolean @default(false)
-
-    @@unique([username, deleted])
-    @@unique([email, deleted])
 
     @@map("users")
 }

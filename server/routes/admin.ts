@@ -141,9 +141,14 @@ export const admin = new Elysia({ prefix: "/admin" })
         set.status = 201;
         return { message: "User created successfully", user };
       } catch (error) {
-        console.error("Error in POST /admin/createUser:", error);
-        set.status = 500;
-        return { error: "Internal Server Error" };
+        if (error.message.includes("already exists")) {
+          log.warn(error.message);
+          set.status = 409; // Conflict
+          throw error;
+        }
+        log.error(error);
+        set.status = 500; // Internal Server Error
+        throw error;
       }
     },
     {
