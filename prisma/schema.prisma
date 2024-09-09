@@ -71,6 +71,9 @@ model User {
     lastLoginTime DateTime @default(now())
     needsToBeLoggedOut Boolean @default(false)
 
+    @@unique([username, deleted])
+    @@unique([email, deleted])
+
     @@map("users")
 }
 

@@ -79,6 +79,7 @@ export async function createUser(data: {
   const userWithEmail = await prisma.user.findUnique({
     where: {
       email: data.email,
+      deleted: false,
     },
   });
   if (userWithEmail) {
@@ -88,6 +89,7 @@ export async function createUser(data: {
   const userWithUsername = await prisma.user.findUnique({
     where: {
       username: data.username,
+      deleted: false,
     },
   });
   if (userWithUsername) {
@@ -211,6 +213,9 @@ export async function getUserDataById(userId: string): Promise<User> {
 
 export async function getAllUsers(): Promise<UserDocument[]> {
   const users = await prisma.user.findMany({
+    where: {
+      deleted: false,
+    },
     include: {
       municipality: true,
       organization: true,

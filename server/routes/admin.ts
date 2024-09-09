@@ -33,11 +33,11 @@ export const admin = new Elysia({ prefix: "/admin" })
           let password = user.password;
           if (!password) {
             password = "";
-          }else{
+          } else {
             delete user.password;
           }
           return user;
-        })
+        });
         set.status = 200;
         return usersWithoutPasswords;
       } catch (error) {
