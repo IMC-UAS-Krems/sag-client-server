@@ -1,9 +1,17 @@
 import { Elysia, t } from "elysia";
 import crypt from "ncrypt-js";
+
 import { panic } from "@utils/panic";
 import { UserDocument, sql } from "@server/sql";
-import { Prisma } from "@prisma/client";
 import { authMiddleware } from "@server/middleware";
+import {
+  AuthContext,
+  AuthContextWithBody,
+  AuthContextWithRequest,
+  RegisterBody,
+  RegisteredUser,
+  LoginBody,
+} from "@server/types";
 
 export const { encrypt, decrypt } = new crypt(Bun.env.JWT_SECRET ?? panic("JWT_SECRET environment variable not set"));
 export type ReturnUser = Omit<UserDocument, "password" | "id">;
@@ -16,7 +24,7 @@ export const auth = new Elysia({ prefix: "/auth" })
       set,
       body: { name, email, username, key, municipalityName, organizationName },
       cookie: { access_token },
-    }): Promise<ReturnUser | undefined> => {
+    }: AuthContextWithBody<RegisterBody>): Promise<RegisteredUser> => {
       try {
         const userRole = "Developer";
         const userResult = await sql.createUser({
@@ -29,7 +37,7 @@ export const auth = new Elysia({ prefix: "/auth" })
           municipalityName,
         });
 
-        const { id, password, ...user } = userResult;
+        const { id, ...user } = userResult;
 
         const token = encrypt(id);
         log.info(`Producing token: ${token}`);
@@ -45,16 +53,22 @@ export const auth = new Elysia({ prefix: "/auth" })
         log.info(`User ${user.name} registered.`);
 
         set.status = 201;
-        return user;
+        return user as RegisteredUser;
       } catch (error) {
-        if (error.message.includes("already exists")) {
-          log.warn(error.message);
-          set.status = 409; // Conflict
+        if (error instanceof Error) {
+          if (error.message.includes("already exists")) {
+            log.warn(error.message);
+            set.status = 409; // Conflict
+            throw error;
+          }
+          log.error(error.message);
+          set.status = 500; // Internal Server Error
           throw error;
+        } else {
+          log.error("An unknown error occurred");
+          set.status = 500; // Internal Server Error
+          throw new Error("An unknown error occurred");
         }
-        log.error(error);
-        set.status = 500; // Internal Server Error
-        throw error;
       }
     },
     {
@@ -79,7 +93,12 @@ export const auth = new Elysia({ prefix: "/auth" })
 
   .post(
     "/login",
-    async ({ log, set, body: { identifier, key }, cookie: { access_token } }): Promise<ReturnUser | undefined> => {
+    async ({
+      log,
+      set,
+      body: { identifier, key },
+      cookie: { access_token },
+    }: AuthContextWithBody<LoginBody>): Promise<ReturnUser | undefined> => {
       // try with email
       let userResult = await sql.selectUser(undefined, identifier, undefined, true);
       if (!userResult) {
@@ -106,7 +125,7 @@ export const auth = new Elysia({ prefix: "/auth" })
       // Reset the needsToBeLoggedOut flag
       await sql.updateUser(userResult.id, { needsToBeLoggedOut: false });
 
-      const { password, id, ...user } = userResult as UserDocument;
+      const { id, ...user } = userResult as UserDocument;
 
       const token = encrypt(id);
 
@@ -146,7 +165,7 @@ export const auth = new Elysia({ prefix: "/auth" })
 
   .post(
     "/logout",
-    async ({ log, set, cookie: { access_token }, request }) => {
+    async ({ log, set, cookie: { access_token }, request }: AuthContextWithRequest) => {
       access_token.set({
         httpOnly: true,
         secure: true,
@@ -161,6 +180,7 @@ export const auth = new Elysia({ prefix: "/auth" })
         await sql.updateUser(userId, { needsToBeLoggedOut: true });
       }
 
+      log.info("User logged out: " + userId);
       set.status = 200;
     },
     {
@@ -176,12 +196,12 @@ export const auth = new Elysia({ prefix: "/auth" })
 
   .get(
     "/check-if-logged-in",
-    async ({ log, set, userId }) => {
+    async ({ set, userId }: AuthContext) => {
       const user = await sql.selectUser(userId);
-      // console.log("Logged in user is:", user);
       set.status = 200;
       if (user == null) {
         set.status = 401;
+        return { error: "User not logged in" }; // Return an error message
       }
       return { email: user.email, userRole: user.userRole };
     },

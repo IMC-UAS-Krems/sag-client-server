@@ -8,9 +8,6 @@ import styles from "@styles/Home.module.css";
 
 import "mapbox-gl/dist/mapbox-gl.css";
 
-// const t = (s: string) => s;
-// const [style, setStyle] = createSignal("basic");
-
 const [viewport, setViewport] = createSignal({
   center: [0, 52],
   zoom: 11,

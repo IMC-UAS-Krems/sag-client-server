@@ -31,8 +31,10 @@ const Register: Component<NavigateProps> = ({ navigate }) => {
   const fetchMunicipalities = async () => {
     try {
       const response = await eden.api.municipalities.get();
-      if (response.data) {
+      if (Array.isArray(response.data)) {
         setMunicipalities(response.data);
+      } else {
+        console.error("Unexpected response format:", response.data);
       }
     } catch (error) {
       console.error("Error fetching municipalities:", error);
@@ -45,11 +47,13 @@ const Register: Component<NavigateProps> = ({ navigate }) => {
     setIsOrganizationsLoading(true);
     try {
       const response = await eden.api.organizationsByMunicipality.post({ municipalityName });
-      if (response.data) {
+      if (Array.isArray(response.data)) {
         setOrganizations(response.data);
         if (organization()) {
           setOrganization(undefined);
         }
+      } else {
+        console.error("Unexpected response format:", response.data);
       }
     } catch (error) {
       console.error("Error fetching organizations:", error);
@@ -104,7 +108,7 @@ const Register: Component<NavigateProps> = ({ navigate }) => {
     const formOrganization = organization() ?? "";
 
     try {
-      const registered = await eden.auth.register.post({
+      const response = await eden.auth.register.post({
         name: formName,
         email: formEmail,
         username: formUsername,
@@ -118,9 +122,12 @@ const Register: Component<NavigateProps> = ({ navigate }) => {
         },
       });
 
-      // console.log("Response registered:", registered);
-      if (registered.error) {
-        throw new Error(registered.data.message);
+      if (response.error) {
+        if (response.error.message) {
+          throw new Error(response.error.message);
+        } else {
+          throw new Error("An unknown error occurred during registration.");
+        }
       }
 
       authStore.setState({ isAuthenticated: true, user: formEmail, userRole: "Developer" });
@@ -132,9 +139,14 @@ const Register: Component<NavigateProps> = ({ navigate }) => {
         icon: "success",
       });
     } catch (error) {
+      let errorMessage = "An unknown error occurred.";
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+
       Swal.fire({
         title: "Error",
-        text: `${error.message}`,
+        text: errorMessage,
         icon: "error",
       });
       return;
