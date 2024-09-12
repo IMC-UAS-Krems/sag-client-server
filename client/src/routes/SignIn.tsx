@@ -64,7 +64,6 @@ const Register: Component = () => {
     const formOrganisation = organisation();
 
     if (!(formName && formEmail && formUsername && formPassword)) {
-      console.log("Invalid data");
       Swal.fire({
         title: "Error",
         text: "Wrong login data",
@@ -88,7 +87,6 @@ const Register: Component = () => {
     });
 
     if (!registered.data || registered.error) {
-      console.log(registered.error);
       return;
     }
 
@@ -97,12 +95,12 @@ const Register: Component = () => {
     navigate("/editor", { replace: true });
 
     Swal.fire({
-      title: "Success",
-      text: `Login successful.`,
+      titleText: "Login successful",
+      position: "top-right",
+      timer: 1500,
+      showConfirmButton: false,
       icon: "success",
     });
-
-    console.log(`Registration successful. Welcome ${registered.data.name}.`);
   };
 
   return (
@@ -144,7 +142,6 @@ const Login: Component = () => {
     const formPassword = password();
 
     if (!(formUsername && formPassword)) {
-      console.log("Invalid data");
       Swal.fire({
         title: "Error",
         text: "Wrong login data",
@@ -164,7 +161,6 @@ const Login: Component = () => {
     });
 
     if (!logged.data || logged.error) {
-      console.log(logged.error);
       Swal.fire({
         title: "Error",
         text: "Wrong login data",
@@ -173,15 +169,15 @@ const Login: Component = () => {
       return;
     }
 
-    console.log(`Login successful. Welcome ${logged.data.name}.`);
-
     authStore.setState({ isAuthenticated: true, user: formUsername });
 
     navigate("/editor", { replace: true });
 
     Swal.fire({
-      title: "Success",
-      text: `Login successful.`,
+      titleText: "Login successful",
+      position: "top-right",
+      timer: 1500,
+      showConfirmButton: false,
       icon: "success",
     });
   };
