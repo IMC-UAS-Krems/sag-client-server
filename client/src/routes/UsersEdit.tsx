@@ -7,25 +7,12 @@ import Swal from "sweetalert2";
 
 import { eden } from "@client/api";
 import { handleUnauthorized } from "@client/utils/authUtils";
-import { UserRole } from "@client/shared/types";
 import Header from "@client/components/Header";
 import FormField from "@client/components/FormField";
 import styles from "@styles/Signin.module.css";
+import { UserRole, UpdateUserBody } from "@server/types";
 
 const UsersEdit: Component = () => {
-  
-
-  interface UpdateUserRequestBody {
-    userId: string;
-    username?: string;
-    password?: string;
-    name?: string;
-    email?: string;
-    organization?: string;
-    municipality?: string;
-    userRole?: UserRole;
-  }
-
   const navigate = useNavigate();
   const userId = useParams().userId;
 
@@ -37,7 +24,7 @@ const UsersEdit: Component = () => {
   const [organization, setOrganization] = createSignal<string | undefined>(undefined);
   const [organizations, setOrganizations] = createSignal<string[]>([]);
   const [municipalities, setMunicipalities] = createSignal<string[]>([]);
-  const [userRole, setUserRole] = createSignal<UserRole | undefined>(undefined);
+  const [userRole, setUserRole] = createSignal<UserRole | string | undefined>(undefined);
   const [errors, setErrors] = createSignal<{ [key: string]: string }>({});
 
   const [oldName, setOldName] = createSignal<string | undefined>(undefined);
@@ -45,7 +32,7 @@ const UsersEdit: Component = () => {
   const [oldUsername, setOldUsername] = createSignal<string | undefined>(undefined);
   const [oldMunicipality, setOldMunicipality] = createSignal<string | undefined>(undefined);
   const [oldOrganization, setOldOrganization] = createSignal<string | undefined>(undefined);
-  const [oldUserRole, setOldUserRole] = createSignal<UserRole | undefined>(undefined);
+  const [oldUserRole, setOldUserRole] = createSignal<UserRole | string | undefined>(undefined);
   const [userFetchError, setUserFetchErrors] = createSignal<string | null>(null);
 
   const [loading, setLoading] = createSignal(true);
@@ -68,9 +55,10 @@ const UsersEdit: Component = () => {
         },
       });
 
+      console.log("Fetched user data:", oldUserData);
+
       // Unauthorized check
       if (oldUserData.status === 401 || oldUserData.status === 403) {
-        // console.log("User is not authorized for this request:", oldUserData);
         handleUnauthorized(navigate);
         return;
       }
@@ -79,15 +67,20 @@ const UsersEdit: Component = () => {
         setLoading(false);
         setUserFetchErrors("User not found");
         return;
-      } else {
+      }
+
+      if ("name" in oldUserData.data) {
         setOldName(oldUserData.data.name);
         setOldEmail(oldUserData.data.email);
         setOldUsername(oldUserData.data.username);
-        setOldMunicipality(oldUserData.data.municipality.name);
-        setOldOrganization(oldUserData.data.organization.name);
+        setOldMunicipality(oldUserData.data.municipalityName);
+        setOldOrganization(oldUserData.data.organizationName);
         setOldUserRole(oldUserData.data.userRole);
+      } else {
+        setUserFetchErrors("User data is invalid");
       }
     } catch (error) {
+      console.error("Error fetching user data:", error);
       setUserFetchErrors("Error fetching user data");
     } finally {
       setLoading(false);
@@ -113,8 +106,10 @@ const UsersEdit: Component = () => {
       // console.log("Fetching organizations for municipality:", municipalityName);
       const response = await eden.api.organizationsByMunicipality.post({ municipalityName });
       if (response.data) {
-        setOrganizations(response.data);
-        // console.log("Fetched organizations:", response.data);
+        if (Array.isArray(response.data)) {
+          setOrganizations(response.data);
+          // console.log("Fetched organizations:", response.data);
+        }
       }
     } catch (error) {
       console.error("Error fetching organizations:", error);
@@ -175,7 +170,7 @@ const UsersEdit: Component = () => {
       return;
     }
 
-    const requestBody: UpdateUserRequestBody = { userId: userId };
+    const requestBody: UpdateUserBody = { userId: userId };
 
     if (name()) requestBody.name = name();
     if (email()) requestBody.email = email();
@@ -183,7 +178,7 @@ const UsersEdit: Component = () => {
     if (password()) requestBody.password = password();
     if (municipality()) requestBody.municipality = municipality();
     if (organization()) requestBody.organization = organization();
-    if (userRole()) requestBody.userRole = userRole();
+    if (userRole()) requestBody.userRole = userRole() as UserRole;
 
     const updated = await eden.admin["update-user"].post({
       ...requestBody,

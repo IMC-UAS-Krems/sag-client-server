@@ -1,7 +1,7 @@
 import { createId } from "@paralleldrive/cuid2";
 import { prisma } from "@∆";
 import { Organization, Project, User, Municipality, UserType, DocumentType, UserRole } from "@prisma/client";
-import { log } from "console";
+import { UserDetails } from "@server/types";
 
 export type Document = {
   municipalityName: string;
@@ -187,16 +187,15 @@ export async function selectUser(
   return user;
 }
 
-export async function getUserDataById(userId: string): Promise<User> {
-  return await prisma.user.findUnique({
+export async function getUserDataById(userId: string): Promise<UserDetails | null> {
+  const user = await prisma.user.findUnique({
     where: {
       id: userId,
     },
     select: {
       id: true,
-      username: true,
-      password: true,
       name: true,
+      username: true,
       email: true,
       municipality: {
         select: {
@@ -211,23 +210,61 @@ export async function getUserDataById(userId: string): Promise<User> {
       userRole: true,
     },
   });
+
+  if (!user) {
+    return null;
+  }
+
+  return {
+    id: user.id,
+    name: user.name,
+    username: user.username,
+    email: user.email,
+    userRole: user.userRole,
+    municipalityName: user.municipality?.name,
+    organizationName: user.organization?.name,
+  };
 }
 
-export async function getAllUsers(): Promise<UserDocument[]> {
+export async function getAllUsers(): Promise<UserDetails[]> {
   const users = await prisma.user.findMany({
-    include: {
-      municipality: true,
-      organization: true,
+    select: {
+      id: true,
+      name: true,
+      username: true,
+      email: true,
+      userRole: true,
+      deleted: true,
+      needsToBeLoggedOut: true,
+      lastLoginTime: true,
+      organization: {
+        select: {
+          name: true,
+        },
+      },
+      municipality: {
+        select: {
+          name: true,
+        },
+      },
     },
   });
 
   return users.map((user) => ({
-    ...user,
+    id: user.id,
+    name: user.name,
+    username: user.username,
+    email: user.email,
+    userRole: user.userRole,
+    deleted: user.deleted,
     municipalityName: user.municipality?.name,
     organizationName: user.organization?.name,
+    lastLoginTime: user.lastLoginTime,
+    needsToBeLoggedOut: user.needsToBeLoggedOut,
   }));
 }
 
+// TODO: Create an additional check for the username and email, to ensure that they are unique
 export async function updateUser(
   userId: string,
   {
@@ -271,10 +308,6 @@ export async function updateUser(
   }
   (user as UserDocument).documents = await getDocuments(user.id);
   return user as UserDocument;
-}
-
-interface UserUpdateInput {
-  lastLoginTime?: Date;
 }
 
 export async function deleteUser(userId: string): Promise<void> {

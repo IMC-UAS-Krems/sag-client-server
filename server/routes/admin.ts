@@ -1,23 +1,16 @@
 import { Elysia, t } from "elysia";
+
 import { sql } from "@server/sql";
-import { UserRole } from "@server/prisma";
 import { authMiddleware } from "@server/middleware";
-import { password } from "bun";
-
-interface UpdateUserRequestBody {
-  userId: string;
-  username?: string;
-  password?: string;
-  name?: string;
-  email?: string;
-  organization?: string;
-  municipality?: string;
-  userRole?: UserRole;
-}
-
-interface LogoutUserRequestBody {
-  userId: string;
-}
+import {
+  AuthContext,
+  UserDetails,
+  AuthContextWithBody,
+  AuthContextWithQuery,
+  CreateUserBody,
+  UpdateUserBody,
+  UserRole,
+} from "@server/types";
 
 export const admin = new Elysia({ prefix: "/admin" })
   .onBeforeHandle(async ({ set, cookie }) => {
@@ -25,21 +18,11 @@ export const admin = new Elysia({ prefix: "/admin" })
   })
   .get(
     "/users",
-    async ({ set }) => {
+    async ({ set }: AuthContext): Promise<UserDetails[] | { error: string }> => {
       try {
         const users = await sql.getAllUsers();
-        // exclude passwords
-        const usersWithoutPasswords = users.map((user) => {
-          let password = user.password;
-          if (!password) {
-            password = "";
-          } else {
-            delete user.password;
-          }
-          return user;
-        });
         set.status = 200;
-        return usersWithoutPasswords;
+        return users;
       } catch (error) {
         set.status = 500;
         return { error: "Failed to fetch users" };
@@ -53,41 +36,20 @@ export const admin = new Elysia({ prefix: "/admin" })
     },
   )
 
-  // .delete(
-  //   "/delete-user",
-  //   async ({ log, set, body: { userId } }) => {
-  //     try {
-  //       log.info("Trying to delete user");
-  //       const user = await sql.deleteUser(userId);
-  //       set.status = 200;
-  //       return user;
-  //     } catch (error) {
-  //       log.error(error);
-  //       set.status = 500;
-  //       return { error: "Failed to delete user" };
-  //     }
-  //   },
-  //   {
-  //     detail: {
-  //       tags: ["admin"],
-  //       description: "Delete a user from the database by ID",
-  //     },
-  //     body: t.Object({
-  //       userId: t.String(),
-  //     }),
-  //   },
-  // )
-
   .delete(
     "/delete-user",
-    async ({ log, set, body: { userId } }) => {
+    async ({
+      log,
+      set,
+      body: { userId },
+    }: AuthContextWithBody<{ userId: string }>): Promise<{ message: string } | { error: string }> => {
       try {
         log.info("Trying to delete user");
         await sql.deleteUser(userId);
         set.status = 200;
         return { message: "User deleted successfully" };
       } catch (error) {
-        log.error(error);
+        log.error(error instanceof Error ? error.message : String(error));
 
         if (error instanceof Error) {
           switch (error.name) {
@@ -120,7 +82,11 @@ export const admin = new Elysia({ prefix: "/admin" })
 
   .post(
     "/create-user",
-    async ({ log, set, body }) => {
+    async ({
+      log,
+      set,
+      body,
+    }: AuthContextWithBody<CreateUserBody>): Promise<{ message: string } | { error: string }> => {
       try {
         const { username, password, name, email, organizationName, municipalityName, userRole } = body;
         if (!username || !password || !name || !email || !organizationName || !municipalityName || !userRole) {
@@ -139,16 +105,20 @@ export const admin = new Elysia({ prefix: "/admin" })
         });
 
         set.status = 201;
-        return { message: "User created successfully", user };
+        return { message: "User created successfully: " + user };
       } catch (error) {
-        if (error.message.includes("already exists")) {
-          log.warn(error.message);
-          set.status = 409; // Conflict
-          throw error;
+        if (error instanceof Error) {
+          if (error.message.includes("already exists")) {
+            log.warn(error.message);
+            set.status = 409; // Conflict
+            return { error: error.message };
+          }
+          log.error(error.message);
+        } else {
+          log.error("An unknown error occurred");
         }
-        log.error(error);
         set.status = 500; // Internal Server Error
-        throw error;
+        return { error: "Failed to create user" };
       }
     },
     {
@@ -168,13 +138,15 @@ export const admin = new Elysia({ prefix: "/admin" })
     },
   )
 
+  // TODO: Fix ncrypt TypeError: argument must be a string, or a string-like object
   .get(
     "/user-details",
-    async ({ log, set, query }: { log: any; set: any; query: { userId: string } }) => {
+    async ({ log, set, query }: AuthContextWithQuery<{ userId: string }>): Promise<UserDetails | { error: string }> => {
       try {
         log.info("Trying to get user details for user");
         const { userId } = query;
-        const user = await sql.getUserDataById(userId);
+        const user: UserDetails | null = await sql.getUserDataById(userId);
+        // log.info(`User details: ${JSON.stringify(user)}`);
         if (!user) {
           throw new Error("User not found");
         } else {
@@ -182,7 +154,11 @@ export const admin = new Elysia({ prefix: "/admin" })
           return user;
         }
       } catch (error) {
-        log.error(error);
+        if (error instanceof Error) {
+          log.error(`Error fetching user details: ${error.message}`);
+        } else {
+          log.error("An unknown error occurred while fetching user details");
+        }
         set.status = 500;
         return { error: "Failed to get user" };
       }
@@ -200,7 +176,7 @@ export const admin = new Elysia({ prefix: "/admin" })
 
   .post(
     "/update-user",
-    async ({ log, set, body }: { log: any; set: any; body: UpdateUserRequestBody }) => {
+    async ({ log, set, body }: AuthContextWithBody<UpdateUserBody>) => {
       try {
         log.info("Trying to update user");
         log.info(`Request body: ${JSON.stringify(body)}`);
@@ -219,7 +195,11 @@ export const admin = new Elysia({ prefix: "/admin" })
         set.status = 200;
         return user;
       } catch (error) {
-        log.error(error);
+        if (error instanceof Error) {
+          log.error(error.message);
+        } else {
+          log.error("An unknown error occurred while updating user");
+        }
         set.status = 500;
         return { error: "Failed to update user" };
       }
@@ -244,26 +224,26 @@ export const admin = new Elysia({ prefix: "/admin" })
 
   .post(
     "/logout-user",
-    async ({ log, set, body }: { log: any; set: any; body: LogoutUserRequestBody }) => {
+    async ({ log, set, body }: AuthContextWithBody<{ userId: string }>) => {
       log.info(`Request body: ${JSON.stringify(body)}`);
       try {
         const userId = body.userId;
 
         if (!userId) {
           set.status = 400;
-          return { status: "error", message: "User ID is required." };
+          return { error: "User ID is required." };
         }
 
         const user = await sql.selectUser(userId);
 
         if (!user) {
           set.status = 404;
-          return { status: "error", message: "User not found." };
+          return { error: "User not found." };
         }
 
         if (user.needsToBeLoggedOut) {
           set.status = 400;
-          return { status: "error", message: "User is already set to be logged out." };
+          return { error: "User is already set to be logged out." };
         }
 
         await sql.updateUser(userId, {
@@ -271,11 +251,15 @@ export const admin = new Elysia({ prefix: "/admin" })
         });
 
         set.status = 200;
-        return { status: "success", message: "User logged out successfully." };
+        return { message: "User logged out successfully." };
       } catch (error) {
-        log.error(error);
+        if (error instanceof Error) {
+          log.error(error.message);
+        } else {
+          log.error("An unknown error occurred while logging out user");
+        }
         set.status = 500;
-        return { status: "error", message: "Failed to log out user." };
+        return { error: "Failed to log out user." };
       }
     },
     {

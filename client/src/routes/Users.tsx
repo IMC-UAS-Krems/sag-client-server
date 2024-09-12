@@ -11,28 +11,20 @@ import Header from "@client/components/Header";
 import authStore from "@store/authStore";
 import styles from "@styles/Users.module.css";
 import { theme } from "@store/index";
+import { UserDetails } from "@server/types";
 
 import "../../../node_modules/solid-contextmenu/dist/style.css";
 
-// User interface
-interface User {
-  id: string;
-  username: string;
-  name: string;
-  email: string;
-  municipalityId: string;
-  organizationId: string;
-  municipalityName: string;
-  organizationName: string;
-  needsToBeLoggedOut: boolean;
-  userRole: string;
-  deleted: boolean;
+// Response structure
+// TODO: Where can we find EdenFetchError type?
+interface EdenFetchError<T, U> {
+  code: T;
+  message: U;
 }
 
-// Response structure
 interface UsersResponse {
-  data: User[] | null;
-  error: string | null;
+  data: UserDetails[] | { error: string } | null;
+  error: EdenFetchError<number, string> | null;
   status: number;
   response: { 200: string | number | boolean | object };
   headers: Record<string, string>;
@@ -45,7 +37,7 @@ const Users: Component = () => {
   // console.log("Logged in user:", loggedInUser);
 
   // User data
-  const [users, setUsers] = createSignal<User[]>([]);
+  const [users, setUsers] = createSignal<UserDetails[]>([]);
   const [loading, setLoading] = createSignal(true);
   const [error, setError] = createSignal<string | null>(null);
   const [onlineStatuses, setOnlineStatuses] = createSignal<Record<string, boolean>>({});
@@ -77,22 +69,29 @@ const Users: Component = () => {
 
       // Unauthorized check
       if (fetchedUsers.status === 401 || fetchedUsers.status === 403) {
-        console.log("User is not authorized for this request:", fetchedUsers);
         handleUnauthorized(navigate);
         return;
       }
 
       if (fetchedUsers.data) {
-        if (fetchedUsers.data.status === "error") {
-          setError(fetchedUsers.data.error || "Unknown error");
+        if (fetchedUsers.status !== 200) {
+          if (!Array.isArray(fetchedUsers.data) && "error" in fetchedUsers.data) {
+            setError(fetchedUsers.data.error || "Unknown error");
+          } else {
+            throw new Error("Failed to fetch users, data is not correct form");
+          }
         } else {
-          setUsers(fetchedUsers.data);
-          await updateOnlineStatuses(fetchedUsers.data);
-          // console.log("Fetch:", fetchedUsers);
-          // console.log("Fetched users:", fetchedUsers.data);
+          if (Array.isArray(fetchedUsers.data)) {
+            setUsers(fetchedUsers.data);
+            await updateOnlineStatuses(fetchedUsers.data);
+            // console.log("Fetch:", fetchedUsers);
+            // console.log("Fetched users:", fetchedUsers.data);
+          } else {
+            throw new Error("Failed to fetch users, data is not an array");
+          }
         }
       } else {
-        setError(fetchedUsers.error || "Unknown error");
+        throw new Error("Failed to fetch users, data is null");
       }
     } catch (error) {
       setError("Failed to fetch users");
@@ -102,7 +101,7 @@ const Users: Component = () => {
     }
   }
 
-  async function updateOnlineStatuses(users: User[]) {
+  async function updateOnlineStatuses(users: UserDetails[]) {
     const statuses: Record<string, boolean> = {};
     for (const user of users) {
       statuses[user.id] = await isUserOnline(user);
@@ -201,23 +200,12 @@ const Users: Component = () => {
 
           // Unauthorized check
           if (response.status === 401 || response.status === 403) {
-            console.log("User is not authorized for this request:", fetchedUsers);
             handleUnauthorized(navigate);
             return;
           }
 
-          if (!response.data || response.error) {
-            console.log("Failed to log out user:", response.error);
-            Swal.fire({
-              title: "Error",
-              text: "Couldn't log out the user",
-              icon: "error",
-            });
-            return;
-          }
-
-          if (response.status !== 200 || response.data.error) {
-            console.log("Failed to log out user:", response.data.error);
+          if (response.status !== 200 || (response.data && response.data.error)) {
+            console.log("Failed to log out user: ", response.data ? response.data.error : "Unknown error");
             Swal.fire({
               title: "Error",
               text: "Couldn't log out the user",
@@ -246,7 +234,7 @@ const Users: Component = () => {
     setReload(!reload());
   }
 
-  const [_animation, setAnimation] = createSignal(animation.scale);
+  const [_animation] = createSignal(animation.scale);
   // const [_theme, setTheme] = createSignal<"light" | "dark">("light");
 
   return (
@@ -305,7 +293,7 @@ const Users: Component = () => {
                         class={styles.actions}
                       >
                         <FaSolidEllipsis />
-                        <Menu id={user.id} animation={_animation()} theme={theme() ? theme() : "light"}>
+                        <Menu id={user.id} animation={_animation()} theme={theme() === "dark" ? "dark" : "light"}>
                           <Item onClick={() => handleEditUser(user.id)} disabled={user.userRole == "Administrator"}>
                             ✏️ Edit
                           </Item>

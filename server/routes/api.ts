@@ -1,4 +1,5 @@
 import { Elysia, t } from "elysia";
+
 import { prisma } from "@server/prisma";
 import { authMiddleware } from "@server/middleware";
 import { sql, Document } from "@server/sql";

@@ -35,6 +35,10 @@ export interface AuthContextWithRequest extends AuthContext {
   };
 }
 
+export interface AuthContextWithQuery<TQuery> extends AuthContext {
+  query: TQuery;
+}
+
 export interface RegisterBody {
   name: string;
   email: string;
@@ -44,11 +48,18 @@ export interface RegisterBody {
   organizationName: string;
 }
 
+// TODO: Use enum on server side too
+export enum UserRole {
+  DEV = "Developer",
+  ADMIN = "Administrator",
+  MANAGER = "Manager",
+}
+
 export interface RegisteredUser {
   name: string;
   username: string;
   email: string;
-  userRole: string;
+  userRole: string | UserRole;
   userType: string;
   writePrivilege: string;
   readPrivilege: string;
@@ -64,4 +75,38 @@ export interface RegisteredUser {
 export interface LoginBody {
   identifier: string;
   key: string;
+}
+
+export interface UserDetails {
+  id: string;
+  name: string;
+  username: string;
+  email: string;
+  userRole: string;
+  deleted?: boolean;
+  municipalityName: string;
+  organizationName: string;
+  needsToBeLoggedOut?: boolean;
+  lastLoginTime?: Date;
+}
+
+export interface CreateUserBody {
+  username: string;
+  password: string;
+  name: string;
+  email: string;
+  organizationName: string;
+  municipalityName: string;
+  userRole: UserRole;
+}
+
+export interface UpdateUserBody {
+  userId: string;
+  username?: string;
+  password?: string;
+  name?: string;
+  email?: string;
+  organization?: string;
+  municipality?: string;
+  userRole?: UserRole;
 }

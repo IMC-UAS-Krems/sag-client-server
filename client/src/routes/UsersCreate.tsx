@@ -47,9 +47,11 @@ const UsersCreate: Component = () => {
     try {
       const response = await eden.api.organizationsByMunicipality.post({ municipalityName });
       if (response.data) {
-        setOrganizations(response.data);
-        if (organization()) {
-          setOrganization(undefined);
+        if (Array.isArray(response.data)) {
+          setOrganizations(response.data);
+          if (organization()) {
+            setOrganization(undefined);
+          }
         }
       }
     } catch (error) {
@@ -121,13 +123,14 @@ const UsersCreate: Component = () => {
 
       // Unauthorized check
       if (response.status === 401 || response.status === 403) {
-        console.log("User is not authorized for this request:", response);
         handleUnauthorized(navigate);
         return;
       }
 
-      if (response.error) {
-        throw new Error(response.data.message);
+      if (response.error || response.status !== 201) {
+        const errorMessage =
+          response.data && "error" in response.data ? response.data.error : "An unknown error occurred";
+        throw new Error(errorMessage);
       }
 
       await Swal.fire({
@@ -139,9 +142,15 @@ const UsersCreate: Component = () => {
       navigate("/users", { replace: true });
     } catch (error) {
       console.error("Error creating user:", error);
+
+      let errorMessage = "An unknown error occurred";
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+
       Swal.fire({
         title: "Error",
-        text: `${error.message}`,
+        text: `${errorMessage}`,
         icon: "error",
       });
     }
