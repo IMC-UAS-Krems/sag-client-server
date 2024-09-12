@@ -8,7 +8,8 @@
     "build": "vite build client --outDir ../dist",
     "serve": "bun run --watch server/index.ts",
     "format": "bunx prettier client/ --write && bunx prettier server/ --write",
-    "docker": "docker compose down && docker compose up --build"
+    "docker": "docker compose down && docker compose up --build",
+    "db": "docker compose up db db-setup"
   },
   "dependencies": {
     "@bogeychan/elysia-logger": "^0.1.1",
@@ -35,7 +36,6 @@
     "pino-pretty": "^11.2.2",
     "prisma": "^5.17.0",
     "solid-codemirror": "^2.3.1",
-    "solid-contextmenu": "^0.0.2",
     "solid-icons": "^1.1.0",
     "solid-js": "^1.8.19",
     "solid-map-gl": "^1.11.3",
