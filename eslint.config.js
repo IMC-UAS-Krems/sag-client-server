@@ -2,9 +2,6 @@ import safeql from "@ts-safeql/eslint-plugin/config";
 import tseslint from "typescript-eslint";
 import eslint from "@eslint/js";
 import { config } from "dotenv";
-import {expand} from "dotenv-expand";
-
-expand(config())
 
 export default tseslint.config(
   eslint.configs.recommended,
@@ -18,5 +15,5 @@ export default tseslint.config(
       // `prisma.$queryRaw` or `prisma.$executeRaw`
       { tag: "prisma.+($queryRaw|$executeRaw)", transform: "{type}[]" },
     ],
-  })
+  }),
 );
