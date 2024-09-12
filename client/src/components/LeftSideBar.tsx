@@ -8,6 +8,7 @@ import { IEditorContext } from "@client/types";
 import { ContextMenu } from "@kobalte/core/context-menu";
 import { Dynamic } from "solid-js/web";
 import { InputDialog } from "./InputDialog";
+import Swal from "sweetalert2";
 
 enum SagDocumentType {
   FILE = "FILE",
@@ -284,7 +285,11 @@ function FileNode(props: { node: TreeNode }) {
   return (
     <div class="flex flex-col">
       <Suspense>
-        <ContextMenu.Trigger disabled={![SagDocumentType.FOLDER, SagDocumentType.FILE].includes(props.node.docType)}>
+        <ContextMenu.Trigger
+          disabled={
+            ![SagDocumentType.FOLDER, SagDocumentType.FILE, SagDocumentType.PROJECT].includes(props.node.docType)
+          }
+        >
           <button
             class="flex flex-row"
             onClick={
@@ -293,7 +298,9 @@ function FileNode(props: { node: TreeNode }) {
                 : toggleExpanded
             }
             onContextMenu={() => {
-              if ([SagDocumentType.FOLDER, SagDocumentType.FILE].includes(props.node.docType)) {
+              if (
+                [SagDocumentType.FOLDER, SagDocumentType.FILE, SagDocumentType.PROJECT].includes(props.node.docType)
+              ) {
                 setSelectedNode(props.node);
               }
             }}
@@ -319,76 +326,56 @@ function FileNode(props: { node: TreeNode }) {
 
 function FileContextMenu(props: { children: JSXElement }) {
   const { code } = useContext(EditorContext) as IEditorContext;
-  const [renameFormRef, renameFormRefSet]: [Accessor<HTMLFormElement>, Setter<HTMLFormElement>] = createSignal();
-  const [showInputDialog, setShowInputDialog] = createSignal(false);
-  const [dialogType, setDialogType] = createSignal("rename");
 
-  const RenameDialog = () => (
-    <InputDialog
-      onSubmit={onRenameSubmit}
-      label="Enter new name"
-      formRefSet={renameFormRefSet}
-      setShowInputDialog={setShowInputDialog}
-    />
-  );
-  const AddFileDialog = () => (
-    <InputDialog
-      onSubmit={onAddFileSubmit}
-      label="Enter file name"
-      formRefSet={renameFormRefSet}
-      setShowInputDialog={setShowInputDialog}
-    />
-  );
-  const AddFolderDialog = () => (
-    <InputDialog
-      onSubmit={onAddFolderSubmit}
-      label="Enter folder name"
-      formRefSet={renameFormRefSet}
-      setShowInputDialog={setShowInputDialog}
-    />
-  );
-
-  const dialogOptions = {
-    rename: RenameDialog,
-    addFile: AddFileDialog,
-    addFolder: AddFolderDialog,
-  };
-
-  function onRenameSubmit(e: SubmitEvent) {
-    e.preventDefault();
-    const node = selectedNode();
-    const data = new FormData(renameFormRef());
-    setShowInputDialog(false);
-    node?.renameDocument(data.get("name") as string);
-  }
-
-  function onAddFileSubmit(e: SubmitEvent) {
-    e.preventDefault();
-    const node = selectedNode();
-    const data = new FormData(renameFormRef());
-    setShowInputDialog(false);
-    node?.createDocument(data.get("name") as string, SagDocumentType.FILE, node?.path() as string);
-  }
-
-  function onAddFolderSubmit(e: SubmitEvent) {
-    e.preventDefault();
-    const node = selectedNode();
-    const data = new FormData(renameFormRef());
-    setShowInputDialog(false);
-    node?.createDocument(data.get("name") as string, SagDocumentType.FOLDER, node?.path() as string);
-  }
-
-  function handleContextMenu(action: MenuOption) {
+  async function handleContextMenu(action: MenuOption) {
     const node = selectedNode();
     switch (action) {
       case MenuOption.AddFile: {
-        setDialogType("addFile");
-        setShowInputDialog(true);
+        const { value } = await Swal.fire<string>({
+          title: "Enter file name",
+          input: "text",
+          showCancelButton: false,
+          buttonsStyling: false,
+          showDenyButton: false,
+          showCloseButton: true,
+          inputAttributes: {
+            autocomplete: "off",
+          },
+          customClass: {
+            confirmButton:
+              "bg-green-500 hover:bg-green-700 text-white font-bold py-1 px-2 rounded focus:outline-none focus:shadow-outline",
+            popup: "bg-white shadow-xl rounded px-8 pt-6 pb-8 mb-4  flex flex-col gap gap-4",
+          },
+        });
+        if (value && value.length > 0) {
+          const node = selectedNode();
+          node?.createDocument(value as string, SagDocumentType.FILE, node?.path() as string);
+        }
+
         break;
       }
       case MenuOption.AddFolder: {
-        setDialogType("addFolder");
-        setShowInputDialog(true);
+        const { value } = await Swal.fire<string>({
+          title: "Enter folder name",
+          input: "text",
+          showCancelButton: false,
+          buttonsStyling: false,
+          showDenyButton: false,
+          showCloseButton: true,
+          inputAttributes: {
+            autocomplete: "off",
+          },
+          customClass: {
+            confirmButton:
+              "bg-green-500 hover:bg-green-700 text-white font-bold py-1 px-2 rounded focus:outline-none focus:shadow-outline",
+            popup: "bg-white shadow-xl rounded px-8 pt-6 pb-8 mb-4  flex flex-col gap gap-4",
+          },
+        });
+        if (value && value.length > 0) {
+          const node = selectedNode();
+          node?.createDocument(value as string, SagDocumentType.FOLDER, node?.path() as string);
+        }
+
         break;
       }
       case MenuOption.Delete: {
@@ -400,8 +387,26 @@ function FileContextMenu(props: { children: JSXElement }) {
         break;
       }
       case MenuOption.Rename: {
-        setDialogType("rename");
-        setShowInputDialog(true);
+        const { value } = await Swal.fire<string>({
+          title: "Enter new name",
+          input: "text",
+          showCancelButton: false,
+          buttonsStyling: false,
+          showDenyButton: false,
+          showCloseButton: true,
+          inputAttributes: {
+            autocomplete: "off",
+          },
+          customClass: {
+            confirmButton:
+              "bg-green-500 hover:bg-green-700 text-white font-bold py-1 px-2 rounded focus:outline-none focus:shadow-outline",
+            popup: "bg-white shadow-xl rounded px-8 pt-6 pb-8 mb-4  flex flex-col gap gap-4",
+          },
+        });
+        if (value && value.length > 0) {
+          const node = selectedNode();
+          node?.renameDocument(value);
+        }
         break;
       }
     }
@@ -410,60 +415,63 @@ function FileContextMenu(props: { children: JSXElement }) {
     <ContextMenu>
       <ContextMenu.Portal>
         <ContextMenu.Content class="bg-white border border-gray-200 rounded shadow-lg">
-          <ul class="py-1">
-            <ContextMenu.Item
-              class="px-4 py-2 cursor-pointer hover:bg-gray-100"
-              onSelect={() => {
-                handleContextMenu(MenuOption.Rename);
-              }}
-            >
-              {MenuOption.Rename}
-            </ContextMenu.Item>
-            <Show when={selectedNode()?.docType === SagDocumentType.FILE}>
-              <ContextMenu.Item
-                class="px-4 py-2 cursor-pointer hover:bg-gray-100"
-                onSelect={() => {
-                  handleContextMenu(MenuOption.Save);
-                }}
-              >
-                {MenuOption.Save}
-              </ContextMenu.Item>
-            </Show>
-            <ContextMenu.Item
-              class="px-4 py-2 cursor-pointer hover:bg-gray-100"
-              onSelect={() => {
-                handleContextMenu(MenuOption.Delete);
-              }}
-            >
-              {MenuOption.Delete}
-            </ContextMenu.Item>
-            <Show when={selectedNode()?.docType === SagDocumentType.FOLDER}>
-              <ContextMenu.Item
-                class="px-4 py-2 cursor-pointer hover:bg-gray-100"
-                onSelect={() => {
-                  handleContextMenu(MenuOption.AddFile);
-                }}
-              >
-                {MenuOption.AddFile}
-              </ContextMenu.Item>
-            </Show>
-            <Show when={selectedNode()?.docType === SagDocumentType.FOLDER}>
-              <ContextMenu.Item
-                class="px-4 py-2 cursor-pointer hover:bg-gray-100"
-                onSelect={() => {
-                  handleContextMenu(MenuOption.AddFolder);
-                }}
-              >
-                {MenuOption.AddFolder}
-              </ContextMenu.Item>
-            </Show>
-          </ul>
+          <Suspense>
+            <ul class="py-1">
+              <Show when={[SagDocumentType.FOLDER, SagDocumentType.FILE].includes(selectedNode()?.docType)}>
+                <ContextMenu.Item
+                  class="px-4 py-2 cursor-pointer hover:bg-gray-100"
+                  onSelect={async () => {
+                    await handleContextMenu(MenuOption.Rename);
+                  }}
+                >
+                  {MenuOption.Rename}
+                </ContextMenu.Item>
+              </Show>
+              <Show when={selectedNode()?.docType === SagDocumentType.FILE}>
+                <ContextMenu.Item
+                  class="px-4 py-2 cursor-pointer hover:bg-gray-100"
+                  onSelect={async () => {
+                    await handleContextMenu(MenuOption.Save);
+                  }}
+                >
+                  {MenuOption.Save}
+                </ContextMenu.Item>
+              </Show>
+              <Show when={[SagDocumentType.FOLDER, SagDocumentType.FILE].includes(selectedNode()?.docType)}>
+                <ContextMenu.Item
+                  class="px-4 py-2 cursor-pointer hover:bg-gray-100"
+                  onSelect={async () => {
+                    await handleContextMenu(MenuOption.Delete);
+                  }}
+                >
+                  {MenuOption.Delete}
+                </ContextMenu.Item>
+              </Show>
+              <Show when={[SagDocumentType.FOLDER, SagDocumentType.PROJECT].includes(selectedNode()?.docType)}>
+                <ContextMenu.Item
+                  class="px-4 py-2 cursor-pointer hover:bg-gray-100"
+                  onSelect={async () => {
+                    await handleContextMenu(MenuOption.AddFile);
+                  }}
+                >
+                  {MenuOption.AddFile}
+                </ContextMenu.Item>
+              </Show>
+              <Show when={[SagDocumentType.FOLDER, SagDocumentType.PROJECT].includes(selectedNode()?.docType)}>
+                <ContextMenu.Item
+                  class="px-4 py-2 cursor-pointer hover:bg-gray-100"
+                  onSelect={async () => {
+                    await handleContextMenu(MenuOption.AddFolder);
+                  }}
+                >
+                  {MenuOption.AddFolder}
+                </ContextMenu.Item>
+              </Show>
+            </ul>
+          </Suspense>
         </ContextMenu.Content>
       </ContextMenu.Portal>
       {props.children}
-      <Show when={showInputDialog()}>
-        <Dynamic component={dialogOptions[dialogType()]} />
-      </Show>
     </ContextMenu>
   );
 }

@@ -2,7 +2,6 @@ import { For } from "solid-js";
 import { errors } from "@store/index";
 
 export function RightSideBar() {
-  console.log(errors());
   return (
     <div class="right-column" style={{ overflow: "auto" }}>
       {errors().length > 0 ? (

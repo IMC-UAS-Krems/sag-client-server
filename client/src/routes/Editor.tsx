@@ -33,7 +33,6 @@ const compile = async (code: string): Promise<CompileResult | undefined> => {
         method: "POST",
       },
     });
-    console.log("compileResult: ", compileResult);
 
     if (compileResult.data?.status === "error" && code.trim() !== "") {
       if (compileResult.data?.hasOwnProperty("errors")) {
@@ -78,7 +77,6 @@ const check = async (code: string): Promise<CompileResult | undefined> => {
         method: "POST",
       },
     });
-    console.log("compileResult: ", compileResult);
 
     if (compileResult.data?.status === "error" && code.trim() !== "") {
       const errors = compileResult.data?.errors as Error[];
@@ -104,7 +102,6 @@ const checkErrors = () => {
       errorMap.set(error.line_start, [error]);
     }
   }
-  console.log(errorMap);
   return errorMap;
 };
 
@@ -130,14 +127,9 @@ export function EditorProvider(props) {
   } = createCodeMirror({
     value: code(),
     onValueChange: (value) => {
-      // console.log("value changed", value);
       setCode(value);
       check(value);
     },
-    // onModelViewUpdate: (modelView) =>
-    //     console.log("modelView updated", modelView),
-    // onTransactionDispatched: (tr: Transaction, view: EditorView) =>
-    //     console.log("Transaction", tr),
   });
 
   return (
