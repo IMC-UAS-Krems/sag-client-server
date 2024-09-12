@@ -228,7 +228,6 @@ const Login: Component<NavigateProps> = ({ navigate }) => {
     const formPassword = password();
 
     if (!(formUsername && formPassword)) {
-      console.log("Invalid data");
       Swal.fire({
         title: "Error",
         text: "Wrong login data",
@@ -248,7 +247,6 @@ const Login: Component<NavigateProps> = ({ navigate }) => {
     });
 
     if (!logged.data || logged.error) {
-      console.log(logged.error);
       Swal.fire({
         title: "Error",
         text: "Wrong login data",
@@ -262,8 +260,10 @@ const Login: Component<NavigateProps> = ({ navigate }) => {
     navigate("/home", { replace: true });
 
     Swal.fire({
-      title: "Success",
-      text: `Login successful.`,
+      titleText: "Login successful",
+      position: "top-right",
+      timer: 1500,
+      showConfirmButton: false,
       icon: "success",
     });
   };
