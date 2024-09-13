@@ -289,6 +289,30 @@ export async function updateUser(
     needsToBeLoggedOut?: boolean;
   },
 ): Promise<UserDocument> {
+  if (email) {
+    const userWithEmail = await prisma.user.findFirst({
+      where: {
+        email: email,
+        deleted: false,
+      },
+    });
+    if (userWithEmail) {
+      throw new Error(`User with email "${email}" already exists`);
+    }
+  }
+
+  if (username) {
+    const userWithUsername = await prisma.user.findFirst({
+      where: {
+        username: username,
+        deleted: false,
+      },
+    });
+    if (userWithUsername) {
+      throw new Error(`User with username "${username}" already exists`);
+    }
+  }
+
   const user = await prisma.user.update({
     where: { id: userId },
     data: {

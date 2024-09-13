@@ -180,40 +180,47 @@ const UsersEdit: Component = () => {
     if (organization()) requestBody.organization = organization();
     if (userRole()) requestBody.userRole = userRole() as UserRole;
 
-    const updated = await eden.admin["update-user"].post({
-      ...requestBody,
-      $fetch: {
-        mode: "cors",
-        credentials: "include",
-        method: "POST",
-      },
-    });
+    try {
+      const updated = await eden.admin["update-user"].post({
+        ...requestBody,
+        $fetch: {
+          mode: "cors",
+          credentials: "include",
+          method: "POST",
+        },
+      });
 
-    // Unauthorized check
-    if (updated.status === 401 || updated.status === 403) {
-      console.log("User is not authorized for this request:", updated);
-      handleUnauthorized(navigate);
-      return;
-    }
+      // Unauthorized check
+      if (updated.status === 401 || updated.status === 403) {
+        handleUnauthorized(navigate);
+        return;
+      }
 
-    if (!updated.data || updated.error) {
+      if (updated.data === null || "error" in updated.data) {
+        console.error("Response data:", updated);
+        Swal.fire({
+          title: "Error",
+          text: updated.data?.error || "Error updating user",
+          icon: "error",
+        });
+        return;
+      }
+
+      Swal.fire({
+        title: "Success",
+        text: `User updated successfully.`,
+        icon: "success",
+      });
+
+      navigate("/users", { replace: true });
+    } catch (error) {
+      console.error("Error updating user:", error);
       Swal.fire({
         title: "Error",
-        text: `Error updating user.`,
+        text: `Error updating user: ${error}`,
         icon: "error",
       });
-      return;
     }
-
-    navigate("/users", { replace: true });
-
-    Swal.fire({
-      title: "Success",
-      text: `User updated successfully.`,
-      icon: "success",
-    });
-
-    // console.log("User updated successfully:", updated.data);
   };
 
   return (

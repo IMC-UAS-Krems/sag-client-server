@@ -176,7 +176,11 @@ export const admin = new Elysia({ prefix: "/admin" })
 
   .post(
     "/update-user",
-    async ({ log, set, body }: AuthContextWithBody<UpdateUserBody>) => {
+    async ({
+      log,
+      set,
+      body,
+    }: AuthContextWithBody<UpdateUserBody>): Promise<{ message: string } | { error: string }> => {
       try {
         log.info("Trying to update user");
         log.info(`Request body: ${JSON.stringify(body)}`);
@@ -193,10 +197,11 @@ export const admin = new Elysia({ prefix: "/admin" })
           throw new Error("User not found during update");
         }
         set.status = 200;
-        return user;
+        return { message: "User updated successfully" };
       } catch (error) {
         if (error instanceof Error) {
           log.error(error.message);
+          return { error: error.message };
         } else {
           log.error("An unknown error occurred while updating user");
         }
