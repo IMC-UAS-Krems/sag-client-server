@@ -14,19 +14,10 @@ const createAuthStore = () => {
     userRole: "",
   });
 
-  let isInitialized = false;
-
   const setCookie = (name: string, value: string, days: number) => {
     const date = new Date();
     date.setTime(date.getTime() + days * 24 * 60 * 60 * 1000);
     const expires = "expires=" + date.toUTCString();
-
-    // TODO: In local development environment, we don't have HTTPS
-    // But on production, we should set Secure and HttpOnly flags
-    // let cookieString = `${name}=${value};${expires};path=/`;
-    // if (window.location.hostname !== "localhost") {
-    //   cookieString += ";Secure;HttpOnly;SameSite=None";
-    // }
     const cookieString = `${name}=${value};${expires};path=/`;
     document.cookie = cookieString;
   };
@@ -47,53 +38,46 @@ const createAuthStore = () => {
   };
 
   const loadAuthStateFromCookie = () => {
+    const accessToken = getCookie("access_token"); 
+    if (!accessToken) {
+      console.log("loadAuthStateFromCookie: No access token found in cookie, resetting auth");
+      resetAuth(); 
+      return;
+    }
+
     const storedAuth = getCookie("authStore");
     if (storedAuth) {
       const parsedAuth = JSON.parse(storedAuth);
       setState(parsedAuth);
-      isInitialized = true;
+    } else {
+      console.log("loadAuthStateFromCookie: No auth state found in cookie, resetting auth");
+      resetAuth();
     }
   };
 
   const saveAuthStateToCookie = (newState: AuthStore) => {
-    setCookie("authStore", JSON.stringify(newState), 2); // Cookie expires in 2 days just like access_token
+    setCookie("authStore", JSON.stringify(newState), 2);
     console.log("saveAuthStateToStorage: newState =", newState);
   };
 
   const resetAuth = () => {
-    // Clear the in-memory state
     setState({
       isAuthenticated: false,
       user: "",
       userRole: "",
     });
-
-    // Remove the auth state from local storage
     deleteCookie("authStore");
-    isInitialized = false;
     console.log("resetAuth: Auth state reset", state());
   };
 
   const initializeAuth = async () => {
-    if (isInitialized) return;
-    isInitialized = true;
-
-    const storedAuth = getCookie("authStore");
-    if (storedAuth) {
-      const parsedAuth = JSON.parse(storedAuth);
-      setState(parsedAuth);
-      if (parsedAuth.isAuthenticated) {
-        console.log("initializeAuth: Auth state loaded from storage", parsedAuth);
-        return;
-      }
-    }
-
+  
     try {
       const response = await eden.auth["check-if-logged-in"].get({ $fetch: { credentials: "include" } });
-      console.log("response from backend", response);
+      console.log("initializeAuth: Response from check-if-logged-in:", response);
 
       if (response.status === 401 || !response.data || !response.data.email || !response.data.userRole) {
-        console.warn("initializeAuth: Unauthorized or incomplete data returned, resetting auth");
+        console.log("initializeAuth: Unauthorized or incomplete data returned, resetting auth");
         resetAuth();
         return;
       }
@@ -103,13 +87,14 @@ const createAuthStore = () => {
         user: response.data.email,
         userRole: response.data.userRole,
       };
+
       setState(newState);
       saveAuthStateToCookie(newState);
       console.log("initializeAuth: Auth initialized", state());
     } catch (error) {
-      console.error("Failed to initialize authentication:", error);
+      console.error("initializeAuth: Failed to initialize authentication:", error);
       resetAuth();
-      console.warn("initializeAuth: Failed to initialize auth, resetting auth", state());
+      throw error;
     }
   };
 
@@ -124,5 +109,4 @@ const createAuthStore = () => {
 };
 
 const authStore = createAuthStore();
-
 export default authStore;

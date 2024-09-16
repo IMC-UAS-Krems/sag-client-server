@@ -1,48 +1,69 @@
 import { useNavigate } from "@solidjs/router";
-import { createSignal, onMount, Show } from "solid-js";
+import { createSignal, onMount, Show, onCleanup } from "solid-js";
 import authStore from "@store/authStore";
+
+const checkInterval = 30000; // 30 seconds
 
 const AuthGuard = (props) => {
   const navigate = useNavigate();
   const [loading, setLoading] = createSignal(true);
+  let intervalId;
 
-  // Mapping Manager and Developer to USER, and Administrator to ADMIN
   const roleMapping = {
     Administrator: "ADMIN",
     Manager: "USER",
     Developer: "USER",
   };
 
-  onMount(async () => {
-    // console.log("AuthGuard: Initializing auth");
+  const checkAuth = async () => {
+    try {
+      await authStore.initializeAuth();
+      const { isAuthenticated, userRole } = authStore.state();
+      const currentPath = window.location.pathname;
+      const requiredRole = props.role;
 
-    await authStore.initializeAuth();
-    // console.log("AuthGuard: Auth initialized", authStore);
+      const mappedUserRole = roleMapping[userRole];
 
-    const { isAuthenticated, userRole } = authStore.state();
-    const currentPath = window.location.pathname;
-
-    // console.log("AuthGuard: currentPath =", currentPath);
-    // console.log("AuthGuard: isAuthenticated =", isAuthenticated);
-    // console.log("AuthGuard: userRole =", userRole);
-
-    const requiredRole = props.role;
-
-    // Map the user's role to the expected role group (e.g., Developer -> USER)
-    const mappedUserRole = roleMapping[userRole];
-
-    if (isAuthenticated && currentPath === "/sign-in") {
-      // console.log("AuthGuard: Already authenticated, redirecting to the home");
-      navigate("/home", { replace: true });
-    } else if (!isAuthenticated && currentPath !== "/sign-in") {
-      // console.log("AuthGuard: Redirecting to /sign-in");
+      if (!isAuthenticated && currentPath !== "/sign-in") {
+        authStore.resetAuth();
+        navigate("/sign-in", { replace: true });
+      } else if (requiredRole && mappedUserRole !== requiredRole) {
+        navigate("/unauthorized", { replace: true });
+      } else {
+        setLoading(false);
+      }
+    } catch (error) {
+      console.error("AuthGuard: Error checking authentication", error);
+      authStore.resetAuth();
       navigate("/sign-in", { replace: true });
-    } else if (requiredRole && mappedUserRole !== requiredRole) {
-      // console.log("AuthGuard: Redirecting to /unauthorized");
-      navigate("/unauthorized", { replace: true });
-    } else {
-      setLoading(false);
     }
+  };
+
+  const startAuthCheckInterval = () => {
+    intervalId = setInterval(async () => {
+      console.log("Checking auth status");
+      try {
+        await authStore.initializeAuth();
+        if (!authStore.state().isAuthenticated) {
+          console.log("Session expired or logged out");
+          authStore.resetAuth();
+          navigate("/sign-in", { replace: true });
+        }
+      } catch (error) {
+        console.warn("Periodic auth check failed:", error);
+        authStore.resetAuth();
+        navigate("/sign-in", { replace: true });
+      }
+    }, checkInterval);
+  };
+
+  onMount(() => {
+    checkAuth();
+    startAuthCheckInterval();
+  });
+
+  onCleanup(() => {
+    if (intervalId) clearInterval(intervalId); // Clear interval on component unmount
   });
 
   return <Show when={!loading()}>{props.children}</Show>;

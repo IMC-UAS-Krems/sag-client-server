@@ -58,6 +58,10 @@ export const authMiddleware = async (
     const sessionDuration = 60 * 60 * 24 * 2 * 1000; // 2 days
     if (now.getTime() - user.lastLoginTime.getTime() > sessionDuration || user.needsToBeLoggedOut) {
       console.error("Session expired, please log in again");
+      // clear token
+      set.headers = {
+        'Set-Cookie': `access_token=; Max-Age=0; Path=/; HttpOnly; SameSite=Strict;`,
+      };
       set.status = 401;
       return { error: "Session expired, please log in again" };
     }
