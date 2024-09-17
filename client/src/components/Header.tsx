@@ -32,7 +32,6 @@ const Header: Component<{ children: JSX.Element }> = (props) => {
     }
   };
 
-
   return (
     <>
       <header class={styles["header-main-container"]}>
@@ -50,7 +49,7 @@ const Header: Component<{ children: JSX.Element }> = (props) => {
             <li>
               <A href="/home">Home</A>
             </li>
-            <Show when={(authStore.state().userRole === "Developer") || (authStore.state().userRole === "Manager")}>
+            <Show when={authStore.state().userRole === "Developer" || authStore.state().userRole === "Manager"}>
               <li>
                 <A href="/editor">Editor</A>
               </li>

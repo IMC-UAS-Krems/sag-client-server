@@ -41,19 +41,19 @@ const app = new Elysia()
     }),
   )
   .resolve(({ cookie }) => {
-  if (!cookie || !cookie.access_token) {
-    console.warn("No access token found in cookies");
-    return { userId: null };
-  }
+    if (!cookie || !cookie.access_token) {
+      console.warn("No access token found in cookies");
+      return { userId: null };
+    }
 
-  try {
-    const id = decrypt(cookie.access_token.value) as string;
-    return { userId: id };
-  } catch (error) {
-    console.error("Failed to decrypt token:", error);
-    return { userId: null };
-  }
-})
+    try {
+      const id = decrypt(cookie.access_token.value) as string;
+      return { userId: id };
+    } catch (error) {
+      console.error("Failed to decrypt token:", error);
+      return { userId: null };
+    }
+  })
   .use(api)
   .use(auth)
   .use(admin)

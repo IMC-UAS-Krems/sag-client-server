@@ -1,4 +1,4 @@
-import { Component, createSignal, For } from "solid-js";
+import { Component, createSignal, For, onMount } from "solid-js";
 
 import MapGL, { Viewport, Marker, Popup } from "solid-map-gl";
 
@@ -7,6 +7,7 @@ import { theme } from "@client/store";
 import styles from "@styles/Home.module.css";
 
 import "mapbox-gl/dist/mapbox-gl.css";
+import authStore from "@client/store/authStore";
 
 const [viewport, setViewport] = createSignal({
   center: [0, 52],

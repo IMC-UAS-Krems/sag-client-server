@@ -3,7 +3,7 @@ import { decrypt } from "./routes/auth";
 
 interface CustomContext {
   set: any;
-  cookie?: { access_token?: { value?: string } }; 
+  cookie?: { access_token?: { value?: string } };
 }
 
 export const authMiddleware = async (
@@ -13,13 +13,7 @@ export const authMiddleware = async (
   // idk why is returning access_token value as string === "undefined"
   // console.log("Detailed cookie in authMiddleware:", JSON.stringify(cookie, null, 2));
 
-  if (
-    !cookie ||
-    !cookie.access_token ||
-    !cookie.access_token.value ||
-    cookie.access_token.value === "undefined"
-    
-  ) {
+  if (!cookie || !cookie.access_token || !cookie.access_token.value || cookie.access_token.value === "undefined") {
     // console.log("cookie in authMiddleware:", cookie);
     console.warn("Unauthorized: No token provided or cookie is missing");
     set.status = 401;
@@ -30,7 +24,6 @@ export const authMiddleware = async (
   // console.log("accessToken in authMiddleware:", accessToken);
 
   try {
-    
     const userId = decrypt(accessToken);
     // console.log("userId in authMiddleware:", userId);
 
@@ -60,7 +53,7 @@ export const authMiddleware = async (
       console.error("Session expired, please log in again");
       // clear token
       set.headers = {
-        'Set-Cookie': `access_token=; Max-Age=0; Path=/; HttpOnly; SameSite=Strict;`,
+        "Set-Cookie": `access_token=; Max-Age=0; Path=/; HttpOnly; SameSite=Strict;`,
       };
       set.status = 401;
       return { error: "Session expired, please log in again" };

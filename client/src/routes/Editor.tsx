@@ -135,7 +135,7 @@ export const Editor: Component = () => {
   };
 
   createEffect(() => {
-    if (authStore.state().isAuthenticated){
+    if (authStore.state().isAuthenticated) {
       check(code());
     }
   });

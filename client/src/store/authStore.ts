@@ -38,10 +38,10 @@ const createAuthStore = () => {
   };
 
   const loadAuthStateFromCookie = () => {
-    const accessToken = getCookie("access_token"); 
+    const accessToken = getCookie("access_token");
     if (!accessToken) {
       console.log("loadAuthStateFromCookie: No access token found in cookie, resetting auth");
-      resetAuth(); 
+      resetAuth();
       return;
     }
 
@@ -71,7 +71,6 @@ const createAuthStore = () => {
   };
 
   const initializeAuth = async () => {
-  
     try {
       const response = await eden.auth["check-if-logged-in"].get({ $fetch: { credentials: "include" } });
       console.log("initializeAuth: Response from check-if-logged-in:", response);

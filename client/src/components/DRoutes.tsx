@@ -1,4 +1,4 @@
-import { type Component } from "solid-js";
+import { onMount, type Component } from "solid-js";
 import { Router, Route, Navigate } from "@solidjs/router";
 
 import Home from "@client/routes/Home";
@@ -10,8 +10,14 @@ import UsersCreate from "@client/routes/UsersCreate";
 import UsersEdit from "@client/routes/UsersEdit";
 import Unauthorized from "@client/routes/Unauthorized";
 import AuthGuard from "@client/guard/authGuard";
+import authStore from "@client/store/authStore";
 
 const DRoutes: Component = () => {
+  // Initialize auth store on app mount
+  onMount(async () => {
+    await authStore.initializeAuth();
+  });
+
   return (
     <Router>
       <Route path="/home" component={Home} />
