@@ -159,8 +159,15 @@ export const auth = new Elysia({ prefix: "/auth" })
     },
   )
 
-  .onBeforeHandle(async ({ set, cookie }) => {
-    return await authMiddleware({ set, cookie }, { requireAdmin: false });
+  .onBeforeHandle(async (context) => {
+    return await authMiddleware(
+      {
+        set: context.set,
+        cookie: context.cookie,
+        userId: context.userId, // Pass userId here
+      },
+      { requireAdmin: false },
+    );
   })
 
   .post(

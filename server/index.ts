@@ -41,7 +41,11 @@ const app = new Elysia()
     }),
   )
   .resolve(({ cookie }) => {
-    if (!cookie || !cookie.access_token) {
+    if (
+      Object.keys(cookie).length === 0 ||
+      !Object.prototype.hasOwnProperty.call(cookie, "access_token") ||
+      typeof cookie.access_token.value !== "string"
+    ) {
       console.warn("No access token found in cookies");
       return { userId: null };
     }
@@ -62,7 +66,7 @@ const app = new Elysia()
     set.status = 200;
     return statuses[Math.floor(Math.random() * statuses.length)];
   })
-  .get("/", async ({ set, redirect }) => {
+  .get("/", async ({ redirect }) => {
     return redirect("/status");
   })
   .listen({ port: "9512", hostname: "0.0.0.0" });

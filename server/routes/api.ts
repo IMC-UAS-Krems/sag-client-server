@@ -75,8 +75,15 @@ export const api = new Elysia({ prefix: "/api" })
   )
 
   // TODO: Should make sure that user is NOT ADMIN
-  .onBeforeHandle(async ({ set, cookie }) => {
-    return await authMiddleware({ set, cookie }, { requireAdmin: false });
+  .onBeforeHandle(async (context) => {
+    return await authMiddleware(
+      {
+        set: context.set,
+        cookie: context.cookie,
+        userId: context.userId, // Pass userId here
+      },
+      { requireAdmin: false },
+    );
   })
 
   .post(
