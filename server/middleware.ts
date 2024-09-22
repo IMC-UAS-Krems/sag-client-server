@@ -1,38 +1,22 @@
 import { sql } from "./sql";
-import { decrypt } from "./routes/auth";
+import { Context } from "elysia";
 
 interface CustomContext {
-  set: any;
-  cookie?: { access_token?: { value?: string } };
+  set: Context["set"] & { user: object };
+  userId: string;
 }
 
 export const authMiddleware = async (
-  { set, cookie }: CustomContext,
+  { set, userId }: CustomContext,
   options = { requireAdmin: false },
 ): Promise<void | { error: string }> => {
-  // idk why is returning access_token value as string === "undefined"
-  // console.log("Detailed cookie in authMiddleware:", JSON.stringify(cookie, null, 2));
-
-  if (!cookie || !cookie.access_token || !cookie.access_token.value || cookie.access_token.value === "undefined") {
-    // console.log("cookie in authMiddleware:", cookie);
-    console.warn("Unauthorized: No token provided or cookie is missing");
+  if (!userId) {
+    console.error("Unauthorized: Missing userId in context");
     set.status = 401;
-    return { error: "Unauthorized: No token provided or cookie is missing" };
+    return { error: "Unauthorized: Missing userId in context" };
   }
 
-  const accessToken = cookie.access_token.value;
-  // console.log("accessToken in authMiddleware:", accessToken);
-
   try {
-    const userId = decrypt(accessToken);
-    // console.log("userId in authMiddleware:", userId);
-
-    if (!userId) {
-      console.error("Unauthorized: Failed to decrypt token");
-      set.status = 401;
-      return { error: "Unauthorized: Invalid token" };
-    }
-
     const user = await sql.selectUser(userId);
     if (!user) {
       console.error("Unauthorized: User not found");
@@ -66,7 +50,7 @@ export const authMiddleware = async (
     });
 
     // Attach user to context
-    (set as any).user = user;
+    set.user = user;
   } catch (error) {
     console.error("Error in authMiddleware:", error);
     set.status = 500;

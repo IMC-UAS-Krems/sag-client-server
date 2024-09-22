@@ -28,7 +28,7 @@ const DRoutes: Component = () => {
       <Route
         path="/editor"
         component={() => (
-          <AuthGuard role="USER">
+          <AuthGuard role={["Manager", "Developer"]}>
             <Editor />
           </AuthGuard>
         )}
@@ -37,7 +37,7 @@ const DRoutes: Component = () => {
       <Route
         path="/users/create"
         component={() => (
-          <AuthGuard role="ADMIN">
+          <AuthGuard role="Administrator">
             <UsersCreate />
           </AuthGuard>
         )}
@@ -46,7 +46,7 @@ const DRoutes: Component = () => {
       <Route
         path="/users/edit/:userId"
         component={() => (
-          <AuthGuard role="ADMIN">
+          <AuthGuard role="Administrator">
             <UsersEdit />
           </AuthGuard>
         )}
@@ -55,7 +55,7 @@ const DRoutes: Component = () => {
       <Route
         path="/users"
         component={() => (
-          <AuthGuard role="ADMIN">
+          <AuthGuard role="Administrator">
             <Users />
           </AuthGuard>
         )}

@@ -32,7 +32,7 @@ interface UsersResponse {
 
 const Users: Component = () => {
   const navigate = useNavigate();
-  const loggedInUser = authStore.state().user;
+  const loggedInUser = authStore.state().name;
   // console.log("Auth store:", authStore.state());
   // console.log("Logged in user:", loggedInUser);
 

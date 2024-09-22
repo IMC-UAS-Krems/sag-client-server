@@ -40,23 +40,34 @@ const app = new Elysia()
       },
     }),
   )
-  .resolve(({ cookie }) => {
-    if (!cookie || !cookie.access_token) {
-      console.warn("No access token found in cookies");
-      return { userId: null };
+
+  .resolve(({ cookie, set }) => {
+    let userId: string | null = null;
+    if (
+      cookie &&
+      cookie.access_token &&
+      typeof cookie.access_token.value === "string" &&
+      cookie.access_token.value !== "undefined"
+    ) {
+      try {
+        userId = decrypt(cookie.access_token.value) as string;
+      } catch (error) {
+        console.error("Failed to decrypt token:", error);
+      }
+    } else {
+      console.warn("No access token found in cookie.");
     }
 
-    try {
-      const id = decrypt(cookie.access_token.value) as string;
-      return { userId: id };
-    } catch (error) {
-      console.error("Failed to decrypt token:", error);
-      return { userId: null };
+    if (!userId) {
+      console.warn("No valid access token found or failed to decrypt token.");
+      // set.status = 401;
     }
+
+    return { userId };
   })
-  .use(api)
   .use(auth)
   .use(admin)
+  .use(api)
   .get("/status", async ({ set }) => {
     const statuses = ["Single", "In a relationship", "Married", "In love", "It's complicated"];
     set.status = 200;

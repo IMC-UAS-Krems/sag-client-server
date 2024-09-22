@@ -65,7 +65,7 @@ const Header: Component<{ children: JSX.Element }> = (props) => {
             <Show when={authStore.state().isAuthenticated}>
               <li>
                 <a href="#" onClick={handleLogout}>
-                  Logout ({authStore.state().user})
+                  Logout ({authStore.state().name})
                 </a>
               </li>
             </Show>

@@ -258,8 +258,7 @@ const Login: Component<NavigateProps> = ({ navigate }) => {
     }
 
     // console.log(`Login successful. Welcome ${logged.data.name}.`);
-    authStore.setState({ isAuthenticated: true, user: formUsername, userRole: logged.data.userRole });
-
+    authStore.initializeAuth();
     navigate("/home", { replace: true });
 
     Swal.fire({
@@ -293,7 +292,7 @@ const SignIn: Component = () => {
       <main class={styles["signin-main-container"]}>
         {authStore.state().isAuthenticated ? (
           <div class={styles["signin-card-container"]}>
-            <h1>You are already logged in as {authStore.state().user}</h1>
+            <h1>You are already logged in as {authStore.state().name}</h1>
           </div>
         ) : (
           <>

@@ -13,8 +13,8 @@ import {
 } from "@server/types";
 
 export const admin = new Elysia({ prefix: "/admin" })
-  .onBeforeHandle(async ({ set, cookie }) => {
-    return await authMiddleware({ set, cookie }, { requireAdmin: true });
+  .onBeforeHandle(async ({ set, userId }) => {
+    return await authMiddleware({ set, userId }, { requireAdmin: true });
   })
   .get(
     "/users",
