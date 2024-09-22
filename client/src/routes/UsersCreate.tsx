@@ -7,7 +7,7 @@ import Swal from "sweetalert2";
 
 import { eden } from "@client/api";
 import { handleUnauthorized } from "@client/utils/authUtils";
-import { UserRole } from "@client/shared/types";
+import { UserRole } from "@utils/roles";
 import Header from "@client/components/Header";
 import FormField from "@client/components/FormField";
 import styles from "@styles/Signin.module.css";
@@ -106,7 +106,7 @@ const UsersCreate: Component = () => {
       password: password() ?? "",
       municipalityName: municipality() ?? "",
       organizationName: organization() ?? "",
-      userRole: userRole() ?? UserRole.DEV,
+      userRole: userRole() ?? UserRole.Developer,
     };
 
     // console.log("Data to be submitted:", requestBody);

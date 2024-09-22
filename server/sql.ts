@@ -1,6 +1,7 @@
 import { createId } from "@paralleldrive/cuid2";
 import { prisma } from "@∆";
-import { Organization, Project, User, Municipality, UserType, DocumentType, UserRole } from "@prisma/client";
+import { Organization, Project, User, Municipality, UserType, DocumentType } from "@prisma/client";
+import { UserRole } from "@utils/roles";
 import { UserDetails } from "@server/types";
 
 export type Document = {

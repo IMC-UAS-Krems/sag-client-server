@@ -9,8 +9,8 @@ import {
   AuthContextWithQuery,
   CreateUserBody,
   UpdateUserBody,
-  UserRole,
 } from "@server/types";
+import { UserRole } from "@utils/roles";
 
 export const admin = new Elysia({ prefix: "/admin" })
   .onBeforeHandle(async (context) => {

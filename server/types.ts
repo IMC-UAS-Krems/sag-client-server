@@ -1,3 +1,5 @@
+import { UserRole } from "@utils/roles";
+
 export interface AuthContext {
   log: {
     info: (message: string) => void;
@@ -46,13 +48,6 @@ export interface RegisterBody {
   key: string;
   municipalityName: string;
   organizationName: string;
-}
-
-// TODO: Use enum on server side too
-export enum UserRole {
-  DEV = "Developer",
-  ADMIN = "Administrator",
-  MANAGER = "Manager",
 }
 
 export interface RegisteredUser {

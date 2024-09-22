@@ -10,7 +10,8 @@ import { handleUnauthorized } from "@client/utils/authUtils";
 import Header from "@client/components/Header";
 import FormField from "@client/components/FormField";
 import styles from "@styles/Signin.module.css";
-import { UserRole, UpdateUserBody } from "@server/types";
+import { UpdateUserBody } from "@server/types";
+import { UserRole } from "@utils/roles";
 
 const UsersEdit: Component = () => {
   const navigate = useNavigate();
