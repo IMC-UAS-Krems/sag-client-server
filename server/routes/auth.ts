@@ -195,7 +195,13 @@ export const auth = new Elysia({ prefix: "/auth" })
   .get(
     "/check-if-logged-in",
     async ({ set, userId }: AuthContext) => {
+      if (!userId) {
+        set.status = 401;
+        return { error: "User not logged in" };
+      }
+
       const user = await sql.selectUser(userId);
+
       if (user == null) {
         set.status = 401;
         return { error: "User not logged in" }; // Return an error message

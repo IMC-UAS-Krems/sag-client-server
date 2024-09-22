@@ -13,8 +13,14 @@ import {
 } from "@server/types";
 
 export const admin = new Elysia({ prefix: "/admin" })
-  .onBeforeHandle(async ({ set, userId }) => {
-    return await authMiddleware({ set, userId }, { requireAdmin: true });
+  .onBeforeHandle(async (context) => {
+    return await authMiddleware(
+      {
+        set: context.set,
+        userId: context.userId,
+      },
+      { requireAdmin: true },
+    );
   })
   .get(
     "/users",
@@ -138,7 +144,6 @@ export const admin = new Elysia({ prefix: "/admin" })
     },
   )
 
-  // TODO: Fix ncrypt TypeError: argument must be a string, or a string-like object
   .get(
     "/user-details",
     async ({ log, set, query }: AuthContextWithQuery<{ userId: string }>): Promise<UserDetails | { error: string }> => {

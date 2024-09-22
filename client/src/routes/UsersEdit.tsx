@@ -41,6 +41,9 @@ const UsersEdit: Component = () => {
 
   const fetchUserData = async () => {
     try {
+      // TODO: It seems like due to some CORS - pre flight issue, the cookie is not being sent 100% correctly from the frontend
+      // This results in a No access token found in cookies from `index.ts` `.resolve()`, otherwise works perfectly
+      // - Easiest workaround: simply use a POST request instead of GET with query params
       const oldUserData = await eden.admin["user-details"].get({
         $fetch: {
           mode: "cors",

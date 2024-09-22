@@ -41,7 +41,7 @@ const app = new Elysia()
     }),
   )
 
-  .resolve(({ cookie, set }) => {
+  .resolve(({ cookie }) => {
     let userId: string | null = null;
     if (
       cookie &&
@@ -73,7 +73,7 @@ const app = new Elysia()
     set.status = 200;
     return statuses[Math.floor(Math.random() * statuses.length)];
   })
-  .get("/", async ({ set, redirect }) => {
+  .get("/", async ({ redirect }) => {
     return redirect("/status");
   })
   .listen({ port: "9512", hostname: "0.0.0.0" });
