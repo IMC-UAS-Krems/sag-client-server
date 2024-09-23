@@ -79,8 +79,10 @@ export interface UserDetails {
   email: string;
   userRole: string;
   deleted?: boolean;
-  municipalityName: string;
-  organizationName: string;
+  municipality?: { name: string };
+  municipalityName?: string;
+  organization?: { name: string };
+  organizationName?: string;
   needsToBeLoggedOut?: boolean;
   lastLoginTime?: Date;
 }

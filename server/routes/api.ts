@@ -74,7 +74,6 @@ export const api = new Elysia({ prefix: "/api" })
     },
   )
 
-  // TODO: Should make sure that user is NOT ADMIN
   .onBeforeHandle(async (context) => {
     return await authMiddleware(
       {

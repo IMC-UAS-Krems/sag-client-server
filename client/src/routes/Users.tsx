@@ -14,19 +14,13 @@ import { theme } from "@store/index";
 import { UserDetails } from "@server/types";
 
 import "../../../node_modules/solid-contextmenu/dist/style.css";
-
-// Response structure
-// TODO: Where can we find EdenFetchError type?
-interface EdenFetchError<T, U> {
-  code: T;
-  message: U;
-}
+import { log } from "console";
 
 interface UsersResponse {
   data: UserDetails[] | { error: string } | null;
-  error: EdenFetchError<number, string> | null;
+  error: { message: string } | null;
   status: number;
-  response: { 200: string | number | boolean | object };
+  response: { 200: UserDetails[] | { error: string } };
   headers: Record<string, string>;
 }
 
@@ -58,6 +52,7 @@ const Users: Component = () => {
   };
 
   async function fetchUsers() {
+    console.log("FETCH USERS: Fetching users");
     try {
       const fetchedUsers: UsersResponse = await eden.admin.users.get({
         $fetch: {
@@ -66,6 +61,7 @@ const Users: Component = () => {
           method: "GET",
         },
       });
+      console.log("FETCH USERS: Fetched users:", fetchedUsers);
 
       // Unauthorized check
       if (fetchedUsers.status === 401 || fetchedUsers.status === 403) {
@@ -282,8 +278,8 @@ const Users: Component = () => {
                       <td>{user.username}</td>
                       <td>{user.name}</td>
                       <td>{user.email}</td>
-                      <td>{user.municipalityName}</td>
-                      <td>{user.organizationName}</td>
+                      <td>{user.municipality.name}</td>
+                      <td>{user.organization.name}</td>
                       <td>{user.userRole}</td>
                       <td>{user.deleted ? "🗑️" : onlineStatus ? "🟢" : "🔴"}</td>
                       <td

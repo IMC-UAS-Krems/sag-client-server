@@ -228,7 +228,7 @@ export async function getUserDataById(userId: string): Promise<UserDetails | nul
 }
 
 export async function getAllUsers(): Promise<UserDetails[]> {
-  const users = await prisma.user.findMany({
+  return await prisma.user.findMany({
     select: {
       id: true,
       name: true,
@@ -250,22 +250,8 @@ export async function getAllUsers(): Promise<UserDetails[]> {
       },
     },
   });
-
-  return users.map((user) => ({
-    id: user.id,
-    name: user.name,
-    username: user.username,
-    email: user.email,
-    userRole: user.userRole,
-    deleted: user.deleted,
-    municipalityName: user.municipality?.name,
-    organizationName: user.organization?.name,
-    lastLoginTime: user.lastLoginTime,
-    needsToBeLoggedOut: user.needsToBeLoggedOut,
-  }));
 }
 
-// TODO: Create an additional check for the username and email, to ensure that they are unique
 export async function updateUser(
   userId: string,
   {
