@@ -36,7 +36,7 @@ export const auth = new Elysia({ prefix: "/auth" })
           municipalityName,
         });
 
-        const { id, ...user } = userResult;
+        const { id, password, ...user } = userResult;
 
         const token = encrypt(id);
         log.info(`Producing token: ${token}`);
@@ -123,7 +123,7 @@ export const auth = new Elysia({ prefix: "/auth" })
 
       // Reset the needsToBeLoggedOut flag
       await sql.updateUser(userResult.id, { needsToBeLoggedOut: false });
-      const { id, ...user } = userResult as UserDocument;
+      const { id, password, ...user } = userResult as UserDocument;
 
       const token = encrypt(id);
 
