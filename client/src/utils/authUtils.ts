@@ -4,7 +4,7 @@ import { useNavigate } from "@solidjs/router";
 // import authStore from "@store/authStore";
 import { User } from "@client/types";
 
-export const sessionDuration = 60 * 60 * 24 * 2 * 1000; // 2 days
+export const sessionDuration = Number(import.meta.env.VITE_COOKIES_EXPIRATION) * 60 * 60 * 1000 || 2 * 24 * 60 * 60 * 1000; // 2 days
 
 export async function isUserOnline(user: User): Promise<boolean> {
   const now = new Date().getTime();

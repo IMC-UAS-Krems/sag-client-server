@@ -3,7 +3,7 @@ import { createSignal, onMount, Show, onCleanup } from "solid-js";
 import authStore from "@store/authStore";
 import { eden } from "@client/api";
 
-const checkInterval = 30000; // 30 seconds
+const checkInterval = Number(import.meta.env.VITE_AUTH_CHECK_INTERVAL) * 1000 || 30000; // 30 seconds
 
 interface AuthGuardProps {
   role: string | string[];
