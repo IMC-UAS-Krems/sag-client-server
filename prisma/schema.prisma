@@ -22,6 +22,7 @@ enum DocumentType {
     FOLDER
 }
 
+// NOTE: Also defined in `../utils/roles.ts`. Don't forget to update it as well
 enum UserRole {
     Developer
     Manager
