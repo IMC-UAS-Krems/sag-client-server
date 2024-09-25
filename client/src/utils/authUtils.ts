@@ -1,10 +1,9 @@
 import { useNavigate } from "@solidjs/router";
 
-// import { eden } from "@client/api";
-// import authStore from "@store/authStore";
 import { User } from "@client/types";
+import { panic } from "@utils/panic";
 
-export const sessionDuration = Number(import.meta.env.VITE_COOKIES_EXPIRATION) * 60 * 60 * 1000 || 2 * 24 * 60 * 60 * 1000; // 2 days
+export const sessionDuration = Number(import.meta.env.VITE_COOKIES_EXPIRATION) || panic("VITE_COOKIES_EXPIRATION environment variable not set");
 
 export async function isUserOnline(user: User): Promise<boolean> {
   const now = new Date().getTime();

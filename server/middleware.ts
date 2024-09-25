@@ -1,6 +1,7 @@
+import { Context } from "elysia";
+
 import { panic } from "@utils/panic";
 import { sql } from "./sql";
-import { Context } from "elysia";
 
 interface CustomContext {
   set: Context["set"] & { user: object };
@@ -33,7 +34,8 @@ export const authMiddleware = async (
 
     // Check session expiration
     const now = new Date();
-    const sessionDuration = Number(Bun.env.VITE_COOKIES_EXPIRATION) * 1000 * 60 * 60 || panic("VITE_COOKIES_EXPIRATION environment variable not set");
+    const sessionDuration =
+      Number(Bun.env.VITE_COOKIES_EXPIRATION) || panic("VITE_COOKIES_EXPIRATION environment variable not set");
     if (now.getTime() - user.lastLoginTime.getTime() > sessionDuration || user.needsToBeLoggedOut) {
       console.error("Session expired, please log in again");
       // clear token

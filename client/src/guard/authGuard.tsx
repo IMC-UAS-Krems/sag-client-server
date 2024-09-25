@@ -1,9 +1,11 @@
-import { useNavigate } from "@solidjs/router";
 import { createSignal, onMount, Show, onCleanup } from "solid-js";
+import { useNavigate } from "@solidjs/router";
+
+import { panic } from "@utils/panic";
 import authStore from "@store/authStore";
 import { eden } from "@client/api";
 
-const checkInterval = Number(import.meta.env.VITE_AUTH_CHECK_INTERVAL) * 1000 || 30000; // 30 seconds
+const checkInterval = Number(import.meta.env.VITE_AUTH_CHECK_INTERVAL) * 1000 || panic("VITE_COOKIES_EXPIRATION environment variable not set");
 
 interface AuthGuardProps {
   role: string | string[];

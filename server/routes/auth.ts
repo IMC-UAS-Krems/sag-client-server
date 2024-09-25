@@ -39,13 +39,14 @@ export const auth = new Elysia({ prefix: "/auth" })
         const { id, password, ...user } = userResult;
 
         const token = encrypt(id);
+        const sessionDuration = Number(Bun.env.VITE_COOKIES_EXPIRATION) || panic("VITE_COOKIES_EXPIRATION environment variable not set");
         log.info(`Producing token: ${token}`);
         access_token.set({
           httpOnly: true,
           secure: true,
           sameSite: "none",
           path: "/", // default
-          maxAge: 60 * 60 * 24 * 2, // 2 days
+          maxAge: sessionDuration,
           value: token,
         });
 
@@ -129,12 +130,13 @@ export const auth = new Elysia({ prefix: "/auth" })
 
       log.info(`Producing token: ${token}`);
 
+      const sessionDuration = Number(Bun.env.VITE_COOKIES_EXPIRATION) || panic("VITE_COOKIES_EXPIRATION environment variable not set");
       access_token.set({
         httpOnly: true,
         secure: true,
         sameSite: "none",
         path: "/", // default
-        maxAge: 60 * 60 * 24 * 2, // 2 days
+        maxAge: sessionDuration,
         value: token,
       });
 

@@ -1,5 +1,7 @@
-import { eden } from "@client/api";
 import { createSignal } from "solid-js";
+
+import { eden } from "@client/api";
+import { panic } from "@utils/panic";
 
 interface AuthStore {
   isAuthenticated: boolean;
@@ -16,9 +18,10 @@ const createAuthStore = () => {
     userRole: "",
   });
 
-  const setCookie = (name: string, value: string, days: number) => {
+  const setCookie = (name: string, value: string) => {
+    const sessionDuration = Number(import.meta.env.VITE_COOKIES_EXPIRATION) * 1000 || panic("VITE_COOKIES_EXPIRATION environment variable not set");
     const date = new Date();
-    date.setTime(date.getTime() + days * 24 * 60 * 60 * 1000);
+    date.setTime(date.getTime() + sessionDuration);
     const expires = "expires=" + date.toUTCString();
     const cookieString = `${name}=${value};${expires};path=/`;
     document.cookie = cookieString;
@@ -57,7 +60,7 @@ const createAuthStore = () => {
   };
 
   const saveAuthStateToCookie = (newState: AuthStore) => {
-    setCookie("authStore", JSON.stringify(newState), 2);
+    setCookie("authStore", JSON.stringify(newState));
   };
 
   const resetAuth = () => {
