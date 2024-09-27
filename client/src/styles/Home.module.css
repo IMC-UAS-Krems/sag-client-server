@@ -1,22 +1,15 @@
-.mainHomeContainer {
-  /* display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  color: var(--primary-text);
-
-  margin-top: 30px; */
+.main-home-container {
   width: 100vw;
 }
 
-.mainArticleContainer {
+.main-article-container {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
 }
 
-.introSection {
+.intro-section {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -24,7 +17,7 @@
   padding: 0 8% 0 8%;
 }
 
-.introSection h1 {
+.intro-section h1 {
   font-size: var(--h1-text-linear);
   color: var(--primary-text);
 
@@ -32,7 +25,7 @@
   padding: 0;
 }
 
-.introSection p {
+.intro-section p {
   font-size: var(--body-text-linear);
   color: var(--primary-text);
   line-height: 35px;
@@ -41,7 +34,7 @@
   padding: 0;
 }
 
-.mapSectionContainer {
+.map-section-container {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -53,7 +46,7 @@
   margin-bottom: 20px;
 }
 
-.mapSectionContainer h1 {
+.map-section-container h1 {
   font-size: var(--h1-text-linear);
   color: var(--primary-text);
 
@@ -61,7 +54,7 @@
   padding: 0;
 }
 
-.mapContainer {
+.map-container {
   position: relative;
   width: 85%;
   height: 100%;
@@ -70,7 +63,7 @@
   border: 3px solid var(--primary-text);
 }
 
-.mapClass {
+.map {
   position: absolute;
   inset: 0;
   z-index: -1;

@@ -59,6 +59,7 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       DATABASE_URL: ${DATABASE_URL}
       COMPILER_URL: ${COMPILER_URL}
+      VITE_COOKIES_EXPIRATION: ${VITE_COOKIES_EXPIRATION}
     deploy:
       resources:
         limits:
@@ -80,6 +81,8 @@ services:
       - ${WEB_CLIENT_PORT}:8100
     environment:
       VITE_SERVER_URL: ${SERVER_URL}
+      VITE_AUTH_CHECK_INTERVAL: ${VITE_AUTH_CHECK_INTERVAL}
+      VITE_COOKIES_EXPIRATION: ${VITE_COOKIES_EXPIRATION}
     deploy:
       resources:
         limits:

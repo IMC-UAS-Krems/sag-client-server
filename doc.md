@@ -11,3 +11,5 @@ Solid Internationalization: https://primitives.solidjs.community/package/i18n
 SolidJs guide: https://www.solidjs.com/guides/getting-started
 
 SolidJs tutorial: https://www.youtube.com/watch?v=uPXn9S31o7Q&list=PL4cUxeGkcC9gU_GvFygZFu0aBysPilkbB
+
+DB Monitoring UI (run): `DATABASE_URL=postgres://postgres:your-super-secret-and-long-postgres-password@localhost:5432/postgres npx prisma studio`

@@ -1,4 +1,5 @@
 import { Elysia, t } from "elysia";
+
 import { prisma } from "@server/prisma";
 import { authMiddleware } from "@server/middleware";
 import { sql, Document } from "@server/sql";
@@ -17,8 +18,72 @@ export const api = new Elysia({ prefix: "/api" })
       set.status = 200;
       return municipalities.map((m) => m.name);
     },
-    { detail: { tags: ["api"] } },
+    {
+      detail: {
+        tags: ["api"],
+        description: "Get all municipalities from the database",
+      },
+    },
   )
+
+  .get(
+    "/organizations",
+    async ({ log, set }) => {
+      const organizations = await prisma.organization.findMany({
+        select: {
+          name: true,
+        },
+      });
+      set.status = 200;
+      return organizations.map((o) => o.name);
+    },
+    {
+      detail: {
+        tags: ["api"],
+        description: "Get all organizations from the database",
+      },
+    },
+  )
+
+  .post(
+    "/organizationsByMunicipality",
+    async ({ set, body: { municipalityName } }) => {
+      try {
+        const organizations = await prisma.organization.findMany({
+          where: {
+            municipality: {
+              name: municipalityName,
+            },
+          },
+        });
+        set.status = 200;
+        return organizations.map((o) => o.name);
+      } catch (error) {
+        set.status = 500;
+        return { error: "Failed to fetch organizations" };
+      }
+    },
+    {
+      detail: {
+        tags: ["api"],
+        description: "Get all organizations of a given municipality via its name",
+      },
+      body: t.Object({
+        municipalityName: t.String(),
+      }),
+    },
+  )
+
+  .onBeforeHandle(async (context) => {
+    return await authMiddleware(
+      {
+        set: context.set,
+        userId: context.userId, // Pass userId here
+      },
+      { requireAdmin: false },
+    );
+  })
+
   .post(
     "/compile",
     async ({ log, set, body: { code }, userId }) => {
@@ -48,7 +113,6 @@ export const api = new Elysia({ prefix: "/api" })
       body: t.Object({
         code: t.String(),
       }),
-      beforeHandle: authMiddleware,
       response: t.Union([
         t.Object({ status: t.Literal("ok"), url: t.String() }),
         t.Object({ status: t.Literal("error"), errors: t.Array(t.Any()) }),
@@ -57,6 +121,7 @@ export const api = new Elysia({ prefix: "/api" })
       detail: { tags: ["api"] },
     },
   )
+
   .post(
     "/check",
     async ({ log, set, userId, body: { code } }) => {
@@ -86,7 +151,6 @@ export const api = new Elysia({ prefix: "/api" })
       body: t.Object({
         code: t.String(),
       }),
-      beforeHandle: authMiddleware,
       response: t.Union([
         t.Object({ status: t.Literal("ok") }),
         t.Object({
@@ -97,6 +161,7 @@ export const api = new Elysia({ prefix: "/api" })
       detail: { tags: ["api"] },
     },
   )
+
   .get(
     "/documents",
     async ({ log, set, userId }): Promise<Document[]> => {
@@ -105,10 +170,13 @@ export const api = new Elysia({ prefix: "/api" })
       return documents;
     },
     {
-      beforeHandle: authMiddleware,
-      detail: { tags: ["api"] },
+      detail: {
+        tags: ["api"],
+        description: "Get all documents of a user by user ID",
+      },
     },
   )
+
   .post(
     "/test",
     async ({ log, set, body: { code }, userId }) => {
@@ -141,7 +209,6 @@ export const api = new Elysia({ prefix: "/api" })
       body: t.Object({
         code: t.String(),
       }),
-      beforeHandle: authMiddleware,
       detail: { tags: ["api"] },
     },
   );

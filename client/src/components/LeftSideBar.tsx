@@ -1,8 +1,12 @@
 import { createSignal, onMount } from "solid-js";
+
 import { Menu, Item, useContextMenu, animation, Submenu } from "solid-contextmenu";
-import Swal from "sweetalert2";
 import "../../../node_modules/solid-contextmenu/dist/style.css";
+import Swal from "sweetalert2";
+
+import styles from "@styles/LeftSideBar.module.css";
 import { eden } from "@client/api";
+import { theme } from "@store/index";
 
 interface File {
   name: string;
@@ -22,7 +26,6 @@ interface LeftSideBarProps {
 export function LeftSideBar(props: LeftSideBarProps) {
   const [files, setFiles] = createSignal<File[]>([]);
   const [_animation, setAnimation] = createSignal(animation.scale);
-  const [_theme, setTheme] = createSignal<"light" | "dark">("light");
   const { show } = useContextMenu({ id: MENU_ID });
 
   let rightClickedFileOrFolder: File | null = null;
@@ -319,11 +322,11 @@ export function LeftSideBar(props: LeftSideBarProps) {
 
   function renderFiles(files: File[]) {
     return (
-      <ul style={{ "list-style": "none", "padding-left": "20px" }}>
+      <ul class={styles["files-list"]}>
         {files.map((file) => (
           <li>
-            <div style={{ display: "flex", "align-items": "center" }}>
-              <span style={{ cursor: "default" }}>{file.files ? (file.isExpanded ? "📂" : "📁") : "📄"}</span>
+            <div class={styles["item-container"]}>
+              <span>{file.files ? (file.isExpanded ? "📂" : "📁") : "📄"}</span>
               <span
                 onClick={() => {
                   handleClick(file);
@@ -378,7 +381,7 @@ export function LeftSideBar(props: LeftSideBarProps) {
       }}
     >
       {renderFiles(files())}
-      <Menu id={MENU_ID} animation={_animation()} theme={_theme()}>
+      <Menu id={MENU_ID} animation={_animation()} theme={theme() ? theme() : "light"}>
         <Item onClick={() => handleMenuClick("Rename")}>✏️ Rename</Item>
         <Item onClick={() => handleMenuClick("Save")}>💾 Save</Item>
         <Item onClick={() => handleMenuClick("Delete")}>🗑️ Delete</Item>

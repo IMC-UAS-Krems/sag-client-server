@@ -1,7 +1,7 @@
 generator client {
     provider        = "prisma-client-js"
     previewFeatures = ["postgresqlExtensions"]
-    binaryTargets   = ["native", "debian-openssl-1.1.x"]
+    binaryTargets   = ["native", "debian-openssl-1.1.x", "linux-arm64-openssl-1.1.x"]
 }
 
 datasource db {
@@ -22,9 +22,11 @@ enum DocumentType {
     FOLDER
 }
 
+// NOTE: Also defined in `../utils/roles.ts`. Don't forget to update it as well
 enum UserRole {
-    USER
-    ADMIN
+    Developer
+    Manager
+    Administrator
 }
 
 enum UserType {
@@ -39,10 +41,10 @@ model User {
 
     // Personal Data
     name     String
-    username String   @unique
-    email    String   @unique
+    username String
+    email    String
     password String
-    userRole UserRole @default(USER)
+    userRole UserRole @default(Developer)
     userType UserType @default(DEFAULT)
 
     // Permissions
@@ -64,6 +66,11 @@ model User {
     // Meta
     registered DateTime  @default(now())
     updatedAt  DateTime? @updatedAt
+    deleted Boolean @default(false)
+
+    // Tracking user tokens
+    lastLoginTime DateTime @default(now())
+    needsToBeLoggedOut Boolean @default(false)
 
     @@map("users")
 }

@@ -1,4 +1,5 @@
-.signinMainContainer {
+/* MAIN */
+.signin-main-container {
   width: 100vw;
   height: auto;
 
@@ -10,7 +11,8 @@
   gap: 20px;
 }
 
-.signinCardContainer {
+/* CONTAINERS */
+.signin-card-container {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -24,18 +26,20 @@
     0px 8px 10px 0px rgba(0, 0, 0, 0.14);
   min-height: 50vh;
   min-width: 45vw;
+  margin-bottom: 30px;
+  padding: 1rem 0 2rem 0;
 }
 
-.signinFormContainer {
+.signin-form-container {
   width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 40px;
+  /* gap: 40px; */
 }
 
-.signinCardContainer button {
+.signin-card-container button {
   background-color: transparent;
   color: var(--primary-text);
   font-size: 18px;
@@ -47,17 +51,17 @@
   border: 1px solid var(--primary-text);
 
   cursor: pointer;
-  margin-top: 80px;
+  margin-top: 40px;
 
   transition: all 0.25s;
 }
 
-.signinCardContainer button:hover {
+.signin-card-container button:hover {
   background-color: var(--primary-text);
   color: var(--secondary-color);
 }
 
-.submenuContainer {
+.submenu-container {
   background: var(--card-color);
   width: 200px;
   height: 150px;
@@ -70,7 +74,37 @@
   gap: 20px;
 }
 
-.navButton {
+@media (max-width: 1000px) {
+  .signin-card-container {
+    width: 70%;
+  }
+}
+
+@media (max-width: 800px) {
+  .signin-main-container {
+    flex-direction: column-reverse;
+    align-items: center;
+  }
+
+  .signin-card-container {
+    width: 90%;
+  }
+
+  .submenu-container {
+    width: 90%;
+  }
+
+  .nav-button {
+    margin: 10%;
+  }
+
+  .active-button {
+    margin: 10%;
+  }
+}
+
+/* BUTTONS */
+.nav-button {
   background-color: transparent;
   color: var(--primary-text);
   font-size: 18px;
@@ -87,12 +121,12 @@
   transition: all 0.25s;
 }
 
-.navButton:hover {
+.nav-button:hover {
   background-color: var(--primary-text);
   color: var(--secondary-color);
 }
 
-.activeButton {
+.active-button {
   background-color: var(--primary-text);
   color: var(--secondary-color);
   font-size: 18px;
@@ -109,56 +143,93 @@
   transition: all 0.25s;
 }
 
-/*---INPUT-FIELD---*/
+.signin-buttons {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  gap: 30px;
+  width: 100%;
+  margin-bottom: 40px;
+}
 
-.textField {
+/* FORM AND INPUT FIELD */
+.text-field {
   display: flex;
   flex-direction: column;
   width: 75%;
+  margin-top: 20px;
+  margin-bottom: 20px;
 }
 
-.textFieldLabel {
+.text-field-label {
   color: var(--primary-text);
   font-size: 18px;
   font-weight: 500;
   user-select: none;
 }
 
-.textFieldInput {
+.text-field-input {
   background: none;
   border: none;
   border-bottom: 2px solid #acacaf;
   color: var(--primary-text);
 
   padding: 14px 14px 14px 0;
-  width: 90%;
+  width: 100%;
 
   font-size: 16px;
   font-weight: 700;
   transition: all 0.5s;
 }
 
-.textFieldInput:active,
-.textFieldInput:focus,
-.textFieldInput:hover {
+.text-field-input:active,
+.text-field-input:focus,
+.text-field-input:hover {
   outline: none;
   border-bottom-color: var(--primary-text);
 }
 
-/* .textFieldInput:hover {
-  border-color: hsl(240 5% 65%);
+select {
+  background-color: var(--secondary-color);
 }
 
-.textFieldInput:focus-visible {
-  outline: 2px solid hsl(200 98% 39%);
-  outline-offset: 2px;
+select option {
+  background-color: var(--secondary-color);
 }
 
-.textFieldInput[data-invalid] {
-  border-color: hsl(0 72% 51%);
-  color: hsl(0 72% 51%);
+input::placeholder {
+  color: var(--primary-text);
+  opacity: 0.5;
 }
 
-.textFieldInput::placeholder {
-  color: hsl(240 4% 46%);
-} */
+/* TEXTS */
+.error-text {
+  color: var(--primary-text);
+  font-size: 16px;
+  font-weight: 500;
+  margin-top: 0;
+  margin-bottom: 15px;
+  padding: 0;
+  text-align: right;
+}
+
+.signin-card-container h1 {
+  padding-top: 1rem;
+  color: var(--primary-text);
+}
+
+/* SPINNERS LOADERS */
+.loader {
+  width: 50px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: 8px solid;
+  border-color: var(--primary-text) transparent var(--primary-text) transparent;
+  animation: spin 1s infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(0.5turn);
+  }
+}

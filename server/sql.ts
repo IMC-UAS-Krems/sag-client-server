@@ -1,6 +1,8 @@
 import { createId } from "@paralleldrive/cuid2";
 import { prisma } from "@∆";
 import { Organization, Project, User, Municipality, UserType, DocumentType } from "@prisma/client";
+import { UserRole } from "@utils/roles";
+import { UserDetails } from "@server/types";
 
 export type Document = {
   municipalityName: string;
@@ -66,34 +68,60 @@ export async function createProject(name: string, organizationName: string): Pro
   });
 }
 
-export async function createUser(
-  username: string,
-  password: string,
-  name: string,
-  email: string,
-  organizationName: string,
-  municipalityName: string,
-): Promise<UserDocument> {
-  const user = await prisma.user.create({
-    data: {
-      username,
-      password,
-      name,
-      email,
-      organization: {
-        connect: { name: organizationName },
-      },
-      municipality: {
-        connect: { name: municipalityName },
-      },
+export async function createUser(data: {
+  username: string;
+  password: string;
+  name: string;
+  email: string;
+  organizationName: string;
+  municipalityName: string;
+  userRole: "Administrator" | "Developer" | "Manager";
+}) {
+  const userWithEmail = await prisma.user.findFirst({
+    where: {
+      email: data.email,
+      deleted: false,
     },
   });
-  if (user === null) {
-    throw new Error(`User ${username} could not be created`);
+  if (userWithEmail) {
+    throw new Error(`User with email "${data.email}" already exists`);
   }
 
-  (user as UserDocument).documents = await getDocuments(user.id);
-  return user as UserDocument;
+  const userWithUsername = await prisma.user.findFirst({
+    where: {
+      username: data.username,
+      deleted: false,
+    },
+  });
+  if (userWithUsername) {
+    throw new Error(`User with username "${data.username}" already exists`);
+  }
+
+  console.warn("Creating user with data:", data);
+
+  try {
+    const user = await prisma.user.create({
+      data: {
+        username: data.username,
+        password: data.password,
+        name: data.name,
+        email: data.email,
+        userRole: data.userRole,
+        organization: {
+          connect: { name: data.organizationName },
+        },
+        municipality: {
+          connect: { name: data.municipalityName },
+        },
+      },
+    });
+
+    console.log(`User ${user.username} created successfully`);
+    return user;
+  } catch (error) {
+    console.error("Error creating user:", error);
+    throw new Error(`User ${data.username} could not be created`);
+  }
 }
 
 export async function selectUser(
@@ -108,20 +136,46 @@ export async function selectUser(
   let user: User | null = null;
   if (userId !== undefined) {
     user = await prisma.user.findUnique({
+      include: {
+        municipality: {
+          select: { name: true },
+        },
+        organization: {
+          select: { name: true },
+        },
+      },
       where: {
         id: userId,
       },
     });
   } else if (email !== undefined) {
-    user = await prisma.user.findUnique({
+    user = await prisma.user.findFirst({
+      include: {
+        municipality: {
+          select: { name: true },
+        },
+        organization: {
+          select: { name: true },
+        },
+      },
       where: {
         email,
+        deleted: false,
       },
     });
   } else {
-    user = await prisma.user.findUnique({
+    user = await prisma.user.findFirst({
+      include: {
+        municipality: {
+          select: { name: true },
+        },
+        organization: {
+          select: { name: true },
+        },
+      },
       where: {
         username,
+        deleted: false,
       },
     });
   }
@@ -132,6 +186,171 @@ export async function selectUser(
     (user as UserDocument).documents = await getDocuments(user.id);
   }
   return user;
+}
+
+export async function getUserDataById(userId: string): Promise<UserDetails | null> {
+  const user = await prisma.user.findUnique({
+    where: {
+      id: userId,
+    },
+    select: {
+      id: true,
+      name: true,
+      username: true,
+      email: true,
+      municipality: {
+        select: {
+          name: true,
+        },
+      },
+      organization: {
+        select: {
+          name: true,
+        },
+      },
+      userRole: true,
+    },
+  });
+
+  if (!user) {
+    return null;
+  }
+
+  return {
+    id: user.id,
+    name: user.name,
+    username: user.username,
+    email: user.email,
+    userRole: user.userRole,
+    municipalityName: user.municipality?.name,
+    organizationName: user.organization?.name,
+  };
+}
+
+export async function getAllUsers(): Promise<UserDetails[]> {
+  return await prisma.user.findMany({
+    select: {
+      id: true,
+      name: true,
+      username: true,
+      email: true,
+      userRole: true,
+      deleted: true,
+      needsToBeLoggedOut: true,
+      lastLoginTime: true,
+      organization: {
+        select: {
+          name: true,
+        },
+      },
+      municipality: {
+        select: {
+          name: true,
+        },
+      },
+    },
+  });
+}
+
+export async function updateUser(
+  userId: string,
+  {
+    username,
+    password,
+    name,
+    email,
+    organization,
+    municipality,
+    userRole,
+    lastLoginTime,
+    needsToBeLoggedOut,
+  }: {
+    username?: string;
+    password?: string;
+    name?: string;
+    email?: string;
+    organization?: string;
+    municipality?: string;
+    userRole?: UserRole;
+    lastLoginTime?: Date;
+    needsToBeLoggedOut?: boolean;
+  },
+): Promise<UserDocument> {
+  if (email) {
+    const userWithEmail = await prisma.user.findFirst({
+      where: {
+        email: email,
+        deleted: false,
+      },
+    });
+    if (userWithEmail) {
+      throw new Error(`User with email "${email}" already exists`);
+    }
+  }
+
+  if (username) {
+    const userWithUsername = await prisma.user.findFirst({
+      where: {
+        username: username,
+        deleted: false,
+      },
+    });
+    if (userWithUsername) {
+      throw new Error(`User with username "${username}" already exists`);
+    }
+  }
+
+  const user = await prisma.user.update({
+    where: { id: userId },
+    data: {
+      username,
+      password,
+      name,
+      email,
+      organization: organization ? { connect: { name: organization } } : undefined,
+      municipality: municipality ? { connect: { name: municipality } } : undefined,
+      userRole,
+      lastLoginTime,
+      needsToBeLoggedOut,
+    },
+  });
+  if (user === null) {
+    throw new Error(`User ${userId} does not exist`);
+  }
+  (user as UserDocument).documents = await getDocuments(user.id);
+  return user as UserDocument;
+}
+
+export async function deleteUser(userId: string): Promise<void> {
+  const user = await prisma.user.findUnique({
+    where: {
+      id: userId,
+    },
+    select: {
+      deleted: true,
+    },
+  });
+
+  if (!user) {
+    const error = new Error(`User with ID ${userId} does not exist.`);
+    error.name = "UserNotFoundError";
+    throw error;
+  }
+
+  if (user.deleted) {
+    const error = new Error(`User with ID ${userId} is already deleted.`);
+    error.name = "UserAlreadyDeletedError";
+    throw error;
+  }
+
+  await prisma.user.update({
+    where: {
+      id: userId,
+    },
+    data: {
+      deleted: true,
+    },
+  });
 }
 
 export async function createDocument(

@@ -34,6 +34,10 @@ yarn-error.log*
 # vercel
 .vercel
 
+# vs code
+/.vscode
+.vscode
+
 **/*.trace
 **/*.zip
 **/*.tar.gz
@@ -44,3 +48,6 @@ package-lock.json
 
 .excalidraw
 .env
+
+
+/volumes

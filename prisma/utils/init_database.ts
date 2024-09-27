@@ -96,6 +96,7 @@ try {
       email: "email@example6.com",
       username: "email@example6.com",
       password: "password123",
+      userRole: "Developer",
       userType: UserType.SUPERUSER_GLOBAL,
       organization: {
         connect: { name: "Imc" },
@@ -103,7 +104,24 @@ try {
       municipality: {
         connect: { name: "Krems" },
       },
-      project: undefined,
+    },
+  });
+
+  await prisma.user.create({
+    data: {
+      id: "clxy0d4xo0003sw97z0cqzc0h",
+      name: "Example Admin",
+      email: "admin@example.com",
+      username: "example_admin",
+      password: "password123",
+      userRole: "Administrator",
+      userType: UserType.SUPERUSER_GLOBAL,
+      organization: {
+        connect: { name: "Sagittarius" },
+      },
+      municipality: {
+        connect: { name: "Krems" },
+      },
     },
   });
 
@@ -114,13 +132,13 @@ try {
       email: "test@mail.com",
       username: "test@mail.com",
       password: "password123",
+      userRole: "Manager",
       organization: {
         connect: { name: "Sagittarius" },
       },
       municipality: {
         connect: { name: "Krems" },
       },
-      project: undefined,
     },
   });
 
@@ -131,13 +149,84 @@ try {
       email: "mike@mail.com",
       username: "mike@mail.com",
       password: "password123",
+      userRole: "Developer",
       organization: {
         connect: { name: "FHSTP" },
       },
       municipality: {
         connect: { name: "St. Pölten" },
       },
-      project: undefined,
+    },
+  });
+
+  await prisma.user.create({
+    data: {
+      id: "clxy0d4xo0003sw97z0cqzc8h",
+      name: "FHSTP Admin",
+      email: "admin@fhstp.com",
+      username: "fhstp_admin",
+      password: "password123",
+      userRole: "Administrator",
+      userType: UserType.SUPERUSER_GLOBAL,
+      organization: {
+        connect: { name: "FHSTP" },
+      },
+      municipality: {
+        connect: { name: "St. Pölten" },
+      },
+    },
+  });
+
+  await prisma.user.create({
+    data: {
+      id: "clxy0d4xo0003sw97z0cqzc5b",
+      name: "IMC Admin",
+      email: "admin@imc.com",
+      username: "imc_admin",
+      password: "password123",
+      userRole: "Administrator",
+      userType: UserType.SUPERUSER_GLOBAL,
+      organization: {
+        connect: { name: "Imc" },
+      },
+      municipality: {
+        connect: { name: "Krems" },
+      },
+    },
+  });
+
+  await prisma.user.create({
+    data: {
+      id: "clxy0d4xo0003sw97z0cqzc4g",
+      name: "FHSTP Manager",
+      email: "manager@fhstp.com",
+      username: "manager_fhstp",
+      password: "password123",
+      userRole: "Manager",
+      organization: {
+        connect: { name: "FHSTP" },
+      },
+      municipality: {
+        connect: { name: "St. Pölten" },
+      },
+    },
+  });
+
+  await prisma.user.create({
+    data: {
+      id: "clxy0d4xo0003sw97z0cqzc7u",
+      name: "Deleted Example",
+      email: "deleted@example.com",
+      username: "deleted_example",
+      password: "password123",
+      userRole: "Developer",
+      organization: {
+        connect: { name: "FHSTP" },
+      },
+      municipality: {
+        connect: { name: "St. Pölten" },
+      },
+      deleted: true,
     },
   });
 

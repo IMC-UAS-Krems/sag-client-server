@@ -3,14 +3,15 @@ import { swagger } from "@elysiajs/swagger";
 import { cors } from "@elysiajs/cors";
 import { logger } from "@bogeychan/elysia-logger";
 import pretty from "pino-pretty";
-import { auth, decrypt } from "@server/routes/auth";
+import { jwt } from "@elysiajs/jwt";
+
+import { auth } from "@server/routes/auth";
 import { api } from "@server/routes/api";
 import { admin } from "@server/routes/admin";
-import { sql } from "@server/sql";
+import { panic } from "@utils/panic";
 
 // TODO: @elysiajs/cookie not needed, can be reverted to original
 // TODO: check cors settings for production
-
 const app = new Elysia()
   .use(
     logger({
@@ -22,7 +23,7 @@ const app = new Elysia()
     cors({
       credentials: true,
       // methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-      allowedHeaders: ["Content-Type", "*"],
+      allowedHeaders: ["Content-Type", "Authorization", "*"],
       origin: true,
     }),
   )
@@ -41,22 +42,45 @@ const app = new Elysia()
       },
     }),
   )
-  .resolve(({ cookie: { access_token } }) => {
-    if (access_token.value == null) {
-      return { userId: null };
+  .use(
+    jwt({
+      name: "jwt",
+      secret: Bun.env.JWT_SECRET ?? panic("JWT_SECRET environment variable not set"),
+    }),
+  )
+  .resolve(async ({ jwt, cookie }) => {
+    interface Token {
+      userId: string;
+      userRole: string;
+      email: string;
     }
-    const id = decrypt(access_token.value) as string;
-    return { userId: id };
+    let jwtToken: Token | null = null;
+    if (cookie.jwtUser && cookie.jwtToken.value !== undefined) {
+      try {
+        const verifiedToken = (await jwt.verify(cookie.jwtToken.value)) as unknown;
+        if (typeof verifiedToken === "object" && verifiedToken !== null && "userId" in verifiedToken) {
+          jwtToken = verifiedToken as Token;
+        } else {
+          console.warn("JWT verification failed or returned an invalid token.");
+        }
+      } catch (error) {
+        console.error("Failed to verify JWT token:", error);
+      }
+    } else {
+      console.warn("No JWT token found in cookies.");
+    }
+
+    return { userId: jwtToken ? jwtToken.userId : null };
   })
-  .use(api)
   .use(auth)
   .use(admin)
+  .use(api)
   .get("/status", async ({ set }) => {
     const statuses = ["Single", "In a relationship", "Married", "In love", "It's complicated"];
     set.status = 200;
     return statuses[Math.floor(Math.random() * statuses.length)];
   })
-  .get("/", async ({ set, redirect }) => {
+  .get("/", async ({ redirect }) => {
     return redirect("/status");
   })
   .listen({ port: "9512", hostname: "0.0.0.0" });

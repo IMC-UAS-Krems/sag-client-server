@@ -1,0 +1,51 @@
+.main-container {
+  width: 100vw;
+  height: auto;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 30px;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--card-color);
+  border-radius: 12px;
+  box-shadow:
+    0px 5px 5px 0px rgba(0, 0, 0, 0.2),
+    0px 3px 14px 0px rgba(0, 0, 0, 0.12),
+    0px 8px 10px 0px rgba(0, 0, 0, 0.14);
+  min-height: 50vh;
+  max-width: 65vw;
+  padding: 1rem 0 1rem 0;
+}
+
+h1 {
+  color: var(--primary-text);
+  margin: 0 3rem 1.5rem 3rem;
+}
+
+button {
+  background-color: transparent;
+  color: var(--primary-text);
+  font-size: 18px;
+  font-weight: 500;
+
+  width: 80%;
+  height: 40px;
+  border-radius: 6px;
+  border: 1px solid var(--primary-text);
+
+  cursor: pointer;
+  margin: 0;
+
+  transition: all 0.25s;
+}
+
+button:hover {
+  background-color: var(--primary-text);
+  color: var(--secondary-color);
+}

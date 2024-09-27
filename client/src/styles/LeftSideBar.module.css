@@ -1,0 +1,13 @@
+.files-list {
+  list-style: none;
+  padding-left: "20px";
+}
+
+.item-container {
+  display: flex;
+  align-items: center;
+}
+
+.item-container:first-child {
+  cursor: default;
+}
