@@ -78,7 +78,6 @@ export const api = new Elysia({ prefix: "/api" })
     return await authMiddleware(
       {
         set: context.set,
-        cookie: context.cookie,
         userId: context.userId, // Pass userId here
       },
       { requireAdmin: false },

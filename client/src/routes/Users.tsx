@@ -14,7 +14,6 @@ import { theme } from "@store/index";
 import { UserDetails } from "@server/types";
 
 import "../../../node_modules/solid-contextmenu/dist/style.css";
-import { log } from "console";
 
 interface UsersResponse {
   data: UserDetails[] | { error: string } | null;
@@ -52,7 +51,6 @@ const Users: Component = () => {
   };
 
   async function fetchUsers() {
-    console.log("FETCH USERS: Fetching users");
     try {
       const fetchedUsers: UsersResponse = await eden.admin.users.get({
         $fetch: {
@@ -61,7 +59,6 @@ const Users: Component = () => {
           method: "GET",
         },
       });
-      console.log("FETCH USERS: Fetched users:", fetchedUsers);
 
       // Unauthorized check
       if (fetchedUsers.status === 401 || fetchedUsers.status === 403) {
@@ -278,8 +275,8 @@ const Users: Component = () => {
                       <td>{user.username}</td>
                       <td>{user.name}</td>
                       <td>{user.email}</td>
-                      <td>{user.municipality.name}</td>
-                      <td>{user.organization.name}</td>
+                      <td>{user.municipality?.name}</td>
+                      <td>{user.organization?.name}</td>
                       <td>{user.userRole}</td>
                       <td>{user.deleted ? "🗑️" : onlineStatus ? "🟢" : "🔴"}</td>
                       <td

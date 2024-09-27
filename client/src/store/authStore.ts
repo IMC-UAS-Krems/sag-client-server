@@ -71,6 +71,7 @@ const createAuthStore = () => {
       userRole: "",
     });
     deleteCookie("authStore");
+    deleteCookie("jwtToken");
   };
 
   const initializeAuth = async () => {

@@ -3,13 +3,15 @@ import { swagger } from "@elysiajs/swagger";
 import { cors } from "@elysiajs/cors";
 import { logger } from "@bogeychan/elysia-logger";
 import pretty from "pino-pretty";
-import { auth, decrypt } from "@server/routes/auth";
+import { jwt } from "@elysiajs/jwt";
+
+import { auth } from "@server/routes/auth";
 import { api } from "@server/routes/api";
 import { admin } from "@server/routes/admin";
+import { panic } from "@utils/panic";
 
 // TODO: @elysiajs/cookie not needed, can be reverted to original
 // TODO: check cors settings for production
-
 const app = new Elysia()
   .use(
     logger({
@@ -40,30 +42,35 @@ const app = new Elysia()
       },
     }),
   )
-
-  .resolve(({ cookie }) => {
-    let userId: string | null = null;
-    if (
-      cookie &&
-      cookie.access_token &&
-      typeof cookie.access_token.value === "string" &&
-      cookie.access_token.value !== "undefined"
-    ) {
+  .use(
+    jwt({
+      name: "jwt",
+      secret: Bun.env.JWT_SECRET ?? panic("JWT_SECRET environment variable not set"),
+    })
+  )
+  .resolve(async ({ jwt, cookie }) => {
+    interface Token {
+      userId: string;
+      userRole: string;
+      email: string;
+    }
+    let jwtToken: Token | null = null;
+    if (cookie.jwtUser && cookie.jwtToken.value !== undefined) {
       try {
-        userId = decrypt(cookie.access_token.value) as string;
+        const verifiedToken = await jwt.verify(cookie.jwtToken.value) as unknown;
+        if (typeof verifiedToken === 'object' && verifiedToken !== null && 'userId' in verifiedToken) {
+          jwtToken = verifiedToken as Token;
+        } else {
+          console.warn("JWT verification failed or returned an invalid token.");
+        }
       } catch (error) {
-        console.error("Failed to decrypt token:", error);
+        console.error("Failed to verify JWT token:", error);
       }
     } else {
-      console.warn("No access token found in cookie.");
+      console.warn("No JWT token found in cookies.");
     }
 
-    if (!userId) {
-      console.warn("No valid access token found or failed to decrypt token.");
-      // set.status = 401;
-    }
-
-    return { userId };
+    return { userId: jwtToken ? jwtToken.userId : null };
   })
   .use(auth)
   .use(admin)

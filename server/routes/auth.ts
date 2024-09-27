@@ -1,5 +1,4 @@
 import { Elysia, t } from "elysia";
-import crypt from "ncrypt-js";
 
 import { panic } from "@utils/panic";
 import { UserDocument, sql } from "@server/sql";
@@ -12,17 +11,17 @@ import {
   LoginBody,
 } from "@server/types";
 
-export const { encrypt, decrypt } = new crypt(Bun.env.JWT_SECRET ?? panic("JWT_SECRET environment variable not set"));
 export type ReturnUser = Omit<UserDocument, "password" | "id">;
 
 export const auth = new Elysia({ prefix: "/auth" })
   .post(
     "/register",
     async ({
+      jwt,
       log,
       set,
       body: { name, email, username, key, municipalityName, organizationName },
-      cookie: { access_token },
+      cookie: { jwtToken },
     }: AuthContextWithBody<RegisterBody>): Promise<RegisteredUser> => {
       try {
         const userRole = "Developer";
@@ -36,19 +35,19 @@ export const auth = new Elysia({ prefix: "/auth" })
           municipalityName,
         });
 
+        // Remove the password and id from the user object on purpose
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { id, password, ...user } = userResult;
-
-        const token = encrypt(id);
         const sessionDuration = Number(Bun.env.VITE_COOKIES_EXPIRATION) || panic("VITE_COOKIES_EXPIRATION environment variable not set");
-        log.info(`Producing token: ${token}`);
-        access_token.set({
+
+        jwtToken.set({
           httpOnly: true,
           secure: true,
           sameSite: "none",
           path: "/", // default
           maxAge: sessionDuration,
-          value: token,
-        });
+          value: await jwt.sign({ userId: id, userRole: user.userRole, email: user.email }),
+        })
 
         log.info(`User ${user.name} registered.`);
 
@@ -82,7 +81,7 @@ export const auth = new Elysia({ prefix: "/auth" })
         // project: t.Optional(t.String()),
       }),
       cookie: t.Cookie({
-        access_token: t.Optional(t.String()),
+        jwtToken: t.Optional(t.String()),
       }),
       detail: {
         tags: ["auth"],
@@ -94,10 +93,11 @@ export const auth = new Elysia({ prefix: "/auth" })
   .post(
     "/login",
     async ({
+      jwt,
       log,
       set,
       body: { identifier, key },
-      cookie: { access_token },
+      cookie: { jwtToken },
     }: AuthContextWithBody<LoginBody>): Promise<ReturnUser | undefined> => {
       // try with email
       let userResult = await sql.selectUser(undefined, identifier, undefined, true);
@@ -124,21 +124,19 @@ export const auth = new Elysia({ prefix: "/auth" })
 
       // Reset the needsToBeLoggedOut flag
       await sql.updateUser(userResult.id, { needsToBeLoggedOut: false });
+      // Remove the password and id from the user object on purpose
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { id, password, ...user } = userResult as UserDocument;
-
-      const token = encrypt(id);
-
-      log.info(`Producing token: ${token}`);
-
       const sessionDuration = Number(Bun.env.VITE_COOKIES_EXPIRATION) || panic("VITE_COOKIES_EXPIRATION environment variable not set");
-      access_token.set({
+
+      jwtToken.set({
         httpOnly: true,
         secure: true,
         sameSite: "none",
         path: "/", // default
         maxAge: sessionDuration,
-        value: token,
-      });
+        value: await jwt.sign({ userId: id, userRole: user.userRole, email: user.email }),
+      })
 
       log.info(`User ${user.name} logged in.`);
 
@@ -150,7 +148,7 @@ export const auth = new Elysia({ prefix: "/auth" })
         key: t.String({ minLength: 8 }),
       }),
       cookie: t.Cookie({
-        access_token: t.Optional(t.String()),
+        jwtToken: t.Optional(t.String()),
       }),
       detail: {
         tags: ["auth"],
@@ -161,13 +159,13 @@ export const auth = new Elysia({ prefix: "/auth" })
 
   .post(
     "/logout",
-    async ({ log, set, cookie: { access_token }, userId }: AuthContextWithRequest) => {
-      if (!userId || !access_token) {
+    async ({ log, set, cookie: { jwtToken }, userId }: AuthContextWithRequest) => {
+      if (!userId || !jwtToken) {
         set.status = 401;
         return { error: "User not logged in" };
       }
 
-      access_token.set({
+      jwtToken.set({
         httpOnly: true,
         secure: true,
         sameSite: "none",
@@ -185,7 +183,7 @@ export const auth = new Elysia({ prefix: "/auth" })
     },
     {
       cookie: t.Cookie({
-        access_token: t.String(),
+        jwtToken: t.Optional(t.String()),
       }),
       detail: {
         tags: ["auth"],
@@ -213,7 +211,7 @@ export const auth = new Elysia({ prefix: "/auth" })
     },
     {
       cookie: t.Cookie({
-        access_token: t.Optional(t.String()),
+        jwtToken: t.Optional(t.String()),
       }),
       detail: {
         tags: ["auth"],
@@ -223,11 +221,11 @@ export const auth = new Elysia({ prefix: "/auth" })
   )
   .get(
     "/check-if-must-logout",
-    async ({ set, userId, cookie: { access_token } }: AuthContextWithRequest) => {
+    async ({ set, userId, cookie: { jwtToken } }: AuthContextWithRequest) => {
       const user = await sql.selectUser(userId);
       if (user == null) {
         set.status = 401;
-        access_token.set({
+        jwtToken.set({
           httpOnly: true,
           secure: true,
           sameSite: "none",
@@ -239,7 +237,7 @@ export const auth = new Elysia({ prefix: "/auth" })
       }
       if (user.needsToBeLoggedOut) {
         set.status = 401;
-        access_token.set({
+        jwtToken.set({
           httpOnly: true,
           secure: true,
           sameSite: "none",
@@ -254,7 +252,7 @@ export const auth = new Elysia({ prefix: "/auth" })
     },
     {
       cookie: t.Cookie({
-        access_token: t.String(),
+        jwtToken: t.Optional(t.String()),
       }),
       detail: {
         tags: ["auth"],

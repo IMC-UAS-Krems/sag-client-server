@@ -1,6 +1,10 @@
 import { UserRole } from "@utils/roles";
 
 export interface AuthContext {
+  jwt: {
+    sign: (payload: object) => string;
+    verify: (token: string) => object;
+  };
   log: {
     info: (message: string) => void;
     warn: (message: string) => void;
@@ -10,14 +14,14 @@ export interface AuthContext {
     status: number;
   };
   cookie: {
-    access_token: {
+    jwtToken: {
       set: (options: {
         httpOnly: boolean;
         secure: boolean;
         sameSite: string;
         path: string;
         maxAge?: number;
-        value: string;
+        value: object | string;
         expires?: Date;
       }) => void;
     };

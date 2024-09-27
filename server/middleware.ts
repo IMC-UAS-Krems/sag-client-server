@@ -4,7 +4,7 @@ import { panic } from "@utils/panic";
 import { sql } from "./sql";
 
 interface CustomContext {
-  set: Context["set"] & { user: object };
+  set: Context["set"];
   userId: string;
 }
 
@@ -12,6 +12,7 @@ export const authMiddleware = async (
   { set, userId }: CustomContext,
   options = { requireAdmin: false },
 ): Promise<void | { error: string }> => {
+
   if (!userId) {
     console.error("Unauthorized: Missing userId in context");
     set.status = 401;
@@ -40,7 +41,7 @@ export const authMiddleware = async (
       console.error("Session expired, please log in again");
       // clear token
       set.headers = {
-        "Set-Cookie": `access_token=; Max-Age=0; Path=/; HttpOnly; SameSite=Strict;`,
+        "Set-Cookie": `jwtToken=; Max-Age=0; Path=/; HttpOnly; SameSite=Strict;`,
       };
       set.status = 401;
       return { error: "Session expired, please log in again" };
@@ -53,7 +54,7 @@ export const authMiddleware = async (
     });
 
     // Attach user to context
-    set.user = user;
+    // set.user = user;
   } catch (error) {
     console.error("Error in authMiddleware:", error);
     set.status = 500;
