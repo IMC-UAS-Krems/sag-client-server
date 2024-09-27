@@ -25,7 +25,7 @@ interface UsersResponse {
 
 const Users: Component = () => {
   const navigate = useNavigate();
-  const loggedInUser = authStore.state().name;
+  const loggedInUser = authStore.state().email;
   // console.log("Auth store:", authStore.state());
   // console.log("Logged in user:", loggedInUser);
 
@@ -103,17 +103,14 @@ const Users: Component = () => {
   }
 
   async function handleCreateUser() {
-    // console.log("Creating user");
     navigate("/users/create");
   }
 
   async function handleEditUser(userId: string) {
-    // console.log("Editing user");
     navigate(`/users/edit/${userId}`);
   }
 
   async function handleDeleteUser(userId: string) {
-    // console.log("Deleting user:", userId);
     Swal.fire({
       title: "Are you sure?",
       text: "You won't be able to revert this!",
@@ -271,7 +268,7 @@ const Users: Component = () => {
                   const onlineStatus = onlineStatuses()[user.id];
 
                   return (
-                    <tr class={user.email == loggedInUser ? styles["logged-in-user"] : ""}>
+                    <tr class={user.email == loggedInUser && !user.deleted ? styles["logged-in-user"] : ""}>
                       <td>{user.username}</td>
                       <td>{user.name}</td>
                       <td>{user.email}</td>

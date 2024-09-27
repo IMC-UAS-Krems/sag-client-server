@@ -15,7 +15,7 @@ interface AuthGuardProps {
 const AuthGuard = (props: AuthGuardProps) => {
   const navigate = useNavigate();
   const [loading, setLoading] = createSignal(true);
-  let intervalId: number;
+  let intervalId: Timer;
   let mustbeLogOut: boolean = false;
 
   const checkAuth = async () => {
@@ -45,7 +45,7 @@ const AuthGuard = (props: AuthGuardProps) => {
     try {
       const response = await eden.auth["check-if-must-logout"].get({ $fetch: { credentials: "include" } });
       console.log("Response from check-if-must-logout:", response);
-      if (response.data.mustLogOut || response.status === 401) {
+      if (response.data?.mustLogOut || response.status === 401) {
         mustbeLogOut = true;
         console.log("Must log out");
         authStore.resetAuth();
@@ -53,7 +53,7 @@ const AuthGuard = (props: AuthGuardProps) => {
         return;
       }
     } catch (error) {
-      console.error("Error checking if must log out", error);
+      console.error("Error checking if must log out: ", error);
       authStore.resetAuth();
       navigate("/sign-in", { replace: true });
     }

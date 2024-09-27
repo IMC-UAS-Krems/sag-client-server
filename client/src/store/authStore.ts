@@ -1,7 +1,6 @@
 import { createSignal } from "solid-js";
 
 import { eden } from "@client/api";
-import { panic } from "@utils/panic";
 
 interface AuthStore {
   isAuthenticated: boolean;
@@ -17,15 +16,6 @@ const createAuthStore = () => {
     name: "",
     userRole: "",
   });
-
-  const setCookie = (name: string, value: string) => {
-    const sessionDuration = Number(import.meta.env.VITE_COOKIES_EXPIRATION) * 1000 || panic("VITE_COOKIES_EXPIRATION environment variable not set");
-    const date = new Date();
-    date.setTime(date.getTime() + sessionDuration);
-    const expires = "expires=" + date.toUTCString();
-    const cookieString = `${name}=${value};${expires};path=/`;
-    document.cookie = cookieString;
-  };
 
   const deleteCookie = (name: string) => {
     document.cookie = name + "=; Max-Age=-99999999;";
@@ -50,17 +40,12 @@ const createAuthStore = () => {
       };
 
       setState(newState);
-      saveAuthStateToCookie(newState);
       console.log("initializeAuth: Auth initialized", state());
     } catch (error) {
       console.error("initializeAuth: Failed to initialize authentication:", error);
       resetAuth();
       throw error;
     }
-  };
-
-  const saveAuthStateToCookie = (newState: AuthStore) => {
-    setCookie("authStore", JSON.stringify(newState));
   };
 
   const resetAuth = () => {
@@ -70,7 +55,6 @@ const createAuthStore = () => {
       email: "",
       userRole: "",
     });
-    deleteCookie("authStore");
     deleteCookie("jwtToken");
   };
 
