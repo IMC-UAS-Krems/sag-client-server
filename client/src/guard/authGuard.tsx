@@ -5,7 +5,9 @@ import { panic } from "@utils/panic";
 import authStore from "@store/authStore";
 import { eden } from "@client/api";
 
-const checkInterval = Number(import.meta.env.VITE_AUTH_CHECK_INTERVAL) * 1000 || panic("VITE_COOKIES_EXPIRATION environment variable not set");
+const checkInterval =
+  Number(import.meta.env.VITE_AUTH_CHECK_INTERVAL) * 1000 ||
+  panic("VITE_COOKIES_EXPIRATION environment variable not set");
 
 interface AuthGuardProps {
   role: string | string[];

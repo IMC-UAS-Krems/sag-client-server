@@ -1,6 +1,6 @@
 import { Context } from "elysia";
 
-import { panic } from "@utils/panic";
+// import { panic } from "@utils/panic";
 import { sql } from "./sql";
 
 interface CustomContext {
@@ -12,7 +12,6 @@ export const authMiddleware = async (
   { set, userId }: CustomContext,
   options = { requireAdmin: false },
 ): Promise<void | { error: string }> => {
-
   if (!userId) {
     console.error("Unauthorized: Missing userId in context");
     set.status = 401;
@@ -32,29 +31,6 @@ export const authMiddleware = async (
       set.status = 403;
       return { error: "Access denied: Admins only" };
     }
-
-    // Check session expiration
-    const now = new Date();
-    const sessionDuration =
-      Number(Bun.env.VITE_COOKIES_EXPIRATION) || panic("VITE_COOKIES_EXPIRATION environment variable not set");
-    if (now.getTime() - user.lastLoginTime.getTime() > sessionDuration || user.needsToBeLoggedOut) {
-      console.error("Session expired, please log in again");
-      // clear token
-      set.headers = {
-        "Set-Cookie": `jwtToken=; Max-Age=0; Path=/; HttpOnly; SameSite=Strict;`,
-      };
-      set.status = 401;
-      return { error: "Session expired, please log in again" };
-    }
-
-    // Update last login time
-    await sql.updateUser(user.id, {
-      lastLoginTime: now,
-      needsToBeLoggedOut: false,
-    });
-
-    // Attach user to context
-    // set.user = user;
   } catch (error) {
     console.error("Error in authMiddleware:", error);
     set.status = 500;

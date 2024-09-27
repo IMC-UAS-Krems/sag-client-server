@@ -3,7 +3,8 @@ import { useNavigate } from "@solidjs/router";
 import { panic } from "@utils/panic";
 import { UserDetails } from "@server/types";
 
-export const sessionDuration = Number(import.meta.env.VITE_COOKIES_EXPIRATION) || panic("VITE_COOKIES_EXPIRATION environment variable not set");
+export const sessionDuration =
+  Number(import.meta.env.VITE_COOKIES_EXPIRATION) || panic("VITE_COOKIES_EXPIRATION environment variable not set");
 
 export async function isUserOnline(user: UserDetails): Promise<boolean> {
   const now = new Date().getTime();

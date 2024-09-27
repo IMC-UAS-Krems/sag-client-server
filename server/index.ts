@@ -46,7 +46,7 @@ const app = new Elysia()
     jwt({
       name: "jwt",
       secret: Bun.env.JWT_SECRET ?? panic("JWT_SECRET environment variable not set"),
-    })
+    }),
   )
   .resolve(async ({ jwt, cookie }) => {
     interface Token {
@@ -57,8 +57,8 @@ const app = new Elysia()
     let jwtToken: Token | null = null;
     if (cookie.jwtUser && cookie.jwtToken.value !== undefined) {
       try {
-        const verifiedToken = await jwt.verify(cookie.jwtToken.value) as unknown;
-        if (typeof verifiedToken === 'object' && verifiedToken !== null && 'userId' in verifiedToken) {
+        const verifiedToken = (await jwt.verify(cookie.jwtToken.value)) as unknown;
+        if (typeof verifiedToken === "object" && verifiedToken !== null && "userId" in verifiedToken) {
           jwtToken = verifiedToken as Token;
         } else {
           console.warn("JWT verification failed or returned an invalid token.");

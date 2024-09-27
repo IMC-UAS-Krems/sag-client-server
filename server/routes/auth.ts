@@ -38,7 +38,8 @@ export const auth = new Elysia({ prefix: "/auth" })
         // Remove the password and id from the user object on purpose
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { id, password, ...user } = userResult;
-        const sessionDuration = Number(Bun.env.VITE_COOKIES_EXPIRATION) || panic("VITE_COOKIES_EXPIRATION environment variable not set");
+        const sessionDuration =
+          Number(Bun.env.VITE_COOKIES_EXPIRATION) || panic("VITE_COOKIES_EXPIRATION environment variable not set");
 
         jwtToken.set({
           httpOnly: true,
@@ -47,7 +48,7 @@ export const auth = new Elysia({ prefix: "/auth" })
           path: "/", // default
           maxAge: sessionDuration,
           value: await jwt.sign({ userId: id, userRole: user.userRole, email: user.email }),
-        })
+        });
 
         log.info(`User ${user.name} registered.`);
 
@@ -127,7 +128,8 @@ export const auth = new Elysia({ prefix: "/auth" })
       // Remove the password and id from the user object on purpose
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { id, password, ...user } = userResult as UserDocument;
-      const sessionDuration = Number(Bun.env.VITE_COOKIES_EXPIRATION) || panic("VITE_COOKIES_EXPIRATION environment variable not set");
+      const sessionDuration =
+        Number(Bun.env.VITE_COOKIES_EXPIRATION) || panic("VITE_COOKIES_EXPIRATION environment variable not set");
 
       jwtToken.set({
         httpOnly: true,
@@ -136,7 +138,7 @@ export const auth = new Elysia({ prefix: "/auth" })
         path: "/", // default
         maxAge: sessionDuration,
         value: await jwt.sign({ userId: id, userRole: user.userRole, email: user.email }),
-      })
+      });
 
       log.info(`User ${user.name} logged in.`);
 
