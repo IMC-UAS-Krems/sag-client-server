@@ -302,4 +302,43 @@ export const admin = new Elysia({ prefix: "/admin" })
         description: "Get all organisations from the database",
       },
     },
+  )
+
+  .delete(
+    "/delete-organisation",
+    async ({
+      log,
+      set,
+      body: { organisationId },
+    }: AuthContextWithBody<{ organisationId: string }>): Promise<{
+      message?: string;
+      error?: string;
+      users?: string[];
+    }> => {
+      try {
+        log.info("Trying to delete organisation");
+        const result = await sql.deleteOrganisation(organisationId);
+
+        if (result.success) {
+          set.status = 200;
+          return { message: "Organisation deleted successfully" };
+        } else {
+          set.status = 400;
+          return { error: result.error, users: result.users?.map((user) => user.name) };
+        }
+      } catch (error) {
+        log.error(error instanceof Error ? error.message : String(error));
+        set.status = 500;
+        return { error: "Internal server error" };
+      }
+    },
+    {
+      detail: {
+        tags: ["admin"],
+        description: "Delete an organisation from the database by ID",
+      },
+      body: t.Object({
+        organisationId: t.String(),
+      }),
+    },
   );

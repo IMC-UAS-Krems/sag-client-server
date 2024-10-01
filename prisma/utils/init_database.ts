@@ -35,6 +35,15 @@ try {
     },
   });
 
+  await prisma.organization.create({
+    data: {
+      name: "OGK",
+      municipality: {
+        connect: { name: "Krems" },
+      },
+    },
+  });
+
   await prisma.project.create({
     data: {
       name: "Project 1",

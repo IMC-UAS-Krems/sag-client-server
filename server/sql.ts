@@ -77,6 +77,39 @@ export async function getAllOrganisations(): Promise<OrganisationDetails[]> {
   });
 }
 
+export async function deleteOrganisation(
+  organisationId: string,
+): Promise<{ success: boolean; users?: object[]; error?: string }> {
+  const organisation = await prisma.organization.findUnique({
+    where: {
+      id: organisationId,
+    },
+    include: {
+      users: {
+        select: {
+          name: true,
+        },
+      },
+    },
+  });
+
+  if (!organisation) {
+    return { success: false, error: `Organisation with ID ${organisationId} does not exist.` };
+  }
+
+  if (organisation.users.length > 0) {
+    const users = organisation.users;
+    return { success: false, users: users, error: "Organisation has assigned users." };
+  }
+
+  await prisma.organization.delete({
+    where: {
+      id: organisationId,
+    },
+  });
+  return { success: true };
+}
+
 /*****************************************************/
 /**                   Projects                       */
 /*****************************************************/

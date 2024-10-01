@@ -5,15 +5,13 @@ import { Menu, Item, useContextMenu, animation, Separator } from "solid-contextm
 import styles from "@styles/Organisations.module.css";
 import { theme } from "@store/index";
 import { FaSolidEllipsis } from "solid-icons/fa";
+import Swal from "sweetalert2";
 
-
-import { handleUnauthorized} from "@client/utils/authUtils";
+import { handleUnauthorized } from "@client/utils/authUtils";
 import { OrganisationDetails } from "@server/types";
 import Header from "@client/components/Header";
 
-
 const Organisations: Component = () => {
-
   const navigate = useNavigate();
 
   const [error, setError] = createSignal<string | null>(null);
@@ -27,7 +25,7 @@ const Organisations: Component = () => {
   });
 
   async function fetchOrganisations() {
-    try{
+    try {
       const fetchedOrganisations = await eden.admin.organisations.get({
         $fetch: {
           mode: "cors",
@@ -36,6 +34,7 @@ const Organisations: Component = () => {
         },
       });
 
+      // Unauthorized check
       if (fetchedOrganisations.status === 401 || fetchedOrganisations.status === 403) {
         handleUnauthorized(navigate);
         return;
@@ -46,32 +45,103 @@ const Organisations: Component = () => {
           if (!Array.isArray(fetchedOrganisations.data) && "error" in fetchedOrganisations.data) {
             setError(fetchedOrganisations.data.error || "Unknown error");
           } else {
-            throw new Error("Failed to fetch users, data is not correct form");
+            throw new Error("Failed to fetch organisations, data is not correct form");
           }
         } else {
           if (Array.isArray(fetchedOrganisations.data)) {
             setOrganisations(fetchedOrganisations.data);
           } else {
-            throw new Error("Failed to fetch users, data is not an array");
+            throw new Error("Failed to fetch organisations, data is not an array");
           }
         }
       } else {
-        throw new Error("Failed to fetch users, data is null");
+        throw new Error("Failed to fetch organisations, data is null");
       }
     } catch (error) {
-      setError("Failed to fetch users");
-      console.error("Failed to fetch users:", error);
+      setError("Failed to fetch organisations");
+      console.error("Failed to fetch organisations:", error);
     } finally {
       setLoading(false);
     }
-}
+  }
+
+  async function handleDeleteOrganisation(organisationId: string) {
+    const organisation = organisations().find((organisation) => organisation.id === organisationId);
+
+    // Check if organisation has users
+    if (organisation && organisation.users.length > 0) {
+      Swal.fire({
+        title: "Error",
+        text: `Couldn't delete the organisation because it has users associated with it: ${organisation.users.map((user) => user.name).join(", ")}`,
+        icon: "error",
+      });
+      return;
+    }
+
+    Swal.fire({
+      title: "Are you sure?",
+      text: "You won't be able to revert this!",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#3085d6",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "Yes, delete it!",
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        try {
+          const deletedOrganisation = await eden.admin["delete-organisation"].delete({
+            organisationId: organisationId,
+            $fetch: {
+              mode: "cors",
+              credentials: "include",
+              method: "DELETE",
+            },
+          });
+
+          // Unauthorized check
+          if (deletedOrganisation.status === 401 || deletedOrganisation.status === 403) {
+            console.log("User is not authorized for this request:", deletedOrganisation);
+            handleUnauthorized(navigate);
+            return;
+          }
+
+          if (!deletedOrganisation.data || deletedOrganisation.error) {
+            console.log("Failed to delete organsiation:", deletedOrganisation.error);
+            Swal.fire({
+              title: "Error",
+              text: "Couldn't delete the organsiation",
+              icon: "error",
+            });
+            return;
+          } else {
+            Swal.fire("Deleted!", "The organsiation has been deleted.", "success");
+            setOrganisations((prevOrganisations) =>
+              prevOrganisations.filter((organisation) => organisation.id !== organisationId),
+            );
+          }
+        } catch (error) {
+          console.error("Failed to delete organisation:", error);
+          Swal.fire({
+            title: "Error",
+            text: "Couldn't delete the organisation",
+            icon: "error",
+          });
+        }
+      }
+    });
+  }
 
   return (
     <Header>
-      <main class={styles["users-main"]}>
+      <main class={styles["organisations-main"]}>
         <h1>Admin Organisations page</h1>
         <div class={styles["nav-button-container"]}>
-          <button onClick={(e)=>{console.log(e)}} class={styles["nav-button"]}>
+          <button
+            onClick={(e) => {
+              console.log(e);
+            }}
+            class={styles["nav-button"]}
+          >
             Create new organisation
           </button>
         </div>
@@ -87,6 +157,7 @@ const Organisations: Component = () => {
                   <th>Name</th>
                   <th>Municipality</th>
                   <th>Verified</th>
+                  <th>Number of members</th>
                   <th>CreatedAt</th>
                   <th>UpdatedAt</th>
                   <th>Actions</th>
@@ -103,6 +174,7 @@ const Organisations: Component = () => {
                       <td>{organisation.name}</td>
                       <td>{organisation.municipality.name}</td>
                       <td>{verifiedStatus}</td>
+                      <td>{organisation.users.length}</td>
                       <td>{new Date(organisation.createdAt).toLocaleString()}</td>
                       <td>{organisation.updatedAt ? new Date(organisation.updatedAt).toLocaleString() : ""}</td>
                       <td
@@ -112,21 +184,20 @@ const Organisations: Component = () => {
                         class={styles.actions}
                       >
                         <FaSolidEllipsis />
-                        <Menu id={organisation.id} animation={_animation()} theme={theme() === "dark" ? "dark" : "light"}>
-                          <Item onClick={(e)=>{console.log(e)}} >
+                        <Menu
+                          id={organisation.id}
+                          animation={_animation()}
+                          theme={theme() === "dark" ? "dark" : "light"}
+                        >
+                          <Item
+                            onClick={(e) => {
+                              console.log(e);
+                            }}
+                          >
                             ✏️ Edit
                           </Item>
-                          <Item
-                            onClick={(e)=> {console.log(e)}}
-                          >
-                            🗑️ Delete
-                          </Item>
+                          <Item onClick={() => handleDeleteOrganisation(organisation.id)}>🗑️ Delete</Item>
                           <Separator />
-                          <Item
-                            onClick={(e)=> {console.log(e)}}
-                            
-                          >
-                          </Item>
                         </Menu>
                       </td>
                     </tr>
@@ -139,6 +210,6 @@ const Organisations: Component = () => {
       </main>
     </Header>
   );
-}
+};
 
 export default Organisations;
