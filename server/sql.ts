@@ -2,7 +2,7 @@ import { createId } from "@paralleldrive/cuid2";
 import { prisma } from "@∆";
 import { Organization, Project, User, Municipality, UserType, DocumentType } from "@prisma/client";
 import { UserRole } from "@utils/roles";
-import { UserDetails } from "@server/types";
+import { UserDetails, OrganisationDetails } from "@server/types";
 
 export type Document = {
   municipalityName: string;
@@ -15,6 +15,9 @@ export type Document = {
 /** UserDocument is a `User` object with an additional `documents` field */
 export type UserDocument = User & { documents: Document[] };
 
+/*****************************************************/
+/**                Municipalities                    */
+/*****************************************************/
 export async function createMunicipality(name: string): Promise<Municipality> {
   return await prisma.municipality.create({
     data: {
@@ -30,6 +33,10 @@ export async function selectMunicipality(name: string): Promise<Municipality | n
     },
   });
 }
+
+/*****************************************************/
+/**                Organisations                     */
+/*****************************************************/
 
 export async function createOrganization(name: string, municipalityName: string): Promise<Organization> {
   if (selectMunicipality(municipalityName) === null) {
@@ -53,6 +60,27 @@ export async function selectOrganization(name: string): Promise<Organization | n
   });
 }
 
+export async function getAllOrganisations(): Promise<OrganisationDetails[]> {
+  return await prisma.organization.findMany({
+    include: {
+      users: {
+        select: {
+          name: true,
+        },
+      },
+      municipality: {
+        select: {
+          name: true,
+        },
+      },
+    },
+  });
+}
+
+/*****************************************************/
+/**                   Projects                       */
+/*****************************************************/
+
 export async function createProject(name: string, organizationName: string): Promise<Project> {
   if ((await selectOrganization(organizationName)) === null) {
     throw new Error(`Organization ${organizationName} does not exist`);
@@ -67,6 +95,10 @@ export async function createProject(name: string, organizationName: string): Pro
     },
   });
 }
+
+/*****************************************************/
+/**                        User                      */
+/*****************************************************/
 
 export async function createUser(data: {
   username: string;
@@ -352,6 +384,10 @@ export async function deleteUser(userId: string): Promise<void> {
     },
   });
 }
+
+/*****************************************************/
+/**                    Documents                     */
+/*****************************************************/
 
 export async function createDocument(
   name: string,

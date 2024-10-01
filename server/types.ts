@@ -111,3 +111,14 @@ export interface UpdateUserBody {
   municipality?: string;
   userRole?: UserRole;
 }
+
+export interface OrganisationDetails {
+  id: string;
+  name: string;
+  municipality: { name: string };
+  municipalityId: string;
+  users: { name: string }[];
+  verified: boolean;
+  createdAt: Date;
+  updatedAt: Date | null;
+}

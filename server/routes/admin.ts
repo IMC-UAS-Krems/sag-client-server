@@ -9,6 +9,7 @@ import {
   AuthContextWithQuery,
   CreateUserBody,
   UpdateUserBody,
+  OrganisationDetails,
 } from "@server/types";
 import { UserRole } from "@utils/roles";
 
@@ -280,5 +281,25 @@ export const admin = new Elysia({ prefix: "/admin" })
       body: t.Object({
         userId: t.String(),
       }),
+    },
+  )
+
+  .get(
+    "/organisations",
+    async ({ set }: AuthContext): Promise<OrganisationDetails[] | { error: string }> => {
+      try {
+        const organisations = await sql.getAllOrganisations();
+        set.status = 200;
+        return organisations;
+      } catch (error) {
+        set.status = 500;
+        return { error: "Failed to fetch users" };
+      }
+    },
+    {
+      detail: {
+        tags: ["admin"],
+        description: "Get all organisations from the database",
+      },
     },
   );
