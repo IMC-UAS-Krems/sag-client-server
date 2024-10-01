@@ -38,7 +38,11 @@ export async function selectMunicipality(name: string): Promise<Municipality | n
 /**                Organisations                     */
 /*****************************************************/
 
-export async function createOrganization(name: string, municipalityName: string): Promise<Organization> {
+export async function createOrganization(
+  name: string,
+  municipalityName: string,
+  verified?: boolean,
+): Promise<Organization> {
   if (selectMunicipality(municipalityName) === null) {
     throw new Error(`Municipality ${municipalityName} does not exist`);
   }
@@ -48,6 +52,7 @@ export async function createOrganization(name: string, municipalityName: string)
       municipality: {
         connect: { name: municipalityName },
       },
+      verified: verified ?? false,
     },
   });
 }

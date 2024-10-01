@@ -1,11 +1,11 @@
 import { eden } from "@client/api";
 import { createSignal, onMount, Component } from "solid-js";
 import { useNavigate } from "@solidjs/router";
-import { Menu, Item, useContextMenu, animation, Separator } from "solid-contextmenu";
-import styles from "@styles/Organisations.module.css";
-import { theme } from "@store/index";
+import { Menu, Item, useContextMenu, animation } from "solid-contextmenu";
 import { FaSolidEllipsis } from "solid-icons/fa";
 import Swal from "sweetalert2";
+import styles from "@styles/Organisations.module.css";
+import { theme } from "@store/index";
 
 import { handleUnauthorized } from "@client/utils/authUtils";
 import { OrganisationDetails } from "@server/types";
@@ -63,6 +63,10 @@ const Organisations: Component = () => {
     } finally {
       setLoading(false);
     }
+  }
+
+  async function handleCreateOrganisation() {
+    navigate("/organisations/create");
   }
 
   async function handleDeleteOrganisation(organisationId: string) {
@@ -136,12 +140,7 @@ const Organisations: Component = () => {
       <main class={styles["organisations-main"]}>
         <h1>Admin Organisations page</h1>
         <div class={styles["nav-button-container"]}>
-          <button
-            onClick={(e) => {
-              console.log(e);
-            }}
-            class={styles["nav-button"]}
-          >
+          <button onClick={handleCreateOrganisation} class={styles["nav-button"]}>
             Create new organisation
           </button>
         </div>
@@ -197,7 +196,6 @@ const Organisations: Component = () => {
                             ✏️ Edit
                           </Item>
                           <Item onClick={() => handleDeleteOrganisation(organisation.id)}>🗑️ Delete</Item>
-                          <Separator />
                         </Menu>
                       </td>
                     </tr>

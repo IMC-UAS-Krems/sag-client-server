@@ -122,3 +122,9 @@ export interface OrganisationDetails {
   createdAt: Date;
   updatedAt: Date | null;
 }
+
+export interface CreateOrganisationBody {
+  organisationName: string;
+  municipalityName: string;
+  verified?: boolean;
+}

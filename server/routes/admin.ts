@@ -7,9 +7,10 @@ import {
   UserDetails,
   AuthContextWithBody,
   AuthContextWithQuery,
-  CreateUserBody,
   UpdateUserBody,
   OrganisationDetails,
+  CreateOrganisationBody,
+  CreateUserBody,
 } from "@server/types";
 import { UserRole } from "@utils/roles";
 
@@ -339,6 +340,65 @@ export const admin = new Elysia({ prefix: "/admin" })
       },
       body: t.Object({
         organisationId: t.String(),
+      }),
+    },
+  )
+
+  .post(
+    "/create-organisation",
+    async ({
+      log,
+      set,
+      body,
+    }: AuthContextWithBody<CreateOrganisationBody>): Promise<{ message: string } | { error: string }> => {
+      try {
+        const { organisationName, municipalityName, verified = true } = body;
+        if (!organisationName || !municipalityName) {
+          set.status = 422;
+          return { error: "All fields are required" };
+        }
+
+        // Check if organisation already exists
+        try {
+          const organisation = await sql.selectOrganization(organisationName);
+          if (organisation) {
+            set.status = 409;
+            return { error: "Organisation already exists" };
+          }
+        } catch (error) {
+          log.error(error instanceof Error ? error.message : String(error));
+          set.status = 500;
+          return { error: "Internal server error" };
+        }
+
+        const municipality = await sql.selectMunicipality(municipalityName);
+        if (!municipality) {
+          set.status = 404;
+          return { error: "Municipality not found" };
+        }
+
+        const newOrganisation = await sql.createOrganization(
+          organisationName,
+          municipalityName,
+          verified, // Default to true
+        );
+
+        set.status = 201;
+        return { message: "Organisation created successfully: " + newOrganisation };
+      } catch (error) {
+        log.error(error instanceof Error ? error.message : String(error));
+        set.status = 500;
+        return { error: "Internal server error" };
+      }
+    },
+    {
+      detail: {
+        tags: ["admin"],
+        description: "Create a new organisation in the database with the provided details",
+      },
+      body: t.Object({
+        organisationName: t.String(),
+        municipalityName: t.String(),
       }),
     },
   );
