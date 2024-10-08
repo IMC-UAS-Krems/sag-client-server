@@ -15,16 +15,17 @@ DROP TYPE "UserRole_old";
 ALTER TABLE "users" ALTER COLUMN "userRole" SET DEFAULT 'Developer';
 COMMIT;
 
+-- DropIndex
+DROP INDEX "users_email_key";
+
+-- DropIndex
+DROP INDEX "users_username_key";
+
+-- AlterTable
+ALTER TABLE "organisations" ADD COLUMN     "description" TEXT NOT NULL DEFAULT 'Organisation Description';
+
 -- AlterTable
 ALTER TABLE "users" ADD COLUMN     "deleted" BOOLEAN NOT NULL DEFAULT false,
 ADD COLUMN     "lastLoginTime" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 ADD COLUMN     "needsToBeLoggedOut" BOOLEAN NOT NULL DEFAULT false,
 ALTER COLUMN "userRole" SET DEFAULT 'Developer';
-
--- DropIndex
-DROP INDEX "users_email_key";
-DROP INDEX "users_username_key";
-
--- Add Partial Unique Indexes
-CREATE UNIQUE INDEX "users_username_deleted_unique" ON "users" ("username") WHERE "deleted" = false;
-CREATE UNIQUE INDEX "users_email_deleted_unique" ON "users" ("email") WHERE "deleted" = false;
