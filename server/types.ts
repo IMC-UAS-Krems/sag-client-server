@@ -115,6 +115,7 @@ export interface UpdateUserBody {
 export interface OrganisationDetails {
   id: string;
   name: string;
+  description: string;
   municipality: { name: string };
   municipalityId: string;
   users: { name: string }[];
@@ -125,6 +126,7 @@ export interface OrganisationDetails {
 
 export interface CreateOrganisationBody {
   organisationName: string;
+  organisationDescription: string;
   municipalityName: string;
   verified?: boolean;
 }

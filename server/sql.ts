@@ -40,6 +40,7 @@ export async function selectMunicipality(name: string): Promise<Municipality | n
 
 export async function createOrganization(
   name: string,
+  description: string,
   municipalityName: string,
   verified?: boolean,
 ): Promise<Organization> {
@@ -49,6 +50,7 @@ export async function createOrganization(
   return await prisma.organization.create({
     data: {
       name: name,
+      description: description,
       municipality: {
         connect: { name: municipalityName },
       },
@@ -61,6 +63,42 @@ export async function selectOrganization(name: string): Promise<Organization | n
   return await prisma.organization.findUnique({
     where: {
       name,
+    },
+  });
+}
+
+export async function getOrganisationById(organisationId: string): Promise<OrganisationDetails | null> {
+  return await prisma.organization.findUnique({
+    where: {
+      id: organisationId,
+    },
+    select: {
+      id: true,
+      name: true,
+      description: true,
+      verified: true,
+      createdAt: true,
+      updatedAt: true,
+      users: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          userRole: true,
+          municipality: {
+            select: {
+              name: true,
+            },
+          },
+        },
+      },
+      municipality: {
+        select: {
+          name: true,
+          id: true,
+        },
+      },
+      municipalityId: true,
     },
   });
 }

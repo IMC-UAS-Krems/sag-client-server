@@ -13,6 +13,7 @@ const OrganisationCreate: Component = () => {
   const navigate = useNavigate();
 
   const [organisationName, setOrganizationName] = createSignal<string | undefined>(undefined);
+  const [organisationDescription, setOrganisationDescription] = createSignal<string | undefined>(undefined);
   const [municipalityName, setMunicipalityName] = createSignal<string | undefined>(undefined);
   const [municipalities, setMunicipalities] = createSignal<string[]>([]);
 
@@ -36,6 +37,7 @@ const OrganisationCreate: Component = () => {
     const newErrors: { [key: string]: string } = {};
     if (!organisationName()) newErrors.name = "Name is required";
     else if (organisationName()!.length < 2) newErrors.name = "Name must be at least 2 characters long";
+    if (!organisationDescription()) newErrors.description = "Description is required";
     if (!municipalityName()) newErrors.municipality = "Municipality is required";
 
     setErrors(newErrors);
@@ -58,6 +60,7 @@ const OrganisationCreate: Component = () => {
 
     const requestBody = {
       organisationName: organisationName()?.trim() ?? "",
+      organisationDescription: organisationDescription()?.trim() ?? "",
       municipalityName: municipalityName() ?? "",
       verified: true,
     };
@@ -126,6 +129,12 @@ const OrganisationCreate: Component = () => {
                   options={municipalities()}
                 />
                 {errors().municipalityName && <p class={styles["error-text"]}>{errors().municipalityName}</p>}
+                <FormField
+                  getter={organisationDescription}
+                  setter={setOrganisationDescription}
+                  labelText="Organisation Description"
+                />
+                {errors().description && <p class={styles["error-text"]}>{errors().description}</p>}
               </>
             )}
           </form>

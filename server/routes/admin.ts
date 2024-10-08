@@ -352,7 +352,7 @@ export const admin = new Elysia({ prefix: "/admin" })
       body,
     }: AuthContextWithBody<CreateOrganisationBody>): Promise<{ message: string } | { error: string }> => {
       try {
-        const { organisationName, municipalityName, verified = true } = body;
+        const { organisationName, organisationDescription, municipalityName, verified = true } = body;
         if (!organisationName || !municipalityName) {
           set.status = 422;
           return { error: "All fields are required" };
@@ -379,6 +379,7 @@ export const admin = new Elysia({ prefix: "/admin" })
 
         const newOrganisation = await sql.createOrganization(
           organisationName,
+          organisationDescription,
           municipalityName,
           verified, // Default to true
         );
@@ -398,7 +399,47 @@ export const admin = new Elysia({ prefix: "/admin" })
       },
       body: t.Object({
         organisationName: t.String(),
+        organisationDescription: t.String(),
         municipalityName: t.String(),
+      }),
+    },
+  )
+
+  .get(
+    "/organisation-details",
+    async ({
+      log,
+      set,
+      query,
+    }: AuthContextWithQuery<{ organisationId: string }>): Promise<OrganisationDetails | { error: string }> => {
+      try {
+        log.info("Trying to get user details for user");
+        const { organisationId } = query;
+        const organisation: OrganisationDetails | null = await sql.getOrganisationById(organisationId);
+        // log.info(`Organisation details: ${JSON.stringify(organisation)}`);
+        if (!organisation) {
+          throw new Error("User not found");
+        } else {
+          set.status = 200;
+          return organisation;
+        }
+      } catch (error) {
+        if (error instanceof Error) {
+          log.error(`Error fetching organisation details: ${error.message}`);
+        } else {
+          log.error("An unknown error occurred while fetching organisation details");
+        }
+        set.status = 500;
+        return { error: "Failed to get organisation" };
+      }
+    },
+    {
+      detail: {
+        tags: ["admin"],
+        description: "Get the details of a organisation by ID",
+      },
+      query: t.Object({
+        organisationId: t.String(),
       }),
     },
   );
