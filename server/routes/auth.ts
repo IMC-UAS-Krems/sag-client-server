@@ -1,5 +1,7 @@
 import { Elysia, t } from "elysia";
 
+import nodemailer from "nodemailer";
+
 import { panic } from "@utils/panic";
 import { UserDocument, sql } from "@server/sql";
 import {
@@ -10,6 +12,8 @@ import {
   RegisteredUser,
   LoginBody,
 } from "@server/types";
+
+import getEmailTemplate from "./emailTemplate";
 
 export type ReturnUser = Omit<UserDocument, "password" | "id">;
 
@@ -209,7 +213,7 @@ export const auth = new Elysia({ prefix: "/auth" })
         return { error: "User not logged in" }; // Return an error message
       }
       set.status = 200;
-      return { name: user.name, email: user.email, userRole: user.userRole };
+      return { name: user.name, email: user.email, userRole: user.userRole, verified: user.verified };
     },
     {
       cookie: t.Cookie({
@@ -261,4 +265,95 @@ export const auth = new Elysia({ prefix: "/auth" })
         description: "Check if the user must log out",
       },
     },
-  );
+  )
+
+  .post(
+    "/send-verification",
+    async ({ jwt, log, set, body }: AuthContextWithBody<{ email: string }>) => {
+      // const transporter = nodemailer.createTransport({
+      //   host: Bun.env.SMTP_HOST ?? panic("SMTP_HOST environment variable not set"),
+      //   port: 587,
+      //   auth: {
+      //     user: Bun.env.SMTP_USER ?? panic("SMTP_USER environment variable not set"),
+      //     pass: Bun.env.SMTP_PASS ?? panic("SMTP_USER environment variable not set"),
+      //   },
+      //   // logger: true,
+      //   // debug: true,
+      // });
+
+      // const user = "dfoddav";
+      // const verificationLink = "https://www.imc.ac.at/";
+      // // Define email options
+      // const mailOptions = {
+      //   from: '"Sagittarius Team" <hello@demomailtrap.com>', // Sender address
+      //   to: body.email, // List of recipients
+      //   subject: "Sagittarius - Email Verification", // Subject line
+      //   text: `Hello ${user}, please verify your email by clicking the following link: ${verificationLink}`, // Plain text body
+      //   html: getEmailTemplate(user, verificationLink), // HTML body
+      // };
+
+      // try {
+      //   // Send email
+      //   const info = await transporter.sendMail(mailOptions);
+      //   console.log("Message sent: %s", info.messageId);
+      // } catch (error) {
+      //   console.error("Error sending email:", error);
+      // }
+
+      const verificationToken = jwt.sign({ email: body.email });
+      log.info(`Verification token: ${verificationToken}`);
+      return verificationToken;
+    },
+    {
+      body: t.Object({
+        email: t.String({ format: "email" }),
+      }),
+      detail: {
+        tags: ["auth"],
+        description: "Send a verification email to the user",
+      },
+    },
+  )
+
+  .post(
+    "/verify-email",
+    async ({ jwt, log, set, body }: AuthContextWithBody<{ verificationToken: string }>) => {
+      try {
+        const verifiedToken = (await jwt.verify(body.verificationToken)) as { email: string };
+        if (typeof verifiedToken === "object" && verifiedToken !== null && "email" in verifiedToken) {
+          // const jwtToken = verifiedToken as { email: string };
+          const user = await sql.verifyUserEmail(verifiedToken.email);
+          if (user) {
+            set.status = 200;
+            log.info(`Email verified: ${verifiedToken}`);
+            return { message: "Email succesfully verified" };
+          } else {
+            set.status = 404;
+            return { error: "User with email not found" };
+          }
+        } else {
+          console.warn("JWT verification failed or returned an invalid token.");
+        }
+      } catch (error) {
+        console.error("Failed to verify JWT token:", error);
+      }
+    },
+    {
+      body: t.Object({
+        token: t.String(),
+      }),
+      detail: {
+        tags: ["auth"],
+        description: "Try and verify a user's email via a token",
+      },
+    },
+  )
+
+  .get("/user-verification-status", async ({ set, userId }: AuthContext) => {
+    if (!userId) {
+      set.status = 401;
+      return { error: "User not logged in" };
+    }
+
+    return { verified: await sql.getUserVerificationStatus(userId) };
+  });

@@ -130,7 +130,13 @@ const Register: Component<NavigateProps> = ({ navigate }) => {
         }
       }
 
-      authStore.setState({ isAuthenticated: true, email: formEmail, name: formName, userRole: "Developer" });
+      authStore.setState({
+        isAuthenticated: true,
+        email: formEmail,
+        name: formName,
+        userRole: "Developer",
+        verified: false,
+      });
       navigate("/editor", { replace: true });
 
       Swal.fire({

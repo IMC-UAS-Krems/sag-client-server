@@ -124,6 +124,41 @@ export async function createUser(data: {
   }
 }
 
+export async function verifyUserEmail(email: string): Promise<User | null> {
+  const user = await prisma.user.findFirst({
+    where: {
+      email: email,
+      deleted: false,
+    },
+  });
+
+  if (user) {
+    return await prisma.user.update({
+      where: {
+        id: user.id,
+      },
+      data: {
+        verified: true,
+      },
+    });
+  }
+
+  return null;
+}
+
+export async function getUserVerificationStatus(userId: string): Promise<boolean> {
+  const user = await prisma.user.findUnique({
+    where: {
+      id: userId,
+    },
+    select: {
+      verified: true,
+    },
+  });
+
+  return user?.verified ?? false;
+}
+
 export async function selectUser(
   userId?: string,
   email?: string,
