@@ -130,3 +130,12 @@ export interface CreateOrganisationBody {
   municipalityName: string;
   verified?: boolean;
 }
+
+export interface UpdateOrganisationBody {
+  id: string;
+  name?: string;
+  description?: string;
+  municipalityName?: string;
+  verified?: boolean;
+  updatedAt: Date;
+}

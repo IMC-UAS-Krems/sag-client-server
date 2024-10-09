@@ -13,6 +13,7 @@ import AuthGuard from "@client/guard/authGuard";
 import authStore from "@client/store/authStore";
 import Organisations from "@client/routes/Organisations";
 import OrganisationsCreate from "@client/routes/OrganisationsCreate";
+import OrganisationsEdit from "@client/routes/OrganisationsEdit";
 
 const DRoutes: Component = () => {
   // Initialize auth store on app mount
@@ -75,6 +76,14 @@ const DRoutes: Component = () => {
         component={() => (
           <AuthGuard role="Administrator">
             <OrganisationsCreate />
+          </AuthGuard>
+        )}
+      />
+      <Route
+        path="/organisations/edit/:organisationId"
+        component={() => (
+          <AuthGuard role="Administrator">
+            <OrganisationsEdit />
           </AuthGuard>
         )}
       />

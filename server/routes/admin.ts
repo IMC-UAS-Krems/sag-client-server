@@ -11,6 +11,7 @@ import {
   OrganisationDetails,
   CreateOrganisationBody,
   CreateUserBody,
+  UpdateOrganisationBody,
 } from "@server/types";
 import { UserRole } from "@utils/roles";
 
@@ -413,12 +414,14 @@ export const admin = new Elysia({ prefix: "/admin" })
       query,
     }: AuthContextWithQuery<{ organisationId: string }>): Promise<OrganisationDetails | { error: string }> => {
       try {
-        log.info("Trying to get user details for user");
+        log.info(JSON.stringify(query));
+        log.info("Trying to get organisation details for" + query.organisationId);
         const { organisationId } = query;
+        log.info(`Organisation ID: ${organisationId}`);
         const organisation: OrganisationDetails | null = await sql.getOrganisationById(organisationId);
-        // log.info(`Organisation details: ${JSON.stringify(organisation)}`);
+        log.info(`Organisation details: ${JSON.stringify(organisation)}`);
         if (!organisation) {
-          throw new Error("User not found");
+          throw new Error("Organisation not found");
         } else {
           set.status = 200;
           return organisation;
@@ -440,6 +443,66 @@ export const admin = new Elysia({ prefix: "/admin" })
       },
       query: t.Object({
         organisationId: t.String(),
+      }),
+    },
+  )
+
+  .post(
+    "/update-organisation",
+    async ({
+      log,
+      set,
+      body,
+    }: AuthContextWithBody<UpdateOrganisationBody>): Promise<{ message: string } | { error: string }> => {
+      try {
+        log.info("Trying to update organisation");
+        log.info(`Request body: ${JSON.stringify(body)}`);
+        log.info(`Request body: ${JSON.stringify(body.id)}`);
+
+        const updateData: UpdateOrganisationBody = {
+          id: body.id,
+          updatedAt: body.updatedAt,
+        };
+
+        if (body.name) updateData.name = body.name;
+        if (body.description) updateData.description = body.description;
+        if (body.municipalityName) updateData.municipalityName = body.municipalityName;
+        if (body.verified !== undefined) updateData.verified = body.verified;
+        if (body.updatedAt) updateData.updatedAt = body.updatedAt;
+
+        log.info(`Update data in abcked before sql: ${JSON.stringify(updateData)}`);
+
+        const organisation = await sql.updateOrganisation(body.id, updateData);
+        log.info(`Organisation updated: ${JSON.stringify(organisation)}`);
+
+        if (!organisation) {
+          throw new Error("Organisation not found during update");
+        }
+        set.status = 200;
+        return { message: "Organisation updated successfully" };
+      } catch (error) {
+        if (error instanceof Error) {
+          log.error(error.message);
+          return { error: error.message };
+        } else {
+          log.error("An unknown error occurred while updating organisation");
+        }
+        set.status = 500;
+        return { error: "Failed to update organisation" };
+      }
+    },
+    {
+      detail: {
+        tags: ["admin"],
+        description: "Update the details of a organisation by ID, only the fields that are provided will be updated",
+      },
+      body: t.Object({
+        id: t.String(),
+        name: t.Optional(t.String()),
+        description: t.Optional(t.String()),
+        municipalityName: t.Optional(t.String()),
+        verified: t.Optional(t.Boolean()),
+        updatedAt: t.Optional(t.Date()),
       }),
     },
   );

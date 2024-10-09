@@ -69,6 +69,10 @@ const Organisations: Component = () => {
     navigate("/organisations/create");
   }
 
+  async function handleEditOrganisation(organisationId: string) {
+    navigate(`/organisations/edit/${organisationId}`);
+  }
+
   async function handleDeleteOrganisation(organisationId: string) {
     const organisation = organisations().find((organisation) => organisation.id === organisationId);
 
@@ -189,8 +193,8 @@ const Organisations: Component = () => {
                           theme={theme() === "dark" ? "dark" : "light"}
                         >
                           <Item
-                            onClick={(e) => {
-                              console.log(e);
+                            onClick={() => {
+                              handleEditOrganisation(organisation.id);
                             }}
                           >
                             ✏️ Edit

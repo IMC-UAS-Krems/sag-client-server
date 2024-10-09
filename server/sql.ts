@@ -2,7 +2,7 @@ import { createId } from "@paralleldrive/cuid2";
 import { prisma } from "@∆";
 import { Organization, Project, User, Municipality, UserType, DocumentType } from "@prisma/client";
 import { UserRole } from "@utils/roles";
-import { UserDetails, OrganisationDetails } from "@server/types";
+import { UserDetails, OrganisationDetails, UpdateOrganisationBody } from "@server/types";
 
 export type Document = {
   municipalityName: string;
@@ -151,6 +151,72 @@ export async function deleteOrganisation(
     },
   });
   return { success: true };
+}
+
+export async function updateOrganisation(
+  organisationId: string,
+  {
+    name,
+    description,
+    municipality,
+    verified,
+    updatedAt,
+  }: {
+    name?: string;
+    description?: string;
+    municipality?: string;
+    verified?: boolean;
+    updatedAt?: Date;
+  },
+): Promise<OrganisationDetails> {
+  // Check if the organization exists
+  const existingOrganisation = await prisma.organization.findUnique({
+    where: { id: organisationId },
+  });
+
+  if (!existingOrganisation) {
+    throw new Error(`Organisation ${organisationId} does not exist`);
+  }
+
+  const updateData: UpdateOrganisationBody = {
+    id: organisationId,
+    updatedAt: updatedAt ?? new Date(),
+  };
+
+  if (name && name !== existingOrganisation.name) {
+    const organisationWithName = await prisma.organization.findFirst({
+      where: {
+        name: name,
+      },
+    });
+    if (organisationWithName) {
+      throw new Error(`Organisation with name "${name}" already exists`);
+    }
+    updateData.name = name;
+  }
+
+  if (description) updateData.description = description;
+  if (municipality) updateData.municipalityName = municipality;
+  if (verified !== undefined) updateData.verified = verified;
+  updateData.updatedAt = updatedAt || new Date();
+
+  const updatedOrganisation = await prisma.organization.update({
+    where: { id: organisationId },
+    data: updateData,
+    select: {
+      id: true,
+      name: true,
+      description: true,
+      municipality: { select: { name: true } },
+      municipalityId: true,
+      users: { select: { name: true } },
+      verified: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+  });
+
+  return updatedOrganisation;
 }
 
 /*****************************************************/
