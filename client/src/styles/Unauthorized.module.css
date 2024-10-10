@@ -15,17 +15,26 @@
   background: var(--card-color);
   border-radius: 12px;
   box-shadow:
-    0px 5px 5px 0px rgba(0, 0, 0, 0.2),
+    0px 5px 5px 0px rgba(33, 23, 23, 0.2),
     0px 3px 14px 0px rgba(0, 0, 0, 0.12),
     0px 8px 10px 0px rgba(0, 0, 0, 0.14);
   min-height: 50vh;
   max-width: 65vw;
   padding: 1rem 0 1rem 0;
+  min-width: 40%;
 }
 
 h1 {
   color: var(--primary-text);
   margin: 0 3rem 1.5rem 3rem;
+  text-align: center;
+}
+
+p {
+  color: var(--primary-text);
+  margin: 0 3rem 1.5rem 3rem;
+  font-size: larger;
+  text-align: center;
 }
 
 button {
@@ -48,4 +57,19 @@ button {
 button:hover {
   background-color: var(--primary-text);
   color: var(--secondary-color);
+}
+
+.loader {
+  width: 50px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: 8px solid;
+  border-color: var(--primary-text) transparent var(--primary-text) transparent;
+  animation: l1 1s infinite;
+}
+
+@keyframes l1 {
+  to {
+    transform: rotate(0.5turn);
+  }
 }

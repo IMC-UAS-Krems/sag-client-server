@@ -12,6 +12,7 @@ import Unauthorized from "@client/routes/Unauthorized";
 import AuthGuard from "@client/guard/authGuard";
 import authStore from "@client/store/authStore";
 import Verify from "@client/routes/Verify";
+import VerifyToken from "@client/routes/VerifyToken";
 
 const DRoutes: Component = () => {
   // Initialize auth store on app mount
@@ -25,6 +26,7 @@ const DRoutes: Component = () => {
       <Route path="/about" component={About} />
       <Route path="/sign-in" component={SignIn} />
       <Route path="/unauthorized" component={Unauthorized} />
+      <Route path="/verify/:token" component={VerifyToken} />
 
       <Route
         path="/verify"

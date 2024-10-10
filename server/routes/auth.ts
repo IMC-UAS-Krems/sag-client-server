@@ -16,6 +16,46 @@ import {
 import getEmailTemplate from "./emailTemplate";
 
 export type ReturnUser = Omit<UserDocument, "password" | "id">;
+interface jwtInterface {
+  sign: (payload: object) => string;
+  verify: (token: string) => object;
+}
+
+const sendVerificationEmail = async (jwt: jwtInterface, email: string, username: string) => {
+  const expireInSeconds =
+    Number(Bun.env.VERIFICATION_EXPIRY) || panic("VERIFICATION_EXPIRY environment variable not set");
+  const verificationToken = await jwt.sign({
+    email: email,
+    expiresAt: new Date(Date.now() + expireInSeconds * 1000).toISOString(),
+  });
+  console.log(`Verification token created: ${verificationToken}`);
+
+  const transporter = nodemailer.createTransport({
+    host: Bun.env.SMTP_HOST ?? panic("SMTP_HOST environment variable not set"),
+    port: 587,
+    auth: {
+      user: Bun.env.SMTP_USER ?? panic("SMTP_USER environment variable not set"),
+      pass: Bun.env.SMTP_PASS ?? panic("SMTP_USER environment variable not set"),
+    },
+    // logger: true,
+    // debug: true,
+  });
+
+  const verificationLink = `http://localhost/verify/${verificationToken}`;
+  // Define email options
+  const mailOptions = {
+    from: '"Sagittarius Team" <hello@demomailtrap.com>', // Sender address
+    to: "david.fodorhivatalos@gmail.com", // TODO: Change to `body.email` once SMTP is set up and it is prod
+    subject: "Sagittarius - Email Verification", // Subject line
+    text: `Hello ${username}, please verify your email by clicking the following link: ${verificationLink}`, // Plain text body
+    html: getEmailTemplate(username, verificationLink), // HTML body
+  };
+
+  const info = await transporter.sendMail(mailOptions);
+  console.log("Message sent: %s", info.messageId);
+
+  return { token: verificationToken };
+};
 
 export const auth = new Elysia({ prefix: "/auth" })
   .post(
@@ -26,7 +66,7 @@ export const auth = new Elysia({ prefix: "/auth" })
       set,
       body: { name, email, username, key, municipalityName, organizationName },
       cookie: { jwtToken },
-    }: AuthContextWithBody<RegisterBody>): Promise<RegisteredUser> => {
+    }: AuthContextWithBody<RegisterBody>): Promise<RegisteredUser | { error: string }> => {
       try {
         const userRole = "Developer";
         const userResult = await sql.createUser({
@@ -55,6 +95,16 @@ export const auth = new Elysia({ prefix: "/auth" })
         });
 
         log.info(`User ${user.name} registered.`);
+
+        // Send verification email
+        try {
+          const verificationToken = await sendVerificationEmail(jwt, email, username);
+          console.log("Verification token of newly registered user:", verificationToken.token);
+        } catch (error) {
+          console.error("Error sending verification email of registering user:", error);
+          set.status = 201;
+          return { error: "Error sending verification email, please try again later" };
+        }
 
         set.status = 201;
         return user as RegisteredUser;
@@ -269,44 +319,22 @@ export const auth = new Elysia({ prefix: "/auth" })
 
   .post(
     "/send-verification",
-    async ({ jwt, log, set, body }: AuthContextWithBody<{ email: string }>) => {
-      // const transporter = nodemailer.createTransport({
-      //   host: Bun.env.SMTP_HOST ?? panic("SMTP_HOST environment variable not set"),
-      //   port: 587,
-      //   auth: {
-      //     user: Bun.env.SMTP_USER ?? panic("SMTP_USER environment variable not set"),
-      //     pass: Bun.env.SMTP_PASS ?? panic("SMTP_USER environment variable not set"),
-      //   },
-      //   // logger: true,
-      //   // debug: true,
-      // });
-
-      // const user = "dfoddav";
-      // const verificationLink = "https://www.imc.ac.at/";
-      // // Define email options
-      // const mailOptions = {
-      //   from: '"Sagittarius Team" <hello@demomailtrap.com>', // Sender address
-      //   to: body.email, // List of recipients
-      //   subject: "Sagittarius - Email Verification", // Subject line
-      //   text: `Hello ${user}, please verify your email by clicking the following link: ${verificationLink}`, // Plain text body
-      //   html: getEmailTemplate(user, verificationLink), // HTML body
-      // };
-
-      // try {
-      //   // Send email
-      //   const info = await transporter.sendMail(mailOptions);
-      //   console.log("Message sent: %s", info.messageId);
-      // } catch (error) {
-      //   console.error("Error sending email:", error);
-      // }
-
-      const verificationToken = jwt.sign({ email: body.email });
-      log.info(`Verification token: ${verificationToken}`);
-      return verificationToken;
+    async ({ jwt, set, body }: AuthContextWithBody<{ email: string; username: string }>) => {
+      try {
+        const verificationToken = await sendVerificationEmail(jwt, body.email, body.username);
+        set.status = 200;
+        // return { message: "Email sent" };
+        return verificationToken; // TODO: Replace this with the above line once SMTP is set up
+      } catch (error) {
+        console.error("Error sending email:", error);
+        set.status = 500;
+        return { error: "Error sending email" };
+      }
     },
     {
       body: t.Object({
         email: t.String({ format: "email" }),
+        username: t.String(),
       }),
       detail: {
         tags: ["auth"],
@@ -317,25 +345,39 @@ export const auth = new Elysia({ prefix: "/auth" })
 
   .post(
     "/verify-email",
-    async ({ jwt, log, set, body }: AuthContextWithBody<{ verificationToken: string }>) => {
+    async ({ jwt, set, body }: AuthContextWithBody<{ token: string }>) => {
       try {
-        const verifiedToken = (await jwt.verify(body.verificationToken)) as { email: string };
+        // console.log("Verifying token:", body.token);
+        const verifiedToken = (await jwt.verify(body.token)) as { email: string; expiresAt: string };
+        // console.log("Verified token:", verifiedToken);
+        // console.log("Email:", verifiedToken.email);
+        // console.log("Expires in:", verifiedToken.expiresAt);
         if (typeof verifiedToken === "object" && verifiedToken !== null && "email" in verifiedToken) {
-          // const jwtToken = verifiedToken as { email: string };
-          const user = await sql.verifyUserEmail(verifiedToken.email);
-          if (user) {
-            set.status = 200;
-            log.info(`Email verified: ${verifiedToken}`);
-            return { message: "Email succesfully verified" };
-          } else {
-            set.status = 404;
-            return { error: "User with email not found" };
+          const expiresAt = new Date(verifiedToken.expiresAt);
+          if (expiresAt < new Date()) {
+            set.status = 400;
+            return { error: "Token expired, please request new verification email" };
           }
+          await sql.verifyUserEmail(verifiedToken.email);
+          set.status = 200;
+          return { message: "Email succesfully verified" };
         } else {
-          console.warn("JWT verification failed or returned an invalid token.");
+          set.status = 400;
+          return { error: "Invalid verification token, please request new verification email" };
         }
       } catch (error) {
-        console.error("Failed to verify JWT token:", error);
+        // console.error("Error during email verification:", error);
+        if (error instanceof Error) {
+          if (error.message.includes("does not exist")) {
+            set.status = 404;
+            return { error: error.message };
+          } else if (error.message.includes("already verified")) {
+            set.status = 409;
+            return { error: error.message };
+          }
+        }
+        set.status = 500;
+        return { error: "Failed to verify token" };
       }
     },
     {
@@ -347,13 +389,4 @@ export const auth = new Elysia({ prefix: "/auth" })
         description: "Try and verify a user's email via a token",
       },
     },
-  )
-
-  .get("/user-verification-status", async ({ set, userId }: AuthContext) => {
-    if (!userId) {
-      set.status = 401;
-      return { error: "User not logged in" };
-    }
-
-    return { verified: await sql.getUserVerificationStatus(userId) };
-  });
+  );

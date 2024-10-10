@@ -76,6 +76,7 @@ export async function createUser(data: {
   organizationName: string;
   municipalityName: string;
   userRole: "Administrator" | "Developer" | "Manager";
+  verified?: boolean;
 }) {
   const userWithEmail = await prisma.user.findFirst({
     where: {
@@ -113,6 +114,7 @@ export async function createUser(data: {
         municipality: {
           connect: { name: data.municipalityName },
         },
+        verified: data.verified || false,
       },
     });
 
@@ -124,16 +126,24 @@ export async function createUser(data: {
   }
 }
 
-export async function verifyUserEmail(email: string): Promise<User | null> {
+export async function verifyUserEmail(email: string) {
   const user = await prisma.user.findFirst({
     where: {
       email: email,
       deleted: false,
     },
+    select: {
+      id: true,
+      verified: true,
+    },
   });
 
-  if (user) {
-    return await prisma.user.update({
+  if (user === null) {
+    throw new Error(`User with email "${email}" does not exist`);
+  } else if (user.verified) {
+    throw new Error(`User with email "${email}" is already verified`);
+  } else {
+    await prisma.user.update({
       where: {
         id: user.id,
       },
@@ -142,21 +152,6 @@ export async function verifyUserEmail(email: string): Promise<User | null> {
       },
     });
   }
-
-  return null;
-}
-
-export async function getUserVerificationStatus(userId: string): Promise<boolean> {
-  const user = await prisma.user.findUnique({
-    where: {
-      id: userId,
-    },
-    select: {
-      verified: true,
-    },
-  });
-
-  return user?.verified ?? false;
 }
 
 export async function selectUser(
