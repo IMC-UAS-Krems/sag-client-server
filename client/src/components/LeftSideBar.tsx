@@ -1,12 +1,46 @@
-import { For, onMount, batch, createSignal, useContext, Show, Accessor, Suspense, Setter, JSXElement } from "solid-js";
+import {
+  For,
+  onMount,
+  batch,
+  createSignal,
+  useContext,
+  Show,
+  Accessor,
+  Suspense,
+  Setter,
+  JSXElement,
+  onCleanup,
+} from "solid-js";
 import { eden } from "@client/api";
 import { createMutable } from "solid-js/store";
 import { EditorContext } from "@client/routes/Editor";
 import { IEditorContext } from "@client/types";
 import { ContextMenu } from "@kobalte/core/context-menu";
-import { Dynamic } from "solid-js/web";
-import { InputDialog } from "./InputDialog";
 import Swal from "sweetalert2";
+
+// TODO: Swal: reuse configuration by creating your own Swal with Swal.mixin({...options})
+
+export const Notification = Swal.mixin({
+  toast: true,
+  position: "top-right",
+  timer: 1500,
+  showConfirmButton: false,
+});
+
+export const Prompt = Swal.mixin({
+  showCancelButton: false,
+  buttonsStyling: false,
+  showDenyButton: false,
+  showCloseButton: true,
+  inputAttributes: {
+    autocomplete: "off",
+  },
+  customClass: {
+    confirmButton:
+      "bg-green-500 hover:bg-green-700 text-white font-bold py-1 px-2 rounded focus:outline-none focus:shadow-outline",
+    popup: "bg-white shadow-xl rounded px-8 pt-6 pb-8 mb-4  flex flex-col gap gap-4",
+  },
+});
 
 enum SagDocumentType {
   FILE = "FILE",
@@ -33,27 +67,31 @@ type SagDocument = {
   documentPath: string;
 };
 
-class TreeNode {
+interface GetChildren {
+  getChildren(): TreeNode[];
+}
+
+export class TreeNode implements GetChildren {
   children: TreeNode[];
   name: Accessor<string>;
   setName: Setter<string>;
   docType: SagDocumentType;
-  path: Accessor<string | null>;
-  setPath: Setter<string | null>;
+  path: Accessor<string | undefined>;
+  setPath: Setter<string | undefined>;
   isExpanded: boolean;
-  projectName: string | null;
-  orgName: string | null;
-  municipalityName: string | null;
-  parent: TreeNode | null;
+  projectName: string | undefined;
+  orgName: string | undefined;
+  municipalityName: string | undefined;
+  parent: TreeNode | undefined;
 
   constructor(
     name: string,
     docType: SagDocumentType,
-    path: string | null = null,
-    projectName: string | null = null,
-    orgName: string | null = null,
-    municipalityName: string | null = null,
-    parent: TreeNode | null = null,
+    path?: string,
+    projectName?: string,
+    orgName?: string,
+    municipalityName?: string,
+    parent?: TreeNode,
   ) {
     [this.name, this.setName] = createSignal(name);
     this.docType = docType;
@@ -67,14 +105,23 @@ class TreeNode {
   }
 
   addChild(child: TreeNode) {
-    this.children.push(child); // Direct mutation is fine with createMutable
+    this.children.push(child);
+  }
+
+  getChildren() {
+    return this.children;
   }
 
   findChild(params: { name: string } | { path: string }) {
     if ("name" in params) {
       return this.children.find((child) => child.name() === params.name);
     }
-    return this.children.find((child) => params.path.startsWith(child.path()));
+
+    if ([SagDocumentType.FOLDER, SagDocumentType.PROJECT].includes(this.docType)) {
+      return this.children.find((child) => params.path.startsWith(child.path() as string)); // all children in a folder or project must have defined paths, otherwise wrong structure
+    }
+
+    console.error(`Cannot find child with path ${params.path} in ${this}`);
   }
 
   icon() {
@@ -92,14 +139,14 @@ class TreeNode {
     }
   }
 
-  getChildren() {
-    return this.children;
-  }
-
   async createDocument(name: string, docType: SagDocumentType, path: string) {
+    if (docType !== SagDocumentType.FOLDER) {
+      console.error("Cannot create document that is not a folder");
+      return;
+    }
     const resp = await eden.api.document.post({
       name: name,
-      documentType: docType.toString().toLowerCase(),
+      documentType: docType.toString().toLowerCase() as "file" | "folder",
       path: path,
       projectName: this.projectName as string,
       organizationName: this.orgName as string,
@@ -158,6 +205,7 @@ class TreeNode {
   }
 
   async saveContent(content: string) {
+    // TODO: add a notification when file is saved
     const resp = await eden.api.document_content.put({
       content: content,
       projectName: this.projectName as string,
@@ -171,6 +219,11 @@ class TreeNode {
     });
     if (resp.status !== 200) {
       console.error("Error saving content");
+    } else {
+      Notification.fire({
+        title: "File saved",
+        icon: "success",
+      });
     }
   }
 
@@ -196,14 +249,36 @@ class TreeNode {
   }
 
   updatePath(path: string) {
-    this.setPath(this.path().replace(this.path(), path));
+    if (this.path() === undefined) {
+      console.error("Path is undefined");
+      return;
+    }
+    this.setPath((this.path() as string).replace(this.path() as string, path));
     for (const child of this.children) {
       child.updatePath(path);
     }
   }
+
+  async checkNewPath(name: string): Promise<boolean> {
+    const response = await eden.api.check_path.get({
+      projectName: this.projectName as string,
+      organizationName: this.orgName as string,
+      municipalityName: this.municipalityName as string,
+      path: this.path() as string,
+      possibleName: name,
+      $fetch: {
+        mode: "cors",
+        credentials: "include",
+      },
+    });
+    if (response.status === 200) {
+      return true;
+    }
+    return false;
+  }
 }
 
-class FileTree {
+class FileTree implements GetChildren {
   root: TreeNode;
 
   constructor() {
@@ -261,15 +336,13 @@ class FileTree {
   }
 
   getChildren() {
-    return this.root.getChildren();
+    return this.root.children;
   }
 }
 
-const [selectedNode, setSelectedNode] = createSignal<TreeNode | null>(null);
-
 function FileNode(props: { node: TreeNode }) {
   let expandDiv: HTMLDivElement;
-  const { handleFileClick } = useContext(EditorContext) as IEditorContext;
+  const { handleFileClick, setSelectedNode } = useContext(EditorContext) as IEditorContext;
 
   function toggleExpanded() {
     if (!props.node.isExpanded) {
@@ -290,11 +363,20 @@ function FileNode(props: { node: TreeNode }) {
         >
           <button
             class="flex flex-row"
-            onClick={
-              props.node.docType === SagDocumentType.FILE
-                ? async () => handleFileClick(await props.node.getContent())
-                : toggleExpanded
-            }
+            onClick={async () => {
+              if (
+                [SagDocumentType.FOLDER, SagDocumentType.FILE, SagDocumentType.PROJECT].includes(props.node.docType)
+              ) {
+                setSelectedNode(props.node);
+              }
+
+              if (props.node.docType === SagDocumentType.FILE) {
+                const content = await props.node.getContent();
+                handleFileClick(content);
+              } else {
+                toggleExpanded();
+              }
+            }}
             onContextMenu={() => {
               if (
                 [SagDocumentType.FOLDER, SagDocumentType.FILE, SagDocumentType.PROJECT].includes(props.node.docType)
@@ -310,6 +392,7 @@ function FileNode(props: { node: TreeNode }) {
       </Suspense>
 
       <div
+        //@ts-expect-error - original message: Variable 'expandDiv' is used before being assigned
         ref={expandDiv}
         class="transition-all duration-400 overflow-hidden grid"
         style={{ "grid-template-rows": "0fr" }}
@@ -323,27 +406,16 @@ function FileNode(props: { node: TreeNode }) {
 }
 
 function FileContextMenu(props: { children: JSXElement }) {
-  const { code } = useContext(EditorContext) as IEditorContext;
+  const { code, selectedNode } = useContext(EditorContext) as IEditorContext;
 
   async function handleContextMenu(action: MenuOption) {
     const node = selectedNode();
     switch (action) {
       case MenuOption.AddFile: {
-        const { value } = await Swal.fire<string>({
+        // TODO: check if a file doesn't exist and the name is valid
+        const { value } = await Prompt.fire<string>({
           title: "Enter file name",
           input: "text",
-          showCancelButton: false,
-          buttonsStyling: false,
-          showDenyButton: false,
-          showCloseButton: true,
-          inputAttributes: {
-            autocomplete: "off",
-          },
-          customClass: {
-            confirmButton:
-              "bg-green-500 hover:bg-green-700 text-white font-bold py-1 px-2 rounded focus:outline-none focus:shadow-outline",
-            popup: "bg-white shadow-xl rounded px-8 pt-6 pb-8 mb-4  flex flex-col gap gap-4",
-          },
         });
         if (value && value.length > 0) {
           const node = selectedNode();
@@ -353,20 +425,19 @@ function FileContextMenu(props: { children: JSXElement }) {
         break;
       }
       case MenuOption.AddFolder: {
-        const { value } = await Swal.fire<string>({
+        // TODO: check if a folder doesn't exist and the name is valid
+        const { value } = await Prompt.fire<string>({
           title: "Enter folder name",
           input: "text",
-          showCancelButton: false,
-          buttonsStyling: false,
-          showDenyButton: false,
-          showCloseButton: true,
-          inputAttributes: {
-            autocomplete: "off",
+          preConfirm: async (path) => {
+            const node = selectedNode();
+            if (await node?.checkNewPath(path)) {
+              return path;
+            }
+            Swal.showValidationMessage("Path already exists");
           },
-          customClass: {
-            confirmButton:
-              "bg-green-500 hover:bg-green-700 text-white font-bold py-1 px-2 rounded focus:outline-none focus:shadow-outline",
-            popup: "bg-white shadow-xl rounded px-8 pt-6 pb-8 mb-4  flex flex-col gap gap-4",
+          inputValidator: (input) => {
+            !input.match("^[a-zA-Z0-9_ ]+$") && "Input must contain only letters, numbers, underscores and spaces";
           },
         });
         if (value && value.length > 0) {
@@ -385,21 +456,10 @@ function FileContextMenu(props: { children: JSXElement }) {
         break;
       }
       case MenuOption.Rename: {
-        const { value } = await Swal.fire<string>({
+        // TODO: check if the name is valid and it doesn't exist
+        const { value } = await Prompt.fire<string>({
           title: "Enter new name",
           input: "text",
-          showCancelButton: false,
-          buttonsStyling: false,
-          showDenyButton: false,
-          showCloseButton: true,
-          inputAttributes: {
-            autocomplete: "off",
-          },
-          customClass: {
-            confirmButton:
-              "bg-green-500 hover:bg-green-700 text-white font-bold py-1 px-2 rounded focus:outline-none focus:shadow-outline",
-            popup: "bg-white shadow-xl rounded px-8 pt-6 pb-8 mb-4  flex flex-col gap gap-4",
-          },
         });
         if (value && value.length > 0) {
           const node = selectedNode();
@@ -415,7 +475,11 @@ function FileContextMenu(props: { children: JSXElement }) {
         <ContextMenu.Content class="bg-white border border-gray-200 rounded shadow-lg">
           <Suspense>
             <ul class="py-1">
-              <Show when={[SagDocumentType.FOLDER, SagDocumentType.FILE].includes(selectedNode()?.docType)}>
+              <Show
+                when={[SagDocumentType.FOLDER, SagDocumentType.FILE].includes(
+                  selectedNode()?.docType as SagDocumentType,
+                )}
+              >
                 <ContextMenu.Item
                   class="px-4 py-2 cursor-pointer hover:bg-gray-100"
                   onSelect={async () => {
@@ -425,17 +489,23 @@ function FileContextMenu(props: { children: JSXElement }) {
                   {MenuOption.Rename}
                 </ContextMenu.Item>
               </Show>
-              <Show when={selectedNode()?.docType === SagDocumentType.FILE}>
-                <ContextMenu.Item
-                  class="px-4 py-2 cursor-pointer hover:bg-gray-100"
-                  onSelect={async () => {
-                    await handleContextMenu(MenuOption.Save);
-                  }}
-                >
-                  {MenuOption.Save}
-                </ContextMenu.Item>
-              </Show>
-              <Show when={[SagDocumentType.FOLDER, SagDocumentType.FILE].includes(selectedNode()?.docType)}>
+              {
+                //<Show when={selectedNode()?.docType === SagDocumentType.FILE}>
+                //  <ContextMenu.Item
+                //    class="px-4 py-2 cursor-pointer hover:bg-gray-100"
+                //    onSelect={async () => {
+                //      await handleContextMenu(MenuOption.Save);
+                //    }}
+                //  >
+                //    {MenuOption.Save}
+                //  </ContextMenu.Item>
+                //</Show>
+              }
+              <Show
+                when={[SagDocumentType.FOLDER, SagDocumentType.FILE].includes(
+                  selectedNode()?.docType as SagDocumentType,
+                )}
+              >
                 <ContextMenu.Item
                   class="px-4 py-2 cursor-pointer hover:bg-gray-100"
                   onSelect={async () => {
@@ -445,7 +515,11 @@ function FileContextMenu(props: { children: JSXElement }) {
                   {MenuOption.Delete}
                 </ContextMenu.Item>
               </Show>
-              <Show when={[SagDocumentType.FOLDER, SagDocumentType.PROJECT].includes(selectedNode()?.docType)}>
+              <Show
+                when={[SagDocumentType.FOLDER, SagDocumentType.PROJECT].includes(
+                  selectedNode()?.docType as SagDocumentType,
+                )}
+              >
                 <ContextMenu.Item
                   class="px-4 py-2 cursor-pointer hover:bg-gray-100"
                   onSelect={async () => {
@@ -455,7 +529,11 @@ function FileContextMenu(props: { children: JSXElement }) {
                   {MenuOption.AddFile}
                 </ContextMenu.Item>
               </Show>
-              <Show when={[SagDocumentType.FOLDER, SagDocumentType.PROJECT].includes(selectedNode()?.docType)}>
+              <Show
+                when={[SagDocumentType.FOLDER, SagDocumentType.PROJECT].includes(
+                  selectedNode()?.docType as SagDocumentType,
+                )}
+              >
                 <ContextMenu.Item
                   class="px-4 py-2 cursor-pointer hover:bg-gray-100"
                   onSelect={async () => {
@@ -476,6 +554,7 @@ function FileContextMenu(props: { children: JSXElement }) {
 
 export function LeftSideBar() {
   const tree = createMutable(new FileTree());
+  const { setSelectedNode } = useContext(EditorContext) as IEditorContext;
 
   onMount(() => {
     eden.api.documents
@@ -487,11 +566,18 @@ export function LeftSideBar() {
       })
       .then((docs) => {
         batch(() => {
-          docs.data.forEach((doc) => {
+          const docArray = docs.data as SagDocument[];
+          docArray.forEach((doc: SagDocument) => {
             tree.addDocument(doc);
           });
         });
       });
+  });
+
+  // TODO: study this thing
+  onCleanup(() => {
+    setSelectedNode(null);
+    tree.root.children = [];
   });
 
   return (
