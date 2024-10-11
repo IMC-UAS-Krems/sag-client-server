@@ -7,9 +7,11 @@ import Swal from "sweetalert2";
 
 import { eden } from "@client/api";
 import authStore from "@store/authStore";
+import { setUser } from "@client/store";
 import Header from "@client/components/Header";
 import FormField from "@client/components/FormField";
 import styles from "@styles/Signin.module.css";
+import { Notification } from "@client/components/LeftSideBar";
 
 interface NavigateProps {
   navigate: ReturnType<typeof useNavigate>;
@@ -259,11 +261,8 @@ const Login: Component<NavigateProps> = ({ navigate }) => {
     authStore.initializeAuth();
     navigate("/home", { replace: true });
 
-    Swal.fire({
+    Notification.fire({
       titleText: "Login successful",
-      position: "top-right",
-      timer: 1500,
-      showConfirmButton: false,
       icon: "success",
     });
   };
