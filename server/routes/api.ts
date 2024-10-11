@@ -323,37 +323,24 @@ export const api = new Elysia({ prefix: "/api" })
       detail: { tags: ["api"], description: "Delete document" },
     },
   )
-  .post(
-    "/test",
-    async ({ log, set, body: { code }, userId }) => {
-      const compiled = await fetch(`${COMPILER_URL}/test`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          source: code,
-        }),
-      });
-      const data = await compiled.json();
-
-      if (!compiled.ok) {
-        set.status = compiled.status;
-        log.error(`${data.error}`);
+  .get(
+    "/check_path",
+    async ({ log, set, body: { projectName, organizationName, municipalityName, path, possibleName }, userId }) => {
+      const result = await sql.checkPathExists(possibleName, municipalityName, organizationName, projectName, path);
+      if (result) {
         set.status = 400;
-        return data.error;
+        return "Path already exists";
       }
-
       set.status = 200;
-      log.info(`Data ${data} compiled.`);
-      return {
-        compiled: data,
-        user_id: userId,
-      };
+      return "Path is available";
     },
     {
       body: t.Object({
-        code: t.String(),
+        projectName: t.String(),
+        organizationName: t.String(),
+        municipalityName: t.String(),
+        path: t.String(),
+        possibleName: t.String(),
       }),
       detail: { tags: ["api"] },
     },

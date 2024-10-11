@@ -757,4 +757,23 @@ async function updateChildPaths(
   }
 }
 
+export async function checkPathExists(
+  possibleName: string,
+  municipalityName: string,
+  orgName: string,
+  projectName: string,
+  path: string,
+): Promise<boolean> {
+  const result = await prisma.$queryRaw<{ path: string }[]>`
+    SELECT path::text
+    FROM documents
+    INNER JOIN projects ON projects.id = documents."projectId"
+    INNER JOIN organisations ON organisations.id = projects."organizationId"
+    INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
+    WHERE projects.name = ${projectName} AND organisations.name = ${orgName} AND municipalities.name = ${municipalityName}
+    AND documents.path = text2ltree(${path}) AND documents.name = ${possibleName}
+    `;
+  return result.length > 0;
+}
+
 export * as sql from "./sql";
