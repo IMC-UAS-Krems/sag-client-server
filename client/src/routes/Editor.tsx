@@ -1,4 +1,4 @@
-import { JSX, Component, createSignal, Show, createContext, useContext } from "solid-js";
+import { JSX, createSignal, Show, createContext, useContext, createEffect } from "solid-js";
 import { createCodeMirror, createEditorControlledValue } from "solid-codemirror";
 import { linter, Diagnostic, lintGutter } from "@codemirror/lint";
 import { EditorView, lineNumbers, keymap } from "@codemirror/view";
@@ -16,13 +16,14 @@ import { RightSideBar } from "../components/RightSideBar";
 import { LeftSideBar } from "../components/LeftSideBar";
 
 import { IEditorContext } from "@client/types";
+import { TreeNode } from "@client/components/LeftSideBar";
 
 type CompileResult = {
   error: string | undefined;
   url: string | undefined;
 };
 
-const compile = async (code: string): Promise<CompileResult | undefined> => {
+async function compile(code: string): Promise<CompileResult | undefined> {
   // Perform the compilation logic here
   try {
     const compileResult = await eden.api.compile.post({
@@ -64,9 +65,9 @@ const compile = async (code: string): Promise<CompileResult | undefined> => {
     console.error("Error during compilation: ", error);
     // Handle the error during compilation
   }
-};
+}
 
-const check = async (code: string): Promise<CompileResult | undefined> => {
+async function check(code: string): Promise<void> {
   // Perform the compilation logic here
   try {
     const compileResult = await eden.api.check.post({
@@ -90,7 +91,7 @@ const check = async (code: string): Promise<CompileResult | undefined> => {
     console.error("Error during compilation: ", error);
     // Handle the error during compilation
   }
-};
+}
 
 const checkErrors = () => {
   const errorList = errors();
@@ -107,8 +108,9 @@ const checkErrors = () => {
 
 export const EditorContext = createContext<IEditorContext>();
 
-export function EditorProvider(props) {
+export function EditorProvider(props: { children: JSX.Element }): JSX.Element {
   const [code, setCode] = createSignal("");
+  const [selectedNode, setSelectedNode] = createSignal<TreeNode | null>(null);
 
   const handleFileClick = (content: string | undefined) => {
     editorView().dispatch({
@@ -133,15 +135,17 @@ export function EditorProvider(props) {
   });
 
   return (
-    <EditorContext.Provider value={{ editorView, editorRef, createExtension, handleFileClick, code, setCode }}>
+    <EditorContext.Provider
+      value={{ editorView, editorRef, createExtension, handleFileClick, code, setCode, selectedNode, setSelectedNode }}
+    >
       {props.children}
     </EditorContext.Provider>
   );
 }
 
-const Editor: Component = () => {
+export function Editor(): JSX.Element {
   const [url, setUrl] = createSignal<JSX.Element | undefined>(undefined);
-  const { editorView, editorRef, createExtension, code } = useContext(EditorContext) as IEditorContext;
+  const { editorView, editorRef, createExtension, code, selectedNode } = useContext(EditorContext) as IEditorContext;
 
   createEditorControlledValue(editorView, code);
 
@@ -279,7 +283,7 @@ const Editor: Component = () => {
   return (
     <Header>
       <main>
-        <div class="flex flex-row justify-end mx-1">
+        <div class="flex flex-row justify-end mx-1 space-x-2">
           <Show when={url() !== undefined}>
             <Alert.Root class="alert">{url()}</Alert.Root>
           </Show>
@@ -315,6 +319,15 @@ const Editor: Component = () => {
           >
             Compile
           </Button.Root>
+          <Button.Root
+            class="bg-gray-900 hover:bg-black text-white font-bold py-1 px-5 rounded-xl focus:outline-none focus:shadow-outline text-lg w-32"
+            onClick={async () => {
+              const node = selectedNode();
+              if (node !== null) node.saveContent(code());
+            }}
+          >
+            Save File
+          </Button.Root>
         </div>
         <div class="editor-container">
           <LeftSideBar />
@@ -326,6 +339,4 @@ const Editor: Component = () => {
       </main>
     </Header>
   );
-};
-
-export default Editor;
+}
