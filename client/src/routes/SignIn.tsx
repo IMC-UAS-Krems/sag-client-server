@@ -10,8 +10,8 @@ import Swal from "sweetalert2";
 import authStore from "@store/authStore";
 
 import { useNavigate } from "@solidjs/router";
-import { setUser } from "@client/store";
 import Header from "@client/components/Header";
+import { Notification } from "@client/components/LeftSideBar";
 
 const FormField: Component<{
   getter: Accessor<string | undefined>;
@@ -94,11 +94,8 @@ const Register: Component = () => {
 
     navigate("/editor", { replace: true });
 
-    Swal.fire({
-      titleText: "Login successful",
-      position: "top-right",
-      timer: 1500,
-      showConfirmButton: false,
+    Notification.fire({
+      title: "Login successful",
       icon: "success",
     });
   };
@@ -173,11 +170,8 @@ const Login: Component = () => {
 
     navigate("/editor", { replace: true });
 
-    Swal.fire({
+    Notification.fire({
       titleText: "Login successful",
-      position: "top-right",
-      timer: 1500,
-      showConfirmButton: false,
       icon: "success",
     });
   };
