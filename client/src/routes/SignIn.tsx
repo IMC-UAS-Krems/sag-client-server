@@ -7,7 +7,6 @@ import Swal from "sweetalert2";
 
 import { eden } from "@client/api";
 import authStore from "@store/authStore";
-import { setUser } from "@client/store";
 import Header from "@client/components/Header";
 import FormField from "@client/components/FormField";
 import styles from "@styles/Signin.module.css";

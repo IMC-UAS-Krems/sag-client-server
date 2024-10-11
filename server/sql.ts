@@ -2,7 +2,7 @@ import { createId } from "@paralleldrive/cuid2";
 import { prisma } from "@∆";
 import { UserRole } from "@utils/roles";
 import { UserDetails } from "@server/types";
-import { Organization, Project, User, Municipality, UserType, DocumentType, Prisma } from "@prisma/client";
+import { Organization, Project, User, Municipality, UserType, DocumentType } from "@prisma/client";
 import { SagError } from "./errors";
 
 export type Document = {

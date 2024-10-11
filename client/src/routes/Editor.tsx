@@ -8,13 +8,9 @@ import { eden } from "@client/api";
 import "../styles/Editor.css";
 import "../styles/Editor.css";
 import { errors, setErrors, Error } from "@store/index";
-import Header from "@client/components/Header";
-import authStore from "@store/authStore";
-import "../styles/Editor.css";
-
 import { RightSideBar } from "../components/RightSideBar";
-import { LeftSideBar } from "../components/LeftSideBar";
-
+import Header from "@client/components/Header";
+import { LeftSideBar } from "@client/components/LeftSideBar";
 import { IEditorContext } from "@client/types";
 import { TreeNode } from "@client/components/LeftSideBar";
 

@@ -12,8 +12,6 @@ import {
   onCleanup,
 } from "solid-js";
 import { eden } from "@client/api";
-import { theme } from "@store/index";
-import { file } from "bun";
 import { createMutable } from "solid-js/store";
 import { EditorContext } from "@client/routes/Editor";
 import { IEditorContext } from "@client/types";
