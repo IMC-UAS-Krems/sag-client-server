@@ -9,6 +9,7 @@ import { auth } from "@server/routes/auth";
 import { api } from "@server/routes/api";
 import { admin } from "@server/routes/admin";
 import { panic } from "@utils/panic";
+import { updateUser } from "./sql";
 
 // TODO: @elysiajs/cookie not needed, can be reverted to original
 // TODO: check cors settings for production
@@ -60,6 +61,12 @@ const app = new Elysia()
         const verifiedToken = (await jwt.verify(cookie.jwtToken.value)) as unknown;
         if (typeof verifiedToken === "object" && verifiedToken !== null && "userId" in verifiedToken) {
           jwtToken = verifiedToken as Token;
+          // Here we can update the last login time of the user
+          try {
+            await updateUser(jwtToken.userId, { lastLoginTime: new Date() });
+          } catch (error) {
+            console.error("Failed to update last login time:", error);
+          }
         } else {
           console.warn("JWT verification failed or returned an invalid token.");
         }

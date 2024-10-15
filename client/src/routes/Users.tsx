@@ -41,9 +41,9 @@ const Users: Component = () => {
     await fetchUsers();
   });
 
-  createEffect(() => {
+  createEffect(async () => {
     reload();
-    fetchUsers();
+    await fetchUsers();
   });
 
   const filteredUsers = () => {
@@ -51,6 +51,7 @@ const Users: Component = () => {
   };
 
   async function fetchUsers() {
+    setLoading(true);
     try {
       const fetchedUsers: UsersResponse = await eden.admin.users.get({
         $fetch: {
@@ -76,7 +77,7 @@ const Users: Component = () => {
         } else {
           if (Array.isArray(fetchedUsers.data)) {
             setUsers(fetchedUsers.data);
-            await updateOnlineStatuses(fetchedUsers.data);
+            await updateOnlineStatuses(fetchedUsers.data); // TODO: Get rid of this seperate call and handle on render
             // console.log("Fetch:", fetchedUsers);
             // console.log("Fetched users:", fetchedUsers.data);
           } else {
@@ -94,6 +95,7 @@ const Users: Component = () => {
     }
   }
 
+  // TODO: Get rid of this, handle on rednder
   async function updateOnlineStatuses(users: UserDetails[]) {
     const statuses: Record<string, boolean> = {};
     for (const user of users) {
@@ -234,6 +236,9 @@ const Users: Component = () => {
         <div class={styles["nav-button-container"]}>
           <button onClick={handleCreateUser} class={styles["nav-button"]}>
             Create new user
+          </button>
+          <button onClick={() => setReload(!reload())} class={styles["nav-button"]}>
+            Refresh data
           </button>
           <button
             onClick={() => setShowDeleted(!showDeleted())}
