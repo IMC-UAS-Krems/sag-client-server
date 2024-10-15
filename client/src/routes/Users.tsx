@@ -6,12 +6,13 @@ import { useNavigate } from "@solidjs/router";
 import Swal from "sweetalert2";
 
 import { eden } from "@client/api";
-import { handleUnauthorized, isUserOnline } from "@client/utils/authUtils";
+import { handleUnauthorized } from "@client/utils/authUtils";
 import Header from "@client/components/Header";
 import authStore from "@store/authStore";
 import styles from "@styles/Users.module.css";
 import { theme } from "@store/index";
 import { UserDetails } from "@server/types";
+import { panic } from "@utils/panic";
 
 import "../../../node_modules/solid-contextmenu/dist/style.css";
 
@@ -26,14 +27,12 @@ interface UsersResponse {
 const Users: Component = () => {
   const navigate = useNavigate();
   const loggedInUser = authStore.state().email;
-  // console.log("Auth store:", authStore.state());
-  // console.log("Logged in user:", loggedInUser);
+  const sessionDuration = Number(import.meta.env.VITE_COOKIES_EXPIRATION) || panic("VITE_COOKIES_EXPIRATION environment variable not set")
 
-  // User data
   const [users, setUsers] = createSignal<UserDetails[]>([]);
   const [loading, setLoading] = createSignal(true);
   const [error, setError] = createSignal<string | null>(null);
-  const [onlineStatuses, setOnlineStatuses] = createSignal<Record<string, boolean>>({});
+  const [now, setNow] = createSignal(new Date().getTime());
   const [reload, setReload] = createSignal(false);
   const [showDeleted, setShowDeleted] = createSignal(false);
 
@@ -43,6 +42,7 @@ const Users: Component = () => {
 
   createEffect(async () => {
     reload();
+    setNow(new Date().getTime());
     await fetchUsers();
   });
 
@@ -77,7 +77,6 @@ const Users: Component = () => {
         } else {
           if (Array.isArray(fetchedUsers.data)) {
             setUsers(fetchedUsers.data);
-            await updateOnlineStatuses(fetchedUsers.data); // TODO: Get rid of this seperate call and handle on render
             // console.log("Fetch:", fetchedUsers);
             // console.log("Fetched users:", fetchedUsers.data);
           } else {
@@ -93,15 +92,6 @@ const Users: Component = () => {
     } finally {
       setLoading(false);
     }
-  }
-
-  // TODO: Get rid of this, handle on rednder
-  async function updateOnlineStatuses(users: UserDetails[]) {
-    const statuses: Record<string, boolean> = {};
-    for (const user of users) {
-      statuses[user.id] = await isUserOnline(user);
-    }
-    setOnlineStatuses(statuses);
   }
 
   async function handleCreateUser() {
@@ -206,12 +196,9 @@ const Users: Component = () => {
             return;
           } else {
             Swal.fire("Logged out!", "The user has been logged out.", "success");
-
             setUsers((prevUsers) =>
               prevUsers.map((user) => (user.id === userId ? { ...user, needsToBeLoggedOut: true } : user)),
             );
-
-            await updateOnlineStatuses(users());
           }
         } catch (error) {
           console.error("Failed to log out user:", error);
@@ -268,53 +255,63 @@ const Users: Component = () => {
               </thead>
 
               <tbody>
-                {filteredUsers().map((user) => {
-                  const { show } = useContextMenu({ id: user.id });
-                  const onlineStatus = onlineStatuses()[user.id];
+                {
+                  filteredUsers().map((user) => {
+                    const { show } = useContextMenu({ id: user.id });
+                    // const onlineStatus = onlineStatuses()[user.id];
+                    let onlineStatus = false;
+                    if (!user.lastLoginTime) {
+                      onlineStatus = false;
+                    } else {
+                      console.log("Now is:", now());
+                      onlineStatus = !user.needsToBeLoggedOut && now() - new Date(user.lastLoginTime).getTime() < sessionDuration;
+                      console.log("User:", user.username, "Online status:", onlineStatus, "Login difference:", now() - new Date(user.lastLoginTime).getTime());
+                    }
 
-                  return (
-                    <tr class={user.email == loggedInUser && !user.deleted ? styles["logged-in-user"] : ""}>
-                      <td>{user.username}</td>
-                      <td>{user.name}</td>
-                      <td>{user.email}</td>
-                      <td>{user.municipality?.name}</td>
-                      <td>{user.organization?.name}</td>
-                      <td>{user.userRole}</td>
-                      <td>{user.deleted ? "🗑️" : onlineStatus ? "🟢" : "🔴"}</td>
-                      <td
-                        onClick={(e) => {
-                          show(e, { props: user.id });
-                        }}
-                        class={styles.actions}
-                      >
-                        <FaSolidEllipsis />
-                        <Menu id={user.id} animation={_animation()} theme={theme() === "dark" ? "dark" : "light"}>
-                          <Item onClick={() => handleEditUser(user.id)} disabled={user.userRole == "Administrator"}>
-                            ✏️ Edit
-                          </Item>
-                          <Item
-                            onClick={() => handleDeleteUser(user.id)}
-                            disabled={user.userRole === "Administrator" || user.deleted}
-                          >
-                            🗑️ Delete
-                          </Item>
-                          <Separator />
-                          <Item
-                            onClick={() => handleLogOutUser(user.id, user.username)}
-                            disabled={
-                              user.userRole === "Administrator" ||
-                              !onlineStatus ||
-                              user.needsToBeLoggedOut ||
-                              user.deleted
-                            }
-                          >
-                            🚶 Log out
-                          </Item>
-                        </Menu>
-                      </td>
-                    </tr>
-                  );
-                })}
+
+                    return (
+                      <tr class={user.email == loggedInUser && !user.deleted ? styles["logged-in-user"] : ""}>
+                        <td>{user.username}</td>
+                        <td>{user.name}</td>
+                        <td>{user.email}</td>
+                        <td>{user.municipality?.name}</td>
+                        <td>{user.organization?.name}</td>
+                        <td>{user.userRole}</td>
+                        <td>{user.deleted ? "🗑️" : onlineStatus ? "🟢" : "🔴"}</td>
+                        <td
+                          onClick={(e) => {
+                            show(e, { props: user.id });
+                          }}
+                          class={styles.actions}
+                        >
+                          <FaSolidEllipsis />
+                          <Menu id={user.id} animation={_animation()} theme={theme() === "dark" ? "dark" : "light"}>
+                            <Item onClick={() => handleEditUser(user.id)} disabled={user.userRole == "Administrator"}>
+                              ✏️ Edit
+                            </Item>
+                            <Item
+                              onClick={() => handleDeleteUser(user.id)}
+                              disabled={user.userRole === "Administrator" || user.deleted}
+                            >
+                              🗑️ Delete
+                            </Item>
+                            <Separator />
+                            <Item
+                              onClick={() => handleLogOutUser(user.id, user.username)}
+                              disabled={
+                                user.userRole === "Administrator" ||
+                                !onlineStatus ||
+                                user.needsToBeLoggedOut ||
+                                user.deleted
+                              }
+                            >
+                              🚶 Log out
+                            </Item>
+                          </Menu>
+                        </td>
+                      </tr>
+                    );
+                  })}
               </tbody>
             </table>
           </div>
