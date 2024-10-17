@@ -1,16 +1,4 @@
-import {
-  For,
-  onMount,
-  batch,
-  createSignal,
-  useContext,
-  Show,
-  Accessor,
-  Suspense,
-  Setter,
-  JSXElement,
-  onCleanup,
-} from "solid-js";
+import { For, onMount, batch, createSignal, useContext, Show, Accessor, Suspense, Setter, JSXElement } from "solid-js";
 import { eden } from "@client/api";
 import { createMutable } from "solid-js/store";
 import { EditorContext } from "@client/contexts/editor";
@@ -18,6 +6,7 @@ import { IEditorContext } from "@client/contexts/editor";
 import { ContextMenu } from "@kobalte/core/context-menu";
 import Swal from "sweetalert2";
 import { Notification, Prompt } from "@client/common";
+import styles from "@styles/LeftSideBar.module.css";
 
 enum SagDocumentType {
   FILE = "FILE",
@@ -61,24 +50,24 @@ export class TreeNode implements GetChildren {
   municipalityName: string | undefined;
   parent: TreeNode | undefined;
 
-  constructor(
-    name: string,
-    docType: SagDocumentType,
-    path?: string,
-    projectName?: string,
-    orgName?: string,
-    municipalityName?: string,
-    parent?: TreeNode,
-  ) {
-    [this.name, this.setName] = createSignal(name);
-    this.docType = docType;
-    [this.path, this.setPath] = createSignal(path);
+  constructor(params: {
+    name: string;
+    docType: SagDocumentType;
+    path?: string;
+    projectName?: string;
+    orgName?: string;
+    municipalityName?: string;
+    parent?: TreeNode;
+  }) {
+    [this.name, this.setName] = createSignal(params.name);
+    this.docType = params.docType;
+    [this.path, this.setPath] = createSignal(params.path);
     this.isExpanded = false;
-    this.projectName = projectName;
-    this.orgName = orgName;
-    this.municipalityName = municipalityName;
+    this.projectName = params.projectName;
+    this.orgName = params.orgName;
+    this.municipalityName = params.municipalityName;
     this.children = createMutable([]);
-    this.parent = parent;
+    this.parent = params.parent;
   }
 
   addChild(child: TreeNode) {
@@ -116,8 +105,12 @@ export class TreeNode implements GetChildren {
     }
   }
 
+  isFile() {
+    return this.docType === SagDocumentType.FILE;
+  }
+
   async createDocument(name: string, docType: SagDocumentType, path: string) {
-    if (docType !== SagDocumentType.FOLDER) {
+    if (![SagDocumentType.FILE, SagDocumentType.FOLDER].includes(docType)) {
       console.error("Cannot create document that is not a folder");
       return;
     }
@@ -136,7 +129,14 @@ export class TreeNode implements GetChildren {
 
     if (resp.status === 200) {
       this.addChild(
-        new TreeNode(name, docType, resp.data as string, this.projectName, this.orgName, this.municipalityName),
+        new TreeNode({
+          name: name,
+          docType: docType,
+          path: resp.data as string,
+          projectName: this.projectName,
+          orgName: this.orgName,
+          municipalityName: this.municipalityName,
+        }),
       );
     }
   }
@@ -182,7 +182,6 @@ export class TreeNode implements GetChildren {
   }
 
   async saveContent(content: string) {
-    // TODO: add a notification when file is saved
     const resp = await eden.api.document_content.put({
       content: content,
       projectName: this.projectName as string,
@@ -236,13 +235,14 @@ export class TreeNode implements GetChildren {
     }
   }
 
-  async checkNewPath(name: string): Promise<boolean> {
-    const response = await eden.api.check_path.get({
+  async checkNewPath(name: string, isNew: boolean): Promise<boolean> {
+    const response = await eden.api.check_path.post({
       projectName: this.projectName as string,
       organizationName: this.orgName as string,
       municipalityName: this.municipalityName as string,
       path: this.path() as string,
       possibleName: name,
+      isNew: isNew,
       $fetch: {
         mode: "cors",
         credentials: "include",
@@ -259,7 +259,7 @@ class FileTree implements GetChildren {
   root: TreeNode;
 
   constructor() {
-    this.root = createMutable(new TreeNode("root", SagDocumentType.FOLDER));
+    this.root = createMutable(new TreeNode({ name: "root", docType: SagDocumentType.FOLDER }));
   }
 
   addDocument(doc: SagDocument) {
@@ -279,28 +279,37 @@ class FileTree implements GetChildren {
       currentNode = currentNode?.findChild({ path: path });
     }
     currentNode?.addChild(
-      new TreeNode(
-        doc.name,
-        SagDocumentType[doc.documentType.toUpperCase() as keyof typeof SagDocumentType],
-        doc.documentPath,
-        doc.projectName,
-        doc.orgName,
-        doc.municipalityName,
-        currentNode,
-      ),
+      new TreeNode({
+        name: doc.name,
+        docType: SagDocumentType[doc.documentType.toUpperCase() as keyof typeof SagDocumentType],
+        path: doc.documentPath,
+        projectName: doc.projectName,
+        orgName: doc.orgName,
+        municipalityName: doc.municipalityName,
+        parent: currentNode,
+      }),
     );
   }
 
   addMunicipality(municipality: string) {
     if (this.root.findChild({ name: municipality }) == null) {
-      this.root.addChild(new TreeNode(municipality, SagDocumentType.MUNICIPALITY));
+      this.root.addChild(
+        new TreeNode({ name: municipality, docType: SagDocumentType.MUNICIPALITY, municipalityName: municipality }),
+      );
     }
   }
 
   addOrg(org: string, municipality: string) {
     const municipalityNode = this.root.findChild({ name: municipality });
     if (municipalityNode?.findChild({ name: org }) == null) {
-      municipalityNode?.addChild(new TreeNode(org, SagDocumentType.ORG));
+      municipalityNode?.addChild(
+        new TreeNode({
+          name: org,
+          docType: SagDocumentType.ORG,
+          municipalityName: municipalityNode.municipalityName,
+          orgName: org,
+        }),
+      );
     }
   }
 
@@ -308,7 +317,15 @@ class FileTree implements GetChildren {
     const municipalityNode = this.root.findChild({ name: municipality });
     const orgNode = municipalityNode?.findChild({ name: org });
     if (orgNode?.findChild({ name: project }) == null) {
-      orgNode?.addChild(new TreeNode(project, SagDocumentType.PROJECT));
+      orgNode?.addChild(
+        new TreeNode({
+          name: project,
+          docType: SagDocumentType.PROJECT,
+          municipalityName: orgNode.municipalityName,
+          orgName: orgNode.orgName,
+          projectName: project,
+        }),
+      );
     }
   }
 
@@ -331,7 +348,7 @@ function FileNode(props: { node: TreeNode }) {
   }
 
   return (
-    <div class="flex flex-col">
+    <div class={styles["file-node"]}>
       <Suspense>
         <ContextMenu.Trigger
           disabled={
@@ -339,7 +356,7 @@ function FileNode(props: { node: TreeNode }) {
           }
         >
           <button
-            class="flex flex-row"
+            class={styles["file-node-btn"]}
             onClick={async () => {
               if (
                 [SagDocumentType.FOLDER, SagDocumentType.FILE, SagDocumentType.PROJECT].includes(props.node.docType)
@@ -362,7 +379,7 @@ function FileNode(props: { node: TreeNode }) {
               }
             }}
           >
-            <span class="mr-2">{props.node.icon()}</span>
+            <span class={styles["file-node-btn-icon"]}>{props.node.icon()}</span>
             <span>{props.node.name()}</span>
           </button>
         </ContextMenu.Trigger>
@@ -371,10 +388,9 @@ function FileNode(props: { node: TreeNode }) {
       <div
         //@ts-expect-error - original message: Variable 'expandDiv' is used before being assigned
         ref={expandDiv}
-        class="transition-all duration-400 overflow-hidden grid"
-        style={{ "grid-template-rows": "0fr" }}
+        class={styles["file-node-container"]}
       >
-        <div class="ml-4 min-h-0">
+        <div class={styles["file-node-list"]}>
           <For each={props.node.getChildren()}>{(child) => <FileNode node={child} />}</For>
         </div>
       </div>
@@ -389,10 +405,22 @@ function FileContextMenu(props: { children: JSXElement }) {
     const node = selectedNode();
     switch (action) {
       case MenuOption.AddFile: {
-        // TODO: check if a file doesn't exist and the name is valid
         const { value } = await Prompt.fire<string>({
           title: "Enter file name",
           input: "text",
+          preConfirm: async (path) => {
+            const node = selectedNode();
+            if (await node?.checkNewPath(path, true)) {
+              return path;
+            }
+            Swal.showValidationMessage("File or folder with this name already exists");
+          },
+          inputValidator: (input) => {
+            console.log(input);
+            if (!input.match("^[a-zA-Z0-9_ ]+$")) {
+              return "Input must contain only letters, numbers, underscores and spaces";
+            }
+          },
         });
         if (value && value.length > 0) {
           const node = selectedNode();
@@ -402,19 +430,21 @@ function FileContextMenu(props: { children: JSXElement }) {
         break;
       }
       case MenuOption.AddFolder: {
-        // TODO: check if a folder doesn't exist and the name is valid
         const { value } = await Prompt.fire<string>({
           title: "Enter folder name",
           input: "text",
           preConfirm: async (path) => {
             const node = selectedNode();
-            if (await node?.checkNewPath(path)) {
+            if (await node?.checkNewPath(path, true)) {
               return path;
             }
-            Swal.showValidationMessage("Path already exists");
+            Swal.showValidationMessage("File or folder with this name already exists");
           },
           inputValidator: (input) => {
-            !input.match("^[a-zA-Z0-9_ ]+$") && "Input must contain only letters, numbers, underscores and spaces";
+            console.log(input);
+            if (!input.match("^[a-zA-Z0-9_ ]+$")) {
+              return "Input must contain only letters, numbers, underscores and spaces";
+            }
           },
         });
         if (value && value.length > 0) {
@@ -437,6 +467,19 @@ function FileContextMenu(props: { children: JSXElement }) {
         const { value } = await Prompt.fire<string>({
           title: "Enter new name",
           input: "text",
+          preConfirm: async (path) => {
+            const node = selectedNode();
+            if (await node?.checkNewPath(path, false)) {
+              return path;
+            }
+            Swal.showValidationMessage("File or folder with this name already exists");
+          },
+          inputValidator: (input) => {
+            console.log(input);
+            if (!input.match("^[a-zA-Z0-9_ ]+$")) {
+              return "Input must contain only letters, numbers, underscores and spaces";
+            }
+          },
         });
         if (value && value.length > 0) {
           const node = selectedNode();
@@ -449,16 +492,16 @@ function FileContextMenu(props: { children: JSXElement }) {
   return (
     <ContextMenu>
       <ContextMenu.Portal>
-        <ContextMenu.Content class="bg-white border border-gray-200 rounded shadow-lg">
+        <ContextMenu.Content class={styles["context-menu"]}>
           <Suspense>
-            <ul class="py-1">
+            <ul class={styles["context-menu-ul"]}>
               <Show
                 when={[SagDocumentType.FOLDER, SagDocumentType.FILE].includes(
                   selectedNode()?.docType as SagDocumentType,
                 )}
               >
                 <ContextMenu.Item
-                  class="px-4 py-2 cursor-pointer hover:bg-gray-100"
+                  class={styles["context-menu-item"]}
                   onSelect={async () => {
                     await handleContextMenu(MenuOption.Rename);
                   }}
@@ -484,7 +527,7 @@ function FileContextMenu(props: { children: JSXElement }) {
                 )}
               >
                 <ContextMenu.Item
-                  class="px-4 py-2 cursor-pointer hover:bg-gray-100"
+                  class={styles["context-menu-item"]}
                   onSelect={async () => {
                     await handleContextMenu(MenuOption.Delete);
                   }}
@@ -498,7 +541,7 @@ function FileContextMenu(props: { children: JSXElement }) {
                 )}
               >
                 <ContextMenu.Item
-                  class="px-4 py-2 cursor-pointer hover:bg-gray-100"
+                  class={styles["context-menu-item"]}
                   onSelect={async () => {
                     await handleContextMenu(MenuOption.AddFile);
                   }}
@@ -512,7 +555,7 @@ function FileContextMenu(props: { children: JSXElement }) {
                 )}
               >
                 <ContextMenu.Item
-                  class="px-4 py-2 cursor-pointer hover:bg-gray-100"
+                  class={styles["context-menu-item"]}
                   onSelect={async () => {
                     await handleContextMenu(MenuOption.AddFolder);
                   }}
@@ -530,8 +573,8 @@ function FileContextMenu(props: { children: JSXElement }) {
 }
 
 export function LeftSideBar() {
-  const tree = createMutable(new FileTree());
-  const { setSelectedNode } = useContext(EditorContext) as IEditorContext;
+  //const tree = createMutable(new FileTree());
+  const tree = new FileTree();
 
   onMount(() => {
     eden.api.documents
@@ -551,19 +594,21 @@ export function LeftSideBar() {
       });
   });
 
-  // TODO: study this thing
-  onCleanup(() => {
-    setSelectedNode(null);
-    tree.root.children = [];
-  });
+  //createEffect(() => {
+  //  on(
+  //    () => tree,
+  //    () => console.log("tree updated"),
+  //    { defer: true },
+  //  );
+  //});
 
   return (
     <>
       <FileContextMenu>
-        <div class="w-1/4 max-h-screen overflow-auto">
+        <div class={styles["file-tree"]}>
           <For each={tree.getChildren()}>
             {(child) => (
-              <div class="ml-4">
+              <div class={styles["file-tree-item"]}>
                 <FileNode node={child} />
               </div>
             )}

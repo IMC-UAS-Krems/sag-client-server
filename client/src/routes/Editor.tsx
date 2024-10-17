@@ -1,5 +1,5 @@
-import { JSX, createSignal, Show, createContext, useContext, createEffect } from "solid-js";
-import { createCodeMirror, createEditorControlledValue } from "solid-codemirror";
+import { JSX, createSignal, useContext, createEffect } from "solid-js";
+import { createEditorControlledValue } from "solid-codemirror";
 import { linter, Diagnostic, lintGutter } from "@codemirror/lint";
 import { EditorView, lineNumbers, keymap } from "@codemirror/view";
 import { Button } from "@kobalte/core";
@@ -10,9 +10,7 @@ import "../styles/Editor.css";
 import { errors, setErrors, Error } from "@store/index";
 import { RightSideBar } from "../components/RightSideBar";
 import Header from "@client/components/Header";
-import { LeftSideBar } from "@client/components/LeftSideBar";
-import { IEditorContext } from "@client/types";
-import { TreeNode } from "@client/components/LeftSideBar";
+import { LeftSideBar, TreeNode } from "@client/components/LeftSideBar";
 import { EditorContext, IEditorContext } from "@client/contexts/editor";
 import { Notification } from "@client/common";
 
@@ -82,7 +80,7 @@ async function compile(code: string): Promise<CompileResult | undefined> {
   }
 }
 
-async function check(code: string): Promise<void> {
+export async function check(code: string): Promise<void> {
   // Perform the compilation logic here
   try {
     const compileResult = await eden.api.check.post({
@@ -121,13 +119,14 @@ const checkErrors = () => {
   return errorMap;
 };
 
-
-
-  });
-
-
-export function Editor(): JSX.Element {
+function Editor(): JSX.Element {
   const { editorView, editorRef, createExtension, code, selectedNode } = useContext(EditorContext) as IEditorContext;
+
+  const [lastSelectedFile, setLastSelectedFile] = createSignal<TreeNode | null>(null);
+
+  createEffect(() => {
+    if (selectedNode()?.isFile()) setLastSelectedFile(selectedNode());
+  });
 
   createEditorControlledValue(editorView, code);
 
@@ -137,7 +136,7 @@ export function Editor(): JSX.Element {
       // { tag: "test1", color: "blue" }, // Custom style for "test1"
       // { tag: "test2", color: "green" }, // Custom style for "test2"
     ]);
-  
+
     // make myHighlightStyle into extension
     createExtension(syntaxHighlighting(styles));*/
 
@@ -267,7 +266,10 @@ export function Editor(): JSX.Element {
       <main>
         <div class="flex flex-row justify-end mx-1 space-x-2">
           <Button.Root
-            class="bg-gray-900 hover:bg-black text-white font-bold py-1 px-5 rounded-xl focus:outline-none focus:shadow-outline text-lg w-32"
+            class={"bg-gray-900 hover:bg-black text-white font-bold py-1 px-5 rounded-xl focus:outline-none focus:shadow-outline text-lg w-32".concat(
+              lastSelectedFile()?.isFile() ? "" : " cursor-not-allowed",
+            )}
+            {...(lastSelectedFile()?.isFile() ? {} : { disabled: true })}
             onClick={async () => {
               await compile(code());
             }}
@@ -275,7 +277,9 @@ export function Editor(): JSX.Element {
             Compile
           </Button.Root>
           <Button.Root
-            class="bg-gray-900 hover:bg-black text-white font-bold py-1 px-5 rounded-xl focus:outline-none focus:shadow-outline text-lg w-32"
+            class={"bg-gray-900 hover:bg-black text-white font-bold py-1 px-5 rounded-xl focus:outline-none focus:shadow-outline text-lg w-32".concat(
+              lastSelectedFile()?.isFile() ? "" : " cursor-not-allowed",
+            )}
             onClick={async () => {
               const node = selectedNode();
               if (node !== null) node.saveContent(code());
@@ -295,3 +299,5 @@ export function Editor(): JSX.Element {
     </Header>
   );
 }
+
+export default Editor;

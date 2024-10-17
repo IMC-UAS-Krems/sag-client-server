@@ -325,8 +325,20 @@ export const api = new Elysia({ prefix: "/api" })
   )
   .post(
     "/check_path",
-    async ({ log, set, body: { projectName, organizationName, municipalityName, path, possibleName }, userId }) => {
-      const result = await sql.checkPathExists(possibleName, municipalityName, organizationName, projectName, path);
+    async ({
+      log,
+      set,
+      body: { projectName, organizationName, municipalityName, path, possibleName, isNew },
+      userId,
+    }) => {
+      const result = await sql.checkPathExists(
+        possibleName,
+        municipalityName,
+        organizationName,
+        projectName,
+        path,
+        isNew,
+      );
       if (result) {
         set.status = 400;
         return "Path already exists";
@@ -341,6 +353,7 @@ export const api = new Elysia({ prefix: "/api" })
         municipalityName: t.String(),
         path: t.String(),
         possibleName: t.String(),
+        isNew: t.Boolean(),
       }),
       detail: { tags: ["api"] },
     },

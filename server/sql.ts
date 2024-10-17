@@ -757,13 +757,24 @@ async function updateChildPaths(
   }
 }
 
+/**
+ * Checks if a document with a `possibleName` exists in the database
+ * if `isNew` is true, check is done with an
+ */
 export async function checkPathExists(
   possibleName: string,
   municipalityName: string,
   orgName: string,
   projectName: string,
   path: string,
+  isNew: boolean,
 ): Promise<boolean> {
+  if (isNew) {
+    path = joinPath(path, possibleName);
+  } else {
+    const splitIndex = (path as string).lastIndexOf(".");
+    path = splitIndex === -1 ? joinPath("", possibleName) : joinPath(path.substring(0, splitIndex), possibleName);
+  }
   const result = await prisma.$queryRaw<{ path: string }[]>`
     SELECT path::text
     FROM documents
