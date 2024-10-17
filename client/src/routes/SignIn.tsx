@@ -10,7 +10,7 @@ import authStore from "@store/authStore";
 import Header from "@client/components/Header";
 import FormField from "@client/components/FormField";
 import styles from "@styles/Signin.module.css";
-import { Notification } from "@client/components/LeftSideBar";
+import { Notification } from "@client/common";
 
 interface NavigateProps {
   navigate: ReturnType<typeof useNavigate>;

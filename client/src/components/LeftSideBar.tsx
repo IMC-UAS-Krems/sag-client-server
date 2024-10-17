@@ -17,30 +17,7 @@ import { EditorContext } from "@client/routes/Editor";
 import { IEditorContext } from "@client/types";
 import { ContextMenu } from "@kobalte/core/context-menu";
 import Swal from "sweetalert2";
-
-// TODO: Swal: reuse configuration by creating your own Swal with Swal.mixin({...options})
-
-export const Notification = Swal.mixin({
-  toast: true,
-  position: "top-right",
-  timer: 1500,
-  showConfirmButton: false,
-});
-
-export const Prompt = Swal.mixin({
-  showCancelButton: false,
-  buttonsStyling: false,
-  showDenyButton: false,
-  showCloseButton: true,
-  inputAttributes: {
-    autocomplete: "off",
-  },
-  customClass: {
-    confirmButton:
-      "bg-green-500 hover:bg-green-700 text-white font-bold py-1 px-2 rounded focus:outline-none focus:shadow-outline",
-    popup: "bg-white shadow-xl rounded px-8 pt-6 pb-8 mb-4  flex flex-col gap gap-4",
-  },
-});
+import { Notification, Prompt } from "@client/common";
 
 enum SagDocumentType {
   FILE = "FILE",
