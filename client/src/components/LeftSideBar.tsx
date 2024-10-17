@@ -13,8 +13,8 @@ import {
 } from "solid-js";
 import { eden } from "@client/api";
 import { createMutable } from "solid-js/store";
-import { EditorContext } from "@client/routes/Editor";
-import { IEditorContext } from "@client/types";
+import { EditorContext } from "@client/contexts/editor";
+import { IEditorContext } from "@client/contexts/editor";
 import { ContextMenu } from "@kobalte/core/context-menu";
 import Swal from "sweetalert2";
 import { Notification, Prompt } from "@client/common";
