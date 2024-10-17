@@ -323,7 +323,7 @@ export const api = new Elysia({ prefix: "/api" })
       detail: { tags: ["api"], description: "Delete document" },
     },
   )
-  .get(
+  .post(
     "/check_path",
     async ({ log, set, body: { projectName, organizationName, municipalityName, path, possibleName }, userId }) => {
       const result = await sql.checkPathExists(possibleName, municipalityName, organizationName, projectName, path);
