@@ -41,8 +41,8 @@ model User {
 
     // Personal Data
     name     String
-    username String
-    email    String
+    username String   @unique
+    email    String   @unique
     password String
     userRole UserRole @default(Developer)
     userType UserType @default(DEFAULT)
@@ -66,11 +66,11 @@ model User {
     // Meta
     registered DateTime  @default(now())
     updatedAt  DateTime? @updatedAt
-    deleted Boolean @default(false)
+    deleted    Boolean   @default(false)
 
     // Tracking user tokens
-    lastLoginTime DateTime @default(now())
-    needsToBeLoggedOut Boolean @default(false)
+    lastLoginTime      DateTime @default(now())
+    needsToBeLoggedOut Boolean  @default(false)
 
     @@map("users")
 }
