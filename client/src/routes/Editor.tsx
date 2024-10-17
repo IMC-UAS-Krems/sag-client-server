@@ -2,7 +2,7 @@ import { JSX, createSignal, Show, createContext, useContext, createEffect } from
 import { createCodeMirror, createEditorControlledValue } from "solid-codemirror";
 import { linter, Diagnostic, lintGutter } from "@codemirror/lint";
 import { EditorView, lineNumbers, keymap } from "@codemirror/view";
-import { Button, Alert } from "@kobalte/core";
+import { Button } from "@kobalte/core";
 
 import { eden } from "@client/api";
 import "../styles/Editor.css";
@@ -14,6 +14,7 @@ import { LeftSideBar } from "@client/components/LeftSideBar";
 import { IEditorContext } from "@client/types";
 import { TreeNode } from "@client/components/LeftSideBar";
 import { EditorContext, IEditorContext } from "@client/contexts/editor";
+import { Notification } from "@client/common";
 
 type CompileResult = {
   error: string | undefined;
@@ -23,6 +24,12 @@ type CompileResult = {
 async function compile(code: string): Promise<CompileResult | undefined> {
   // Perform the compilation logic here
   try {
+    Notification.fire({
+      icon: "info",
+      titleText: "Compiling",
+      timer: 5000,
+    });
+    Notification.stopTimer();
     const compileResult = await eden.api.compile.post({
       code,
       $fetch: {
@@ -31,6 +38,18 @@ async function compile(code: string): Promise<CompileResult | undefined> {
         method: "POST",
       },
     });
+
+    if (compileResult.error) {
+      Notification.update({
+        title: "Error",
+        titleText: compileResult.error.value.name,
+        icon: "error",
+      });
+
+      Notification.toggleTimer();
+
+      return;
+    }
 
     if (compileResult.data?.status === "error" && code.trim() !== "") {
       if (compileResult.data?.hasOwnProperty("errors")) {
@@ -42,20 +61,19 @@ async function compile(code: string): Promise<CompileResult | undefined> {
         return;
       } else {
         setErrors([]);
-
-        return {
-          error: compileResult.data?.error,
-          url: undefined,
-        };
       }
     }
     setErrors([]);
     const url = compileResult.data?.url;
 
-    return {
-      error: undefined,
-      url: url,
-    };
+    Notification.update({
+      title: `<span>Dash deployed successfully to Azure<br>`,
+      titleText: undefined,
+      html: `<a href="${url}" target="_blank">${url}</a><span>`,
+      icon: "success",
+    });
+
+    Notification.toggleTimer();
 
     // Handle the compilation result as needed
   } catch (error) {
@@ -109,7 +127,6 @@ const checkErrors = () => {
 
 
 export function Editor(): JSX.Element {
-  const [url, setUrl] = createSignal<JSX.Element | undefined>(undefined);
   const { editorView, editorRef, createExtension, code, selectedNode } = useContext(EditorContext) as IEditorContext;
 
   createEditorControlledValue(editorView, code);
@@ -249,37 +266,10 @@ export function Editor(): JSX.Element {
     <Header>
       <main>
         <div class="flex flex-row justify-end mx-1 space-x-2">
-          <Show when={url() !== undefined}>
-            <Alert.Root class="alert">{url()}</Alert.Root>
-          </Show>
           <Button.Root
             class="bg-gray-900 hover:bg-black text-white font-bold py-1 px-5 rounded-xl focus:outline-none focus:shadow-outline text-lg w-32"
             onClick={async () => {
-              setUrl("Compiling...");
-
-              const result = await compile(code());
-
-              if (result === undefined) {
-                setUrl("Something went wrong. Please try again.");
-              } else {
-                if (result.error) {
-                  setUrl(<span>Error: {result.error}\nPlease check your code and try again.</span>);
-                } else {
-                  setUrl(
-                    <span>
-                      Success! Navigate to{" "}
-                      <a href={result.url?.replaceAll('"', "")} target="_blank">
-                        {result.url}
-                      </a>{" "}
-                      to visualize the dashboard.
-                    </span>,
-                  );
-                }
-
-                setTimeout(() => {
-                  setUrl(undefined);
-                }, 10000);
-              }
+              await compile(code());
             }}
           >
             Compile
