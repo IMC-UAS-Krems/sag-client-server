@@ -13,6 +13,7 @@ import Header from "@client/components/Header";
 import { LeftSideBar } from "@client/components/LeftSideBar";
 import { IEditorContext } from "@client/types";
 import { TreeNode } from "@client/components/LeftSideBar";
+import { EditorContext, IEditorContext } from "@client/contexts/editor";
 
 type CompileResult = {
   error: string | undefined;
@@ -102,42 +103,10 @@ const checkErrors = () => {
   return errorMap;
 };
 
-export const EditorContext = createContext<IEditorContext>();
 
-export function EditorProvider(props: { children: JSX.Element }): JSX.Element {
-  const [code, setCode] = createSignal("");
-  const [selectedNode, setSelectedNode] = createSignal<TreeNode | null>(null);
 
-  const handleFileClick = (content: string | undefined) => {
-    editorView().dispatch({
-      changes: {
-        from: 0,
-        to: editorView().state.doc.length,
-        insert: content,
-      },
-    });
-  };
-
-  const {
-    editorView,
-    ref: editorRef,
-    createExtension,
-  } = createCodeMirror({
-    value: code(),
-    onValueChange: (value) => {
-      setCode(value);
-      check(value);
-    },
   });
 
-  return (
-    <EditorContext.Provider
-      value={{ editorView, editorRef, createExtension, handleFileClick, code, setCode, selectedNode, setSelectedNode }}
-    >
-      {props.children}
-    </EditorContext.Provider>
-  );
-}
 
 export function Editor(): JSX.Element {
   const [url, setUrl] = createSignal<JSX.Element | undefined>(undefined);

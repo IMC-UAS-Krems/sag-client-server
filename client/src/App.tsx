@@ -1,7 +1,7 @@
 import type { Component } from "solid-js";
 
 import DRoutes from "./components/DRoutes";
-import { EditorProvider } from "./routes/Editor";
+import { EditorProvider } from "./contexts/editor";
 
 const t = (s: string) => s;
 
