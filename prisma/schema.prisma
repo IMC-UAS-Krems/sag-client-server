@@ -69,7 +69,7 @@ model User {
     deleted Boolean @default(false)
 
     // Tracking user tokens
-    lastLoginTime DateTime @default(now())
+    lastTimeActive DateTime @default(now())
     needsToBeLoggedOut Boolean @default(false)
 
     @@map("users")

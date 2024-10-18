@@ -63,7 +63,7 @@ const app = new Elysia()
           jwtToken = verifiedToken as Token;
           // Here we can update the last login time of the user
           try {
-            await updateUser(jwtToken.userId, { lastLoginTime: new Date() });
+            await updateUser(jwtToken.userId, { lastTimeActive: new Date() });
           } catch (error) {
             console.error("Failed to update last login time:", error);
           }

@@ -27,7 +27,8 @@ interface UsersResponse {
 const Users: Component = () => {
   const navigate = useNavigate();
   const loggedInUser = authStore.state().email;
-  const loggedInTimespan = Number(import.meta.env.VITE_LOGGED_IN_TIMESPAN) || panic("VITE_LOGGED_IN_TIMESPAN environment variable not set")
+  const loggedInTimespan =
+    Number(import.meta.env.VITE_LOGGED_IN_TIMESPAN) || panic("VITE_LOGGED_IN_TIMESPAN environment variable not set");
 
   const [users, setUsers] = createSignal<UserDetails[]>([]);
   const [loading, setLoading] = createSignal(true);
@@ -255,63 +256,70 @@ const Users: Component = () => {
               </thead>
 
               <tbody>
-                {
-                  filteredUsers().map((user) => {
-                    const { show } = useContextMenu({ id: user.id });
-                    // const onlineStatus = onlineStatuses()[user.id];
-                    let onlineStatus = false;
-                    if (!user.lastLoginTime) {
-                      onlineStatus = false;
-                    } else {
-                      console.log("Now is:", now());
-                      onlineStatus = !user.needsToBeLoggedOut && now() - new Date(user.lastLoginTime).getTime() < loggedInTimespan * 1000;
-                      console.log("User:", user.username, "Online status:", onlineStatus, "Login difference:", now() - new Date(user.lastLoginTime).getTime());
-                    }
-
-
-                    return (
-                      <tr class={user.email == loggedInUser && !user.deleted ? styles["logged-in-user"] : ""}>
-                        <td>{user.username}</td>
-                        <td>{user.name}</td>
-                        <td>{user.email}</td>
-                        <td>{user.municipality?.name}</td>
-                        <td>{user.organization?.name}</td>
-                        <td>{user.userRole}</td>
-                        <td>{user.deleted ? "🗑️" : onlineStatus ? "🟢" : "🔴"}</td>
-                        <td
-                          onClick={(e) => {
-                            show(e, { props: user.id });
-                          }}
-                          class={styles.actions}
-                        >
-                          <FaSolidEllipsis />
-                          <Menu id={user.id} animation={_animation()} theme={theme() === "dark" ? "dark" : "light"}>
-                            <Item onClick={() => handleEditUser(user.id)} disabled={user.userRole == "Administrator"}>
-                              ✏️ Edit
-                            </Item>
-                            <Item
-                              onClick={() => handleDeleteUser(user.id)}
-                              disabled={user.userRole === "Administrator" || user.deleted}
-                            >
-                              🗑️ Delete
-                            </Item>
-                            <Separator />
-                            <Item
-                              onClick={() => handleLogOutUser(user.id, user.username)}
-                              disabled={
-                                user.userRole === "Administrator" ||
-                                !onlineStatus ||
-                                user.needsToBeLoggedOut ||
-                                user.deleted
-                              }
-                            >
-                              🚶 Log out
-                            </Item>
-                          </Menu>
-                        </td>
-                      </tr>
+                {filteredUsers().map((user) => {
+                  const { show } = useContextMenu({ id: user.id });
+                  // const onlineStatus = onlineStatuses()[user.id];
+                  let onlineStatus = false;
+                  if (!user.lastTimeActive) {
+                    onlineStatus = false;
+                  } else {
+                    console.log("Now is:", now());
+                    onlineStatus =
+                      !user.needsToBeLoggedOut &&
+                      now() - new Date(user.lastTimeActive).getTime() < loggedInTimespan * 1000;
+                    console.log(
+                      "User:",
+                      user.username,
+                      "Online status:",
+                      onlineStatus,
+                      "Login difference:",
+                      now() - new Date(user.lastTimeActive).getTime(),
                     );
-                  })}
+                  }
+
+                  return (
+                    <tr class={user.email == loggedInUser && !user.deleted ? styles["logged-in-user"] : ""}>
+                      <td>{user.username}</td>
+                      <td>{user.name}</td>
+                      <td>{user.email}</td>
+                      <td>{user.municipality?.name}</td>
+                      <td>{user.organization?.name}</td>
+                      <td>{user.userRole}</td>
+                      <td>{user.deleted ? "🗑️" : onlineStatus ? "🟢" : "🔴"}</td>
+                      <td
+                        onClick={(e) => {
+                          show(e, { props: user.id });
+                        }}
+                        class={styles.actions}
+                      >
+                        <FaSolidEllipsis />
+                        <Menu id={user.id} animation={_animation()} theme={theme() === "dark" ? "dark" : "light"}>
+                          <Item onClick={() => handleEditUser(user.id)} disabled={user.userRole == "Administrator"}>
+                            ✏️ Edit
+                          </Item>
+                          <Item
+                            onClick={() => handleDeleteUser(user.id)}
+                            disabled={user.userRole === "Administrator" || user.deleted}
+                          >
+                            🗑️ Delete
+                          </Item>
+                          <Separator />
+                          <Item
+                            onClick={() => handleLogOutUser(user.id, user.username)}
+                            disabled={
+                              user.userRole === "Administrator" ||
+                              !onlineStatus ||
+                              user.needsToBeLoggedOut ||
+                              user.deleted
+                            }
+                          >
+                            🚶 Log out
+                          </Item>
+                        </Menu>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
