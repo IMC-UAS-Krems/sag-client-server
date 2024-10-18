@@ -1,3 +1,50 @@
+import nodemailer from "nodemailer";
+import { panic } from "@utils/panic";
+
+interface jwtInterface {
+  sign: (payload: object) => string;
+  verify: (token: string) => object;
+}
+
+export const sendVerificationEmail = async (jwt: jwtInterface, email: string, username: string) => {
+  const expireInSeconds =
+    Number(Bun.env.VERIFICATION_EXPIRY) || panic("VERIFICATION_EXPIRY environment variable not set");
+  const verificationToken = await jwt.sign({
+    email: email,
+    expiresAt: new Date(Date.now() + expireInSeconds * 1000).toISOString(),
+  });
+  console.log(`Verification token created: ${verificationToken}`);
+
+  const transporter = nodemailer.createTransport({
+    // host: Bun.env.SMTP_HOST ?? panic("SMTP_HOST environment variable not set"),
+    host: Bun.env.SMTP_HOST ?? panic("SENDGRID_SMTP_HOST environment variable not set"),
+    port: 587,
+    auth: {
+      user: "apikey",
+      pass: Bun.env.SMTP_PASS ?? panic("SENDGRID_API_KEY environment variable not set"),
+      // user: Bun.env.SMTP_USER ?? panic("SMTP_USER environment variable not set"),
+      // pass: Bun.env.SMTP_PASS ?? panic("SMTP_USER environment variable not set"),
+    },
+    logger: true,
+    debug: true,
+  });
+
+  const verificationLink = `http://localhost/verify/${verificationToken}`;
+  // Define email options
+  const mailOptions = {
+    from: `"Sagittarius Team" <${Bun.env.SMTP_SENDER ?? panic("SMTP_SENDER environment variable not set")}>`, // Sender address
+    to: Bun.env.EXAMPLE_RECEIVER ?? panic("EXAMPLE_RECEIVER environment variable not set"), // TODO: Change to `body.email` once SMTP is set up and it is prod
+    subject: "Sagittarius - Email Verification", // Subject line
+    text: `Hello ${username}, please verify your email by clicking the following link: ${verificationLink}`, // Plain text body
+    html: getEmailTemplate(username, verificationLink), // HTML body
+  };
+
+  const info = await transporter.sendMail(mailOptions);
+  console.log("Message sent: %s", info.messageId);
+
+  return { token: verificationToken };
+};
+
 const getEmailTemplate = (username: string, verificationLink: string) => {
   return `
 <!doctype html>
@@ -97,5 +144,3 @@ const getEmailTemplate = (username: string, verificationLink: string) => {
 </html>
 `;
 };
-
-export default getEmailTemplate;
