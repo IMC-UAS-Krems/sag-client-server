@@ -1,13 +1,14 @@
-import { eden } from "@client/api";
 import { createSignal, onMount, Component } from "solid-js";
-import { useNavigate } from "@solidjs/router";
-import { Menu, Item, useContextMenu, animation } from "solid-contextmenu";
+
 import { FaSolidEllipsis } from "solid-icons/fa";
+import { Menu, Item, useContextMenu, animation } from "solid-contextmenu";
+import { useNavigate } from "@solidjs/router";
 import Swal from "sweetalert2";
+
+import { eden } from "@client/api";
+import { handleUnauthorized } from "@client/utils/authUtils";
 import styles from "@styles/Organisations.module.css";
 import { theme } from "@store/index";
-
-import { handleUnauthorized } from "@client/utils/authUtils";
 import { OrganisationDetails } from "@server/types";
 import Header from "@client/components/Header";
 

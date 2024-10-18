@@ -1,13 +1,15 @@
-import { Component } from "solid-js";
-import { eden } from "@client/api";
-import { useNavigate } from "@solidjs/router";
 import { createSignal, createEffect } from "solid-js";
+import { Component } from "solid-js";
+
+import { useNavigate } from "@solidjs/router";
+import { Button } from "@kobalte/core";
 import Swal from "sweetalert2";
+
+import { eden } from "@client/api";
 import { handleUnauthorized } from "@client/utils/authUtils";
-import styles from "@styles/Signin.module.css";
+import styles from "@styles/OrganisationsCreate.module.css";
 import Header from "@client/components/Header";
 import FormField from "@client/components/FormField";
-import { Button } from "@kobalte/core";
 
 const OrganisationCreate: Component = () => {
   const navigate = useNavigate();
@@ -112,10 +114,10 @@ const OrganisationCreate: Component = () => {
 
   return (
     <Header>
-      <main class={styles["signin-main-container"]}>
-        <div class={styles["signin-card-container"]}>
+      <main class={styles["organisation-main-container"]}>
+        <div class={styles["organisation-card-container"]}>
           <h1>Create Organisation</h1>
-          <form class={styles["signin-form-container"]}>
+          <form class={styles["organisation-form-container"]}>
             <FormField getter={organisationName} setter={setOrganizationName} labelText="Organisation name" />
             {errors().organisationName && <p class={styles["error-text"]}>{errors().organisationName}</p>}
             {isMunicipalitiesLoading() ? (
@@ -133,12 +135,13 @@ const OrganisationCreate: Component = () => {
                   getter={organisationDescription}
                   setter={setOrganisationDescription}
                   labelText="Organisation Description"
+                  isTextArea={true}
                 />
                 {errors().description && <p class={styles["error-text"]}>{errors().description}</p>}
               </>
             )}
           </form>
-          <div class={styles["signin-buttons"]}>
+          <div class={styles["create-buttons"]}>
             <Button.Root onClick={submit}>Submit</Button.Root>
             <Button.Root onClick={() => navigate("/users", { replace: true })}>Cancel</Button.Root>
           </div>

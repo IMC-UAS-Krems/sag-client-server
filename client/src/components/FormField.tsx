@@ -11,7 +11,8 @@ const FormField: Component<{
   options?: string[];
   password?: boolean;
   oldValue?: string | undefined;
-}> = ({ getter, setter, labelText, options, password, oldValue }) => {
+  isTextArea?: boolean;
+}> = ({ getter, setter, labelText, options, password, oldValue, isTextArea }) => {
   return (
     <div class={styles["text-field"]}>
       <label class={styles["text-field-label"]}>{labelText}</label>
@@ -35,6 +36,13 @@ const FormField: Component<{
             options.map((option) => <option value={option}>{option}</option>)
           )}
         </select>
+      ) : isTextArea ? (
+        <textarea
+          class={styles["textarea-field"]}
+          value={getter() || ""}
+          onInput={(e) => setter(e.currentTarget.value)}
+          placeholder={oldValue ? oldValue : ""}
+        ></textarea>
       ) : (
         <TextField.Root>
           <TextField.Input

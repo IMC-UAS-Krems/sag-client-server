@@ -1,8 +1,7 @@
 /* MAIN */
-.signin-main-container {
+.organisation-main-container {
   width: 100vw;
   height: auto;
-
   display: flex;
   flex-direction: row;
   justify-content: center;
@@ -12,7 +11,7 @@
 }
 
 /* CONTAINERS */
-.signin-card-container {
+.organisation-card-container {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -30,7 +29,7 @@
   padding: 1rem 0 2rem 0;
 }
 
-.signin-form-container {
+.organisation-form-container {
   width: 100%;
   display: flex;
   flex-direction: column;
@@ -39,7 +38,7 @@
   /* gap: 40px; */
 }
 
-.signin-card-container button {
+.organisation-card-container button {
   background-color: transparent;
   color: var(--primary-text);
   font-size: 18px;
@@ -56,61 +55,28 @@
   transition: all 0.25s;
 }
 
-.signin-card-container button:hover {
+.organisation-card-container button:hover {
   background-color: var(--primary-text);
   color: var(--secondary-color);
 }
 
-.submenu-container {
-  background: var(--card-color);
-  width: 200px;
-  height: 150px;
-  border-radius: 12px;
-
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 20px;
-}
-
-.textarea-field {
-  width: 100%;
-  min-height: 3rem;
-  margin-top: 5px;
-  padding: 10px;
-  border: 1px solid var(--primary-text);
-  border-radius: 6px;
-  font-size: 1rem;
-  resize: vertical;
-  transition:
-    border-color 0.2s ease-in-out,
-    box-shadow 0.2s ease-in-out;
-  background-color: transparent;
-}
-
-.textarea-field:focus {
-  box-shadow: 0 0 5px var(--primary-text);
-  outline: none;
-}
-
 @media (max-width: 1000px) {
-  .signin-card-container {
+  .organisation-card-container {
     width: 70%;
   }
 }
 
 @media (max-width: 800px) {
-  .signin-main-container {
+  .organisation-main-container {
     flex-direction: column-reverse;
     align-items: center;
   }
 
-  .signin-card-container {
+  .organisation-card-container {
     width: 90%;
   }
 
-  .submenu-container {
+  .organisation-container {
     width: 90%;
   }
 
@@ -163,7 +129,7 @@
   transition: all 0.25s;
 }
 
-.signin-buttons {
+.create-buttons {
   display: flex;
   flex-direction: row;
   justify-content: center;
@@ -179,34 +145,6 @@
   width: 75%;
   margin-top: 20px;
   margin-bottom: 20px;
-}
-
-.text-field-label {
-  color: var(--primary-text);
-  font-size: 18px;
-  font-weight: 500;
-  user-select: none;
-}
-
-.text-field-input {
-  background: none;
-  border: none;
-  border-bottom: 2px solid #acacaf;
-  color: var(--primary-text);
-
-  padding: 14px 14px 14px 0;
-  width: 100%;
-
-  font-size: 16px;
-  font-weight: 700;
-  transition: all 0.5s;
-}
-
-.text-field-input:active,
-.text-field-input:focus,
-.text-field-input:hover {
-  outline: none;
-  border-bottom-color: var(--primary-text);
 }
 
 select {
@@ -233,7 +171,7 @@ input::placeholder {
   text-align: right;
 }
 
-.signin-card-container h1 {
+.organisation-card-container h1 {
   padding-top: 1rem;
   color: var(--primary-text);
 }

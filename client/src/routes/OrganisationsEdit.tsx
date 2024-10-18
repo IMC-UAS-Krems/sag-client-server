@@ -2,15 +2,15 @@ import { createSignal, createEffect } from "solid-js";
 import type { Component } from "solid-js";
 
 import { useNavigate, useParams } from "@solidjs/router";
-import { handleUnauthorized } from "@client/utils/authUtils";
-import { UpdateOrganisationBody } from "@server/types";
-
 import { Button } from "@kobalte/core";
 import Swal from "sweetalert2";
+
 import { eden } from "@client/api";
+import { handleUnauthorized } from "@client/utils/authUtils";
+import { UpdateOrganisationBody } from "@server/types";
 import Header from "@client/components/Header";
 import FormField from "@client/components/FormField";
-import styles from "@styles/Signin.module.css";
+import styles from "@styles/OrganisationsCreate.module.css";
 
 const OrganisationsEdit: Component = () => {
   const navigate = useNavigate();
@@ -199,8 +199,8 @@ const OrganisationsEdit: Component = () => {
   };
   return (
     <Header>
-      <main class={styles["signin-main-container"]}>
-        <div class={styles["signin-card-container"]}>
+      <main class={styles["organisation-main-container"]}>
+        <div class={styles["organisation-card-container"]}>
           <h1>Edit Organisation</h1>
           {loading() ? (
             <div class={styles.loader}></div>
@@ -209,13 +209,13 @@ const OrganisationsEdit: Component = () => {
               <p class={styles["error-text"]}>
                 {organisationFetchError()} for organisation with id: {organisationId}
               </p>
-              <div class={styles["signin-buttons"]}>
+              <div class={styles["create-buttons"]}>
                 <Button.Root onClick={() => navigate("/organisations", { replace: true })}>Go Back</Button.Root>
               </div>
             </div>
           ) : (
             <div style="width: 100%">
-              <form class={styles["signin-form-container"]}>
+              <form class={styles["organisation-form-container"]}>
                 <FormField
                   getter={organisationName}
                   setter={setOrganizationName}
@@ -223,14 +223,6 @@ const OrganisationsEdit: Component = () => {
                   oldValue={oldOrganisationName()}
                 />
                 {errors().organisationName && <p class={styles["error-text"]}>{errors().organisationName}</p>}
-                <FormField
-                  getter={organisationDescription}
-                  setter={setOrganisationDescription}
-                  labelText="Description"
-                  oldValue={oldDescription()}
-                />
-                {errors().organisation && <p class={styles["error-text"]}>{errors().organisation}</p>}
-
                 {isMunicipalitiesLoading() ? (
                   <div class={styles.loader}></div>
                 ) : (
@@ -244,7 +236,15 @@ const OrganisationsEdit: Component = () => {
                     />
                   </>
                 )}
-                <div class={styles["form-group"]}>
+                <FormField
+                  getter={organisationDescription}
+                  setter={setOrganisationDescription}
+                  labelText="Description"
+                  oldValue={oldDescription()}
+                  isTextArea={true}
+                />
+                {errors().organisation && <p class={styles["error-text"]}>{errors().organisation}</p>}
+                <div>
                   <label for="verified">Verified</label>
                   <input
                     type="checkbox"
@@ -254,7 +254,7 @@ const OrganisationsEdit: Component = () => {
                   />
                 </div>
               </form>
-              <div class={styles["signin-buttons"]}>
+              <div class={styles["create-buttons"]}>
                 <Button.Root onClick={submit}>Submit</Button.Root>
                 <Button.Root onClick={() => navigate("/organisations", { replace: true })}>Cancel</Button.Root>
               </div>
