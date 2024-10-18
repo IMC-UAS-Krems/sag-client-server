@@ -34,6 +34,14 @@ export async function selectMunicipality(name: string): Promise<Municipality | n
   });
 }
 
+export async function selectMunicipalityById(id: string): Promise<Municipality | null> {
+  return await prisma.municipality.findUnique({
+    where: {
+      id,
+    },
+  });
+}
+
 /*****************************************************/
 /**                Organisations                     */
 /*****************************************************/
@@ -158,13 +166,13 @@ export async function updateOrganisation(
   {
     name,
     description,
-    municipality,
+    municipalityName,
     verified,
     updatedAt,
   }: {
     name?: string;
     description?: string;
-    municipality?: string;
+    municipalityName?: string;
     verified?: boolean;
     updatedAt?: Date;
   },
@@ -196,7 +204,15 @@ export async function updateOrganisation(
   }
 
   if (description) updateData.description = description;
-  if (municipality) updateData.municipalityName = municipality;
+
+  if (municipalityName) {
+    const municipality = await selectMunicipality(municipalityName);
+    if (!municipality) {
+      throw new Error(`Municipality ${municipalityName} does not exist`);
+    }
+    updateData.municipalityId = municipality.id;
+  }
+
   if (verified !== undefined) updateData.verified = verified;
   updateData.updatedAt = updatedAt || new Date();
 

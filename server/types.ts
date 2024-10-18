@@ -136,6 +136,7 @@ export interface UpdateOrganisationBody {
   name?: string;
   description?: string;
   municipalityName?: string;
+  municipalityId?: string;
   verified?: boolean;
   updatedAt: Date;
 }
