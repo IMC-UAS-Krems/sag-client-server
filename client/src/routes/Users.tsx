@@ -27,7 +27,7 @@ interface UsersResponse {
 const Users: Component = () => {
   const navigate = useNavigate();
   const loggedInUser = authStore.state().email;
-  const sessionDuration = Number(import.meta.env.VITE_COOKIES_EXPIRATION) || panic("VITE_COOKIES_EXPIRATION environment variable not set")
+  const loggedInTimespan = Number(import.meta.env.VITE_LOGGED_IN_TIMESPAN) || panic("VITE_LOGGED_IN_TIMESPAN environment variable not set")
 
   const [users, setUsers] = createSignal<UserDetails[]>([]);
   const [loading, setLoading] = createSignal(true);
@@ -264,7 +264,7 @@ const Users: Component = () => {
                       onlineStatus = false;
                     } else {
                       console.log("Now is:", now());
-                      onlineStatus = !user.needsToBeLoggedOut && now() - new Date(user.lastLoginTime).getTime() < sessionDuration;
+                      onlineStatus = !user.needsToBeLoggedOut && now() - new Date(user.lastLoginTime).getTime() < loggedInTimespan * 1000;
                       console.log("User:", user.username, "Online status:", onlineStatus, "Login difference:", now() - new Date(user.lastLoginTime).getTime());
                     }
 
