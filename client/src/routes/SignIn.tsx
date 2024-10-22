@@ -10,6 +10,7 @@ import authStore from "@store/authStore";
 import Header from "@client/components/Header";
 import FormField from "@client/components/FormField";
 import styles from "@styles/Signin.module.css";
+import { Notification } from "@client/common";
 
 interface NavigateProps {
   navigate: ReturnType<typeof useNavigate>;
@@ -228,7 +229,6 @@ const Login: Component<NavigateProps> = ({ navigate }) => {
     const formPassword = password();
 
     if (!(formUsername && formPassword)) {
-      console.log("Invalid data");
       Swal.fire({
         title: "Error",
         text: "Wrong login data",
@@ -248,7 +248,6 @@ const Login: Component<NavigateProps> = ({ navigate }) => {
     });
 
     if (!logged.data || logged.error) {
-      console.log(logged.error);
       Swal.fire({
         title: "Error",
         text: "Wrong login data",
@@ -261,9 +260,8 @@ const Login: Component<NavigateProps> = ({ navigate }) => {
     authStore.initializeAuth();
     navigate("/home", { replace: true });
 
-    Swal.fire({
-      title: "Success",
-      text: `Login successful.`,
+    Notification.fire({
+      titleText: "Login successful",
       icon: "success",
     });
   };

@@ -1,13 +1,40 @@
-.files-list {
-  list-style: none;
-  padding-left: "20px";
+.file-node {
+    @apply flex flex-col;
 }
 
-.item-container {
-  display: flex;
-  align-items: center;
+.file-node-btn {
+    @apply flex flex-row;
 }
 
-.item-container:first-child {
-  cursor: default;
+.file-node-btn-icon{
+    @apply mr-2;
+}
+
+.file-node-container{
+    grid-template-rows: 0fr;
+    @apply transition-all duration-500 overflow-hidden grid;
+}
+
+.file-node-list{
+    @apply ml-4 min-h-0;
+}
+
+.context-menu{
+    @apply bg-white border border-gray-200 rounded shadow-lg;
+}
+
+.context-menu-ul {
+    @apply py-1;
+}
+
+.context-menu-item{
+    @apply px-4 py-2 cursor-pointer hover:bg-gray-100;
+}
+
+.file-tree {
+    @apply w-1/4 max-h-screen overflow-auto;
+}
+
+.file-tree-item {
+    @apply ml-4;
 }

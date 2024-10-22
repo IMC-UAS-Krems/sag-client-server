@@ -1,6 +1,7 @@
 import type { Component } from "solid-js";
 
 import DRoutes from "./components/DRoutes";
+import { EditorProvider } from "./contexts/editor";
 
 const t = (s: string) => s;
 
@@ -23,8 +24,13 @@ const App: Component = () => {
   //   const newLocale = locale() === "en" ? "de" : "en";
   //   locale(newLocale);
   // };
-
-  return <DRoutes />;
+  return (
+    <>
+      <EditorProvider>
+        <DRoutes />;
+      </EditorProvider>
+    </>
+  );
 };
 
 export default App;

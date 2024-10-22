@@ -1,395 +1,620 @@
-import { createSignal, onMount } from "solid-js";
-
-import { Menu, Item, useContextMenu, animation, Submenu } from "solid-contextmenu";
-import "../../../node_modules/solid-contextmenu/dist/style.css";
-import Swal from "sweetalert2";
-
-import styles from "@styles/LeftSideBar.module.css";
+import { For, onMount, batch, createSignal, useContext, Show, Accessor, Suspense, Setter, JSXElement } from "solid-js";
 import { eden } from "@client/api";
-import { theme } from "@store/index";
+import { createMutable } from "solid-js/store";
+import { EditorContext } from "@client/contexts/editor";
+import { IEditorContext } from "@client/contexts/editor";
+import { ContextMenu } from "@kobalte/core/context-menu";
+import Swal from "sweetalert2";
+import { Notification, Prompt } from "@client/common";
+import styles from "@styles/LeftSideBar.module.css";
 
-interface File {
+enum SagDocumentType {
+  FILE = "FILE",
+  FOLDER = "FOLDER",
+  MUNICIPALITY = "MUNICIPALITY",
+  ORG = "ORG",
+  PROJECT = "PROJECT",
+}
+
+enum MenuOption {
+  Save = "Save",
+  Delete = "Delete",
+  Rename = "Rename",
+  AddFile = "Add File",
+  AddFolder = "Add Folder",
+}
+
+type SagDocument = {
   name: string;
+  municipalityName: string;
+  orgName: string;
+  projectName: string;
+  documentType: string;
+  documentPath: string;
+};
+
+interface GetChildren {
+  getChildren(): TreeNode[];
+}
+
+export class TreeNode implements GetChildren {
+  children: TreeNode[];
+  name: Accessor<string>;
+  setName: Setter<string>;
+  docType: SagDocumentType;
+  path: Accessor<string | undefined>;
+  setPath: Setter<string | undefined>;
   isExpanded: boolean;
-  content?: string;
-  files?: File[];
-  isSelected?: boolean;
-}
+  projectName: string | undefined;
+  orgName: string | undefined;
+  municipalityName: string | undefined;
+  parent: TreeNode | undefined;
 
-const MENU_ID = "menu-id";
+  constructor(params: {
+    name: string;
+    docType: SagDocumentType;
+    path?: string;
+    projectName?: string;
+    orgName?: string;
+    municipalityName?: string;
+    parent?: TreeNode;
+  }) {
+    [this.name, this.setName] = createSignal(params.name);
+    this.docType = params.docType;
+    [this.path, this.setPath] = createSignal(params.path);
+    this.isExpanded = false;
+    this.projectName = params.projectName;
+    this.orgName = params.orgName;
+    this.municipalityName = params.municipalityName;
+    this.children = createMutable([]);
+    this.parent = params.parent;
+  }
 
-interface LeftSideBarProps {
-  onFileClick: (content: string | undefined) => void;
-  code: string;
-}
+  addChild(child: TreeNode) {
+    this.children.push(child);
+  }
 
-export function LeftSideBar(props: LeftSideBarProps) {
-  const [files, setFiles] = createSignal<File[]>([]);
-  const [_animation, setAnimation] = createSignal(animation.scale);
-  const { show } = useContextMenu({ id: MENU_ID });
+  getChildren() {
+    return this.children;
+  }
 
-  let rightClickedFileOrFolder: File | null = null;
-  let leftClickedFileOrFolder: File | null = null;
+  findChild(params: { name: string } | { path: string }) {
+    if ("name" in params) {
+      return this.children.find((child) => child.name() === params.name);
+    }
 
-  const fetchFiles = async (): Promise<File[]> => {
-    let files = await eden.api.initialDocuments.get({
+    if ([SagDocumentType.FOLDER, SagDocumentType.PROJECT].includes(this.docType)) {
+      return this.children.find((child) => params.path.startsWith(child.path() as string)); // all children in a folder or project must have defined paths, otherwise wrong structure
+    }
+
+    console.error(`Cannot find child with path ${params.path} in ${this}`);
+  }
+
+  icon() {
+    switch (this.docType) {
+      case SagDocumentType.FILE:
+        return "📄";
+      case SagDocumentType.FOLDER:
+        return "📁";
+      case SagDocumentType.MUNICIPALITY:
+        return "🏠";
+      case SagDocumentType.ORG:
+        return "🏢";
+      case SagDocumentType.PROJECT:
+        return "🏗️";
+    }
+  }
+
+  isFile() {
+    return this.docType === SagDocumentType.FILE;
+  }
+
+  async createDocument(name: string, docType: SagDocumentType, path: string) {
+    if (![SagDocumentType.FILE, SagDocumentType.FOLDER].includes(docType)) {
+      console.error("Cannot create document that is not a folder");
+      return;
+    }
+    const resp = await eden.api.document.post({
+      name: name,
+      documentType: docType.toString().toLowerCase() as "file" | "folder",
+      path: path,
+      projectName: this.projectName as string,
+      organizationName: this.orgName as string,
+      municipalityName: this.municipalityName as string,
       $fetch: {
         mode: "cors",
         credentials: "include",
-        method: "GET",
       },
     });
-    return files.data as File[];
-  };
 
-  const updateFiles = async (files: File[]): Promise<File[]> => {
-    let updated_files = await eden.api.initialDocuments.post({
-      documents: files,
+    if (resp.status === 200) {
+      this.addChild(
+        new TreeNode({
+          name: name,
+          docType: docType,
+          path: resp.data as string,
+          projectName: this.projectName,
+          orgName: this.orgName,
+          municipalityName: this.municipalityName,
+        }),
+      );
+    }
+  }
+
+  async deleteDocument() {
+    const resp = await eden.api.document.delete({
+      path: this.path() as string,
+      projectName: this.projectName as string,
+      organizationName: this.orgName as string,
+      municipalityName: this.municipalityName as string,
       $fetch: {
         mode: "cors",
         credentials: "include",
-        method: "POST",
       },
     });
-    return updated_files.data as File[];
-  };
 
-  onMount(async () => {
-    const initialFiles = await fetchFiles();
-    if (!Array.isArray(initialFiles)) {
-      return;
-    }
-    setFiles(initialFiles);
-    initialFiles.forEach((file) => {
-      if (file.files) {
-        file.files.forEach((subfile) => {
-          if (subfile.isSelected && subfile.content !== undefined) {
-            props.onFileClick(subfile.content);
-          }
-        });
-      } else {
-        if (file.isSelected && file.content !== undefined) {
-          props.onFileClick(file.content);
-        }
+    if (resp.status === 200) {
+      const index = this.parent?.children.findIndex((child) => child.name() === this.name());
+      if (index !== undefined) {
+        this.parent?.children.splice(index, 1);
       }
-    });
-  });
-
-  async function setFilesAndUpdate(files: File[]) {
-    setFiles(files);
-    try {
-      await updateFiles(files);
-    } catch (error) {
-      console.error("Failed to update files:", error);
     }
   }
 
-  function toggleExpand(file: File) {
-    setFiles((currentFiles) => {
-      const updateFileAndNested = (currentFile: File): File => {
-        if (currentFile === file) {
-          return { ...currentFile, isExpanded: !currentFile.isExpanded };
-        }
-        if (currentFile.files && currentFile.files.includes(file)) {
-          return {
-            ...currentFile,
-            files: currentFile.files.map((subfile) =>
-              subfile === file ? { ...subfile, isExpanded: !subfile.isExpanded } : subfile,
-            ),
-          };
-        }
-        if (currentFile.files) {
-          return {
-            ...currentFile,
-            files: currentFile.files.map(updateFileAndNested),
-          };
-        }
-        return currentFile;
-      };
-
-      const updatedFiles = currentFiles.map(updateFileAndNested);
-      setFilesAndUpdate(updatedFiles);
-      return updatedFiles;
+  async getContent(): Promise<string> {
+    const resp = await eden.api.document_content.get({
+      $query: {
+        projectName: this.projectName as string,
+        organizationName: this.orgName as string,
+        municipalityName: this.municipalityName as string,
+        path: this.path() as string,
+      },
+      $fetch: {
+        mode: "cors",
+        credentials: "include",
+      },
     });
+
+    if (resp.status === 200) {
+      return resp.data as string;
+    }
+    return "";
   }
 
-  function setFilesIsSelectedToFalse(files: File[]) {
-    files.forEach((file) => {
-      file.isSelected = false;
-      if (file.files) {
-        setFilesIsSelectedToFalse(file.files);
-      }
+  async saveContent(content: string) {
+    const resp = await eden.api.document_content.put({
+      content: content,
+      projectName: this.projectName as string,
+      organizationName: this.orgName as string,
+      municipalityName: this.municipalityName as string,
+      path: this.path() as string,
+      $fetch: {
+        mode: "cors",
+        credentials: "include",
+      },
     });
-  }
-
-  function handleClick(file: File) {
-    if (file.content !== undefined) {
-      console.log("Selected file content: ", file.content);
-      props.onFileClick(file.content);
+    if (resp.status !== 200) {
+      console.error("Error saving content");
     } else {
-      props.onFileClick(undefined);
-    }
-    setFilesIsSelectedToFalse(files());
-    leftClickedFileOrFolder = file;
-    rightClickedFileOrFolder = null;
-    leftClickedFileOrFolder.isSelected = true;
-    setFilesAndUpdate([...files()]);
-  }
-
-  function handleContextMenu(event: MouseEvent, file: File | null) {
-    event.preventDefault();
-    show(event);
-    if (file === null) {
-      console.log("Right-clicked on empty space");
-      rightClickedFileOrFolder = null;
-      leftClickedFileOrFolder = null;
-    } else {
-      console.log(`Right-clicked on ${file.name}`);
-      setFilesIsSelectedToFalse(files());
-      rightClickedFileOrFolder = file;
-      rightClickedFileOrFolder.isSelected = true;
-      leftClickedFileOrFolder = null;
-      setFilesAndUpdate([...files()]);
+      Notification.fire({
+        title: "File saved",
+        icon: "success",
+      });
     }
   }
 
-  function handleMenuClick(action: string) {
-    console.log("Clicked action:", action);
-    if (action === "Rename" && rightClickedFileOrFolder === null) {
-      Swal.fire("Error", "Please right-click on a file or folder in order to rename it.", "error");
-      return;
-    } else if (action === "Add folder" && rightClickedFileOrFolder === null) {
-      const newFolderName = prompt("Enter new folder name:");
-      if (newFolderName?.length == 0) {
-        Swal.fire("Error", "Name cannot be empty.", "error");
-        return;
-      }
-      const existingFolder = findFileRecursive(files(), newFolderName || "");
-      if (existingFolder) {
-        Swal.fire("Error", `Name ${newFolderName} already exists.`, "error");
-        return;
-      }
-      if (newFolderName !== null) {
-        const updatedFiles = [...files(), { name: newFolderName, isExpanded: false, files: [] }];
-        setFilesAndUpdate(updatedFiles);
-      }
-    } else if (action === "Add file" && rightClickedFileOrFolder === null) {
-      const newFileName = prompt("Enter new file name:");
-      if (newFileName?.length == 0) {
-        Swal.fire("Error", "Name cannot be empty.", "error");
-        return;
-      }
-      const existingFile = findFileRecursive(files(), newFileName || "");
-      if (existingFile) {
-        Swal.fire("Error", `Name ${newFileName} already exists.`, "error");
-        return;
-      }
-      if (newFileName !== null) {
-        const updatedFiles = [
-          ...files(),
-          {
-            name: newFileName,
-            isExpanded: false,
-            content: "",
-            isSelected: false,
-          },
-        ];
-        setFilesAndUpdate(updatedFiles);
-      }
-    } else if (action === "Save" && rightClickedFileOrFolder === null) {
-      Swal.fire("Error", "Please right-click on a file in order to save its content.", "error");
-      return;
-    } else if (action === "Delete" && rightClickedFileOrFolder === null) {
-      Swal.fire("Error", "Please right-click on a file or folder in order to delete it.", "error");
-      return;
-    }
+  async renameDocument(newName: string) {
+    if (newName) {
+      const resp = await eden.api.document.put({
+        newName: newName,
+        projectName: this.projectName as string,
+        organizationName: this.orgName as string,
+        municipalityName: this.municipalityName as string,
+        path: this.path() as string,
+        $fetch: {
+          mode: "cors",
+          credentials: "include",
+        },
+      });
 
-    if (action === "Rename" && rightClickedFileOrFolder) {
-      const newName = prompt(
-        `Enter new name for ${rightClickedFileOrFolder.files ? "folder" : "file"} <${rightClickedFileOrFolder.name}>:`,
-      );
-      if (newName?.length == 0) {
-        Swal.fire("Error", "Name cannot be empty.", "error");
-        return;
+      if (resp.status === 200) {
+        this.setName(newName);
+        this.updatePath(resp.data as string);
       }
-      const existingFileOrFolder = findFileRecursive(files(), newName || "");
-      if (existingFileOrFolder) {
-        Swal.fire("Error", `Name ${newName} already exists.`, "error");
-        return;
-      }
-      if (newName !== null) {
-        rightClickedFileOrFolder.name = newName;
-        setFilesAndUpdate([...files()]);
-      }
-    } else if (action === "Add folder" && rightClickedFileOrFolder) {
-      const newFolderName = prompt("Enter new folder name:");
-      if (newFolderName?.length == 0) {
-        Swal.fire("Error", "Name cannot be empty.", "error");
-        return;
-      }
-      const existingFolder = findFileRecursive(files(), newFolderName || "");
-      if (existingFolder) {
-        Swal.fire("Error", `Name ${newFolderName} already exists.`, "error");
-        return;
-      }
-      if (newFolderName !== null) {
-        rightClickedFileOrFolder.files = rightClickedFileOrFolder.files || [];
-        rightClickedFileOrFolder.files.push({
-          name: newFolderName,
-          isExpanded: false,
-          files: [],
-        });
-        setFilesAndUpdate([...files()]);
-      }
-    } else if (action === "Add file" && rightClickedFileOrFolder) {
-      const newFileName = prompt("Enter new file name:");
-      if (newFileName?.length == 0) {
-        Swal.fire("Error", "Name cannot be empty.", "error");
-        return;
-      }
-      const existingFile = findFileRecursive(files(), newFileName || "");
-      if (existingFile) {
-        Swal.fire("Error", `Name ${newFileName} already exists.`, "error");
-        return;
-      }
-      if (newFileName !== null) {
-        rightClickedFileOrFolder.files = rightClickedFileOrFolder.files || [];
-        rightClickedFileOrFolder.files.push({
-          name: newFileName,
-          isExpanded: false,
-          content: "",
-          isSelected: false,
-        });
-        setFilesAndUpdate([...files()]);
-      }
-    } else if (action === "Save" && rightClickedFileOrFolder) {
-      if (!rightClickedFileOrFolder.isSelected) {
-        if (!rightClickedFileOrFolder?.content) {
-          Swal.fire("Error", "Please right-click on a file in order to save its content.", "error");
-          return;
-        } else if (!rightClickedFileOrFolder.isSelected) {
-          Swal.fire("Error", "The file needs to be selected in order to save its content.", "error");
-          return;
-        }
-      }
-      rightClickedFileOrFolder.content = props.code;
-      Swal.fire(
-        "Success",
-        `The content of file ${rightClickedFileOrFolder.name} has been successfully saved.`,
-        "success",
-      );
-    } else if (action === "Delete" && rightClickedFileOrFolder) {
-      if (rightClickedFileOrFolder.files) {
-        setFiles((currentFiles) => {
-          const deleteFolderAndNested = (currentFile: File): File | null => {
-            if (currentFile === rightClickedFileOrFolder) {
-              return null;
-            }
-            if (currentFile.files) {
-              return {
-                ...currentFile,
-                files: currentFile.files.map(deleteFolderAndNested).filter((file) => file !== null) as File[],
-              };
-            }
-            return currentFile;
-          };
-
-          const updatedFiles = currentFiles.map(deleteFolderAndNested).filter((file) => file !== null) as File[];
-          setFilesAndUpdate(updatedFiles);
-          return updatedFiles;
-        });
-      } else if (rightClickedFileOrFolder.content !== undefined) {
-        console.log("Deleted file content: ", rightClickedFileOrFolder.content);
-        setFiles((currentFiles) => {
-          const deleteFile = (currentFile: File): File | null => {
-            if (currentFile === rightClickedFileOrFolder) {
-              return null;
-            }
-            return {
-              ...currentFile,
-              files: currentFile.files?.map(deleteFile).filter((file) => file !== null) as File[],
-            };
-          };
-
-          const updatedFiles = currentFiles.map(deleteFile).filter((file) => file !== null) as File[];
-          setFilesAndUpdate(updatedFiles);
-          return updatedFiles;
-        });
-      }
-      console.log(files());
     }
   }
 
-  function renderFiles(files: File[]) {
-    return (
-      <ul class={styles["files-list"]}>
-        {files.map((file) => (
-          <li>
-            <div class={styles["item-container"]}>
-              <span>{file.files ? (file.isExpanded ? "📂" : "📁") : "📄"}</span>
-              <span
-                onClick={() => {
-                  handleClick(file);
-                  toggleExpand(file);
-                }}
-                style={{
-                  cursor: "pointer",
-                  "font-weight": file.isSelected ? "bold" : "normal",
-                }}
-              >
-                {file.name}
-              </span>
-            </div>
-            {file.isExpanded && file.files && renderFiles(file.files)}
-          </li>
-        ))}
-      </ul>
+  updatePath(path: string) {
+    if (this.path() === undefined) {
+      console.error("Path is undefined");
+      return;
+    }
+    this.setPath((this.path() as string).replace(this.path() as string, path));
+    for (const child of this.children) {
+      child.updatePath(path);
+    }
+  }
+
+  async checkNewPath(name: string, isNew: boolean): Promise<boolean> {
+    const response = await eden.api.check_path.post({
+      projectName: this.projectName as string,
+      organizationName: this.orgName as string,
+      municipalityName: this.municipalityName as string,
+      path: this.path() as string,
+      possibleName: name,
+      isNew: isNew,
+      $fetch: {
+        mode: "cors",
+        credentials: "include",
+      },
+    });
+    if (response.status === 200) {
+      return true;
+    }
+    return false;
+  }
+}
+
+class FileTree implements GetChildren {
+  root: TreeNode;
+
+  constructor() {
+    this.root = createMutable(new TreeNode({ name: "root", docType: SagDocumentType.FOLDER }));
+  }
+
+  addDocument(doc: SagDocument) {
+    const pathSplit = doc.documentPath.lastIndexOf(".");
+    const path = pathSplit === -1 ? doc.documentPath : doc.documentPath.slice(0, pathSplit);
+
+    this.addMunicipality(doc.municipalityName);
+    this.addOrg(doc.orgName, doc.municipalityName);
+    this.addProject(doc.projectName, doc.orgName, doc.municipalityName);
+
+    let currentNode = this.root
+      .findChild({ name: doc.municipalityName })
+      ?.findChild({ name: doc.orgName })
+      ?.findChild({ name: doc.projectName });
+
+    for (let i = 1; i < doc.documentPath.split(".").length; i++) {
+      currentNode = currentNode?.findChild({ path: path });
+    }
+    currentNode?.addChild(
+      new TreeNode({
+        name: doc.name,
+        docType: SagDocumentType[doc.documentType.toUpperCase() as keyof typeof SagDocumentType],
+        path: doc.documentPath,
+        projectName: doc.projectName,
+        orgName: doc.orgName,
+        municipalityName: doc.municipalityName,
+        parent: currentNode,
+      }),
     );
   }
 
-  function findFileRecursive(files: File[], clickedName: string): File | null {
-    for (const file of files) {
-      if (file.name === clickedName) {
-        return file;
-      }
-      if (file.files) {
-        const foundFile = findFileRecursive(file.files, clickedName);
-        if (foundFile) {
-          return foundFile;
-        }
-      }
+  addMunicipality(municipality: string) {
+    if (this.root.findChild({ name: municipality }) == null) {
+      this.root.addChild(
+        new TreeNode({ name: municipality, docType: SagDocumentType.MUNICIPALITY, municipalityName: municipality }),
+      );
     }
-    return null;
+  }
+
+  addOrg(org: string, municipality: string) {
+    const municipalityNode = this.root.findChild({ name: municipality });
+    if (municipalityNode?.findChild({ name: org }) == null) {
+      municipalityNode?.addChild(
+        new TreeNode({
+          name: org,
+          docType: SagDocumentType.ORG,
+          municipalityName: municipalityNode.municipalityName,
+          orgName: org,
+        }),
+      );
+    }
+  }
+
+  addProject(project: string, org: string, municipality: string) {
+    const municipalityNode = this.root.findChild({ name: municipality });
+    const orgNode = municipalityNode?.findChild({ name: org });
+    if (orgNode?.findChild({ name: project }) == null) {
+      orgNode?.addChild(
+        new TreeNode({
+          name: project,
+          docType: SagDocumentType.PROJECT,
+          municipalityName: orgNode.municipalityName,
+          orgName: orgNode.orgName,
+          projectName: project,
+        }),
+      );
+    }
+  }
+
+  getChildren() {
+    return this.root.children;
+  }
+}
+
+function FileNode(props: { node: TreeNode }) {
+  let expandDiv: HTMLDivElement;
+  const { handleFileClick, setSelectedNode } = useContext(EditorContext) as IEditorContext;
+
+  function toggleExpanded() {
+    if (!props.node.isExpanded) {
+      expandDiv.style.gridTemplateRows = "1fr";
+    } else {
+      expandDiv.style.gridTemplateRows = "0fr";
+    }
+    props.node.isExpanded = !props.node.isExpanded;
   }
 
   return (
-    <div
-      class="left-column"
-      style={{ overflow: "auto" }}
-      onContextMenu={(event) => {
-        const target = event.target as HTMLElement;
-        if (target.innerText) {
-          const rightClickedElement = findFileRecursive(files(), target.innerText);
-          if (rightClickedElement) {
-            handleContextMenu(event, rightClickedElement);
-          } else {
-            handleContextMenu(event, null);
+    <div class={styles["file-node"]}>
+      <Suspense>
+        <ContextMenu.Trigger
+          disabled={
+            ![SagDocumentType.FOLDER, SagDocumentType.FILE, SagDocumentType.PROJECT].includes(props.node.docType)
           }
-        } else {
-          handleContextMenu(event, null);
-        }
-      }}
-    >
-      {renderFiles(files())}
-      <Menu id={MENU_ID} animation={_animation()} theme={theme() ? theme() : "light"}>
-        <Item onClick={() => handleMenuClick("Rename")}>✏️ Rename</Item>
-        <Item onClick={() => handleMenuClick("Save")}>💾 Save</Item>
-        <Item onClick={() => handleMenuClick("Delete")}>🗑️ Delete</Item>
-        <Submenu label="➕ Add">
-          <Item onClick={() => handleMenuClick("Add folder")}>📁 Folder</Item>
-          <Item onClick={() => handleMenuClick("Add file")}>📄 File</Item>
-        </Submenu>
-      </Menu>
+        >
+          <button
+            class={styles["file-node-btn"]}
+            onClick={async () => {
+              if (
+                [SagDocumentType.FOLDER, SagDocumentType.FILE, SagDocumentType.PROJECT].includes(props.node.docType)
+              ) {
+                setSelectedNode(props.node);
+              }
+
+              if (props.node.docType === SagDocumentType.FILE) {
+                const content = await props.node.getContent();
+                handleFileClick(content);
+              } else {
+                toggleExpanded();
+              }
+            }}
+            onContextMenu={() => {
+              if (
+                [SagDocumentType.FOLDER, SagDocumentType.FILE, SagDocumentType.PROJECT].includes(props.node.docType)
+              ) {
+                setSelectedNode(props.node);
+              }
+            }}
+          >
+            <span class={styles["file-node-btn-icon"]}>{props.node.icon()}</span>
+            <span>{props.node.name()}</span>
+          </button>
+        </ContextMenu.Trigger>
+      </Suspense>
+
+      <div
+        //@ts-expect-error - original message: Variable 'expandDiv' is used before being assigned
+        ref={expandDiv}
+        class={styles["file-node-container"]}
+      >
+        <div class={styles["file-node-list"]}>
+          <For each={props.node.getChildren()}>{(child) => <FileNode node={child} />}</For>
+        </div>
+      </div>
     </div>
+  );
+}
+
+function FileContextMenu(props: { children: JSXElement }) {
+  const { code, selectedNode } = useContext(EditorContext) as IEditorContext;
+
+  async function handleContextMenu(action: MenuOption) {
+    const node = selectedNode();
+    switch (action) {
+      case MenuOption.AddFile: {
+        const { value } = await Prompt.fire<string>({
+          title: "Enter file name",
+          input: "text",
+          preConfirm: async (path) => {
+            const node = selectedNode();
+            if (await node?.checkNewPath(path, true)) {
+              return path;
+            }
+            Swal.showValidationMessage("File or folder with this name already exists");
+          },
+          inputValidator: (input) => {
+            console.log(input);
+            if (!input.match("^[a-zA-Z0-9_ ]+$")) {
+              return "Input must contain only letters, numbers, underscores and spaces";
+            }
+          },
+        });
+        if (value && value.length > 0) {
+          const node = selectedNode();
+          node?.createDocument(value as string, SagDocumentType.FILE, node?.path() as string);
+        }
+
+        break;
+      }
+      case MenuOption.AddFolder: {
+        const { value } = await Prompt.fire<string>({
+          title: "Enter folder name",
+          input: "text",
+          preConfirm: async (path) => {
+            const node = selectedNode();
+            if (await node?.checkNewPath(path, true)) {
+              return path;
+            }
+            Swal.showValidationMessage("File or folder with this name already exists");
+          },
+          inputValidator: (input) => {
+            console.log(input);
+            if (!input.match("^[a-zA-Z0-9_ ]+$")) {
+              return "Input must contain only letters, numbers, underscores and spaces";
+            }
+          },
+        });
+        if (value && value.length > 0) {
+          const node = selectedNode();
+          node?.createDocument(value as string, SagDocumentType.FOLDER, node?.path() as string);
+        }
+
+        break;
+      }
+      case MenuOption.Delete: {
+        node?.deleteDocument();
+        break;
+      }
+      case MenuOption.Save: {
+        node?.saveContent(code());
+        break;
+      }
+      case MenuOption.Rename: {
+        // TODO: check if the name is valid and it doesn't exist
+        const { value } = await Prompt.fire<string>({
+          title: "Enter new name",
+          input: "text",
+          preConfirm: async (path) => {
+            const node = selectedNode();
+            if (await node?.checkNewPath(path, false)) {
+              return path;
+            }
+            Swal.showValidationMessage("File or folder with this name already exists");
+          },
+          inputValidator: (input) => {
+            console.log(input);
+            if (!input.match("^[a-zA-Z0-9_ ]+$")) {
+              return "Input must contain only letters, numbers, underscores and spaces";
+            }
+          },
+        });
+        if (value && value.length > 0) {
+          const node = selectedNode();
+          node?.renameDocument(value);
+        }
+        break;
+      }
+    }
+  }
+  return (
+    <ContextMenu>
+      <ContextMenu.Portal>
+        <ContextMenu.Content class={styles["context-menu"]}>
+          <Suspense>
+            <ul class={styles["context-menu-ul"]}>
+              <Show
+                when={[SagDocumentType.FOLDER, SagDocumentType.FILE].includes(
+                  selectedNode()?.docType as SagDocumentType,
+                )}
+              >
+                <ContextMenu.Item
+                  class={styles["context-menu-item"]}
+                  onSelect={async () => {
+                    await handleContextMenu(MenuOption.Rename);
+                  }}
+                >
+                  {MenuOption.Rename}
+                </ContextMenu.Item>
+              </Show>
+              {
+                //<Show when={selectedNode()?.docType === SagDocumentType.FILE}>
+                //  <ContextMenu.Item
+                //    class="px-4 py-2 cursor-pointer hover:bg-gray-100"
+                //    onSelect={async () => {
+                //      await handleContextMenu(MenuOption.Save);
+                //    }}
+                //  >
+                //    {MenuOption.Save}
+                //  </ContextMenu.Item>
+                //</Show>
+              }
+              <Show
+                when={[SagDocumentType.FOLDER, SagDocumentType.FILE].includes(
+                  selectedNode()?.docType as SagDocumentType,
+                )}
+              >
+                <ContextMenu.Item
+                  class={styles["context-menu-item"]}
+                  onSelect={async () => {
+                    await handleContextMenu(MenuOption.Delete);
+                  }}
+                >
+                  {MenuOption.Delete}
+                </ContextMenu.Item>
+              </Show>
+              <Show
+                when={[SagDocumentType.FOLDER, SagDocumentType.PROJECT].includes(
+                  selectedNode()?.docType as SagDocumentType,
+                )}
+              >
+                <ContextMenu.Item
+                  class={styles["context-menu-item"]}
+                  onSelect={async () => {
+                    await handleContextMenu(MenuOption.AddFile);
+                  }}
+                >
+                  {MenuOption.AddFile}
+                </ContextMenu.Item>
+              </Show>
+              <Show
+                when={[SagDocumentType.FOLDER, SagDocumentType.PROJECT].includes(
+                  selectedNode()?.docType as SagDocumentType,
+                )}
+              >
+                <ContextMenu.Item
+                  class={styles["context-menu-item"]}
+                  onSelect={async () => {
+                    await handleContextMenu(MenuOption.AddFolder);
+                  }}
+                >
+                  {MenuOption.AddFolder}
+                </ContextMenu.Item>
+              </Show>
+            </ul>
+          </Suspense>
+        </ContextMenu.Content>
+      </ContextMenu.Portal>
+      {props.children}
+    </ContextMenu>
+  );
+}
+
+export function LeftSideBar() {
+  //const tree = createMutable(new FileTree());
+  const tree = new FileTree();
+
+  onMount(() => {
+    eden.api.documents
+      .get({
+        $fetch: {
+          mode: "cors",
+          credentials: "include",
+        },
+      })
+      .then((docs) => {
+        batch(() => {
+          const docArray = docs.data as SagDocument[];
+          docArray.forEach((doc: SagDocument) => {
+            tree.addDocument(doc);
+          });
+        });
+      });
+  });
+
+  //createEffect(() => {
+  //  on(
+  //    () => tree,
+  //    () => console.log("tree updated"),
+  //    { defer: true },
+  //  );
+  //});
+
+  return (
+    <>
+      <FileContextMenu>
+        <div class={styles["file-tree"]}>
+          <For each={tree.getChildren()}>
+            {(child) => (
+              <div class={styles["file-tree-item"]}>
+                <FileNode node={child} />
+              </div>
+            )}
+          </For>
+        </div>
+      </FileContextMenu>
+    </>
   );
 }
