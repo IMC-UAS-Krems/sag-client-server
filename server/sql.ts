@@ -240,7 +240,7 @@ export async function getAllUsers(): Promise<UserDetails[]> {
       userRole: true,
       deleted: true,
       needsToBeLoggedOut: true,
-      lastLoginTime: true,
+      lastTimeActive: true,
       organization: {
         select: {
           name: true,
@@ -265,7 +265,7 @@ export async function updateUser(
     organization,
     municipality,
     userRole,
-    lastLoginTime,
+    lastTimeActive,
     needsToBeLoggedOut,
   }: {
     username?: string;
@@ -275,7 +275,7 @@ export async function updateUser(
     organization?: string;
     municipality?: string;
     userRole?: UserRole;
-    lastLoginTime?: Date;
+    lastTimeActive?: Date;
     needsToBeLoggedOut?: boolean;
   },
 ): Promise<UserDocument> {
@@ -313,7 +313,7 @@ export async function updateUser(
       organization: organization ? { connect: { name: organization } } : undefined,
       municipality: municipality ? { connect: { name: municipality } } : undefined,
       userRole,
-      lastLoginTime,
+      lastTimeActive,
       needsToBeLoggedOut,
     },
   });

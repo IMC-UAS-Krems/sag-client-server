@@ -67,7 +67,7 @@ export interface RegisteredUser {
   registered: Date;
   updatedAt: Date | null;
   deleted: boolean;
-  lastLoginTime: Date;
+  lastTimeActive: Date;
   needsToBeLoggedOut: boolean;
 }
 
@@ -88,7 +88,7 @@ export interface UserDetails {
   organization?: { name: string };
   organizationName?: string;
   needsToBeLoggedOut?: boolean;
-  lastLoginTime?: Date;
+  lastTimeActive?: Date;
 }
 
 export interface CreateUserBody {

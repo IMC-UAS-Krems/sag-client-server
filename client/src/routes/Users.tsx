@@ -6,12 +6,13 @@ import { useNavigate } from "@solidjs/router";
 import Swal from "sweetalert2";
 
 import { eden } from "@client/api";
-import { handleUnauthorized, isUserOnline } from "@client/utils/authUtils";
+import { handleUnauthorized } from "@client/utils/authUtils";
 import Header from "@client/components/Header";
 import authStore from "@store/authStore";
 import styles from "@styles/Users.module.css";
 import { theme } from "@store/index";
 import { UserDetails } from "@server/types";
+import { panic } from "@utils/panic";
 
 import "../../../node_modules/solid-contextmenu/dist/style.css";
 
@@ -26,14 +27,13 @@ interface UsersResponse {
 const Users: Component = () => {
   const navigate = useNavigate();
   const loggedInUser = authStore.state().email;
-  // console.log("Auth store:", authStore.state());
-  // console.log("Logged in user:", loggedInUser);
+  const loggedInTimespan =
+    Number(import.meta.env.VITE_LOGGED_IN_TIMESPAN) || panic("VITE_LOGGED_IN_TIMESPAN environment variable not set");
 
-  // User data
   const [users, setUsers] = createSignal<UserDetails[]>([]);
   const [loading, setLoading] = createSignal(true);
   const [error, setError] = createSignal<string | null>(null);
-  const [onlineStatuses, setOnlineStatuses] = createSignal<Record<string, boolean>>({});
+  const [now, setNow] = createSignal(new Date().getTime());
   const [reload, setReload] = createSignal(false);
   const [showDeleted, setShowDeleted] = createSignal(false);
 
@@ -41,9 +41,10 @@ const Users: Component = () => {
     await fetchUsers();
   });
 
-  createEffect(() => {
+  createEffect(async () => {
     reload();
-    fetchUsers();
+    setNow(new Date().getTime());
+    await fetchUsers();
   });
 
   const filteredUsers = () => {
@@ -51,6 +52,7 @@ const Users: Component = () => {
   };
 
   async function fetchUsers() {
+    setLoading(true);
     try {
       const fetchedUsers: UsersResponse = await eden.admin.users.get({
         $fetch: {
@@ -76,7 +78,6 @@ const Users: Component = () => {
         } else {
           if (Array.isArray(fetchedUsers.data)) {
             setUsers(fetchedUsers.data);
-            await updateOnlineStatuses(fetchedUsers.data);
             // console.log("Fetch:", fetchedUsers);
             // console.log("Fetched users:", fetchedUsers.data);
           } else {
@@ -92,14 +93,6 @@ const Users: Component = () => {
     } finally {
       setLoading(false);
     }
-  }
-
-  async function updateOnlineStatuses(users: UserDetails[]) {
-    const statuses: Record<string, boolean> = {};
-    for (const user of users) {
-      statuses[user.id] = await isUserOnline(user);
-    }
-    setOnlineStatuses(statuses);
   }
 
   async function handleCreateUser() {
@@ -204,12 +197,9 @@ const Users: Component = () => {
             return;
           } else {
             Swal.fire("Logged out!", "The user has been logged out.", "success");
-
             setUsers((prevUsers) =>
               prevUsers.map((user) => (user.id === userId ? { ...user, needsToBeLoggedOut: true } : user)),
             );
-
-            await updateOnlineStatuses(users());
           }
         } catch (error) {
           console.error("Failed to log out user:", error);
@@ -234,6 +224,9 @@ const Users: Component = () => {
         <div class={styles["nav-button-container"]}>
           <button onClick={handleCreateUser} class={styles["nav-button"]}>
             Create new user
+          </button>
+          <button onClick={() => setReload(!reload())} class={styles["nav-button"]}>
+            Refresh data
           </button>
           <button
             onClick={() => setShowDeleted(!showDeleted())}
@@ -265,7 +258,24 @@ const Users: Component = () => {
               <tbody>
                 {filteredUsers().map((user) => {
                   const { show } = useContextMenu({ id: user.id });
-                  const onlineStatus = onlineStatuses()[user.id];
+                  // const onlineStatus = onlineStatuses()[user.id];
+                  let onlineStatus = false;
+                  if (!user.lastTimeActive) {
+                    onlineStatus = false;
+                  } else {
+                    console.log("Now is:", now());
+                    onlineStatus =
+                      !user.needsToBeLoggedOut &&
+                      now() - new Date(user.lastTimeActive).getTime() < loggedInTimespan * 1000;
+                    console.log(
+                      "User:",
+                      user.username,
+                      "Online status:",
+                      onlineStatus,
+                      "Login difference:",
+                      now() - new Date(user.lastTimeActive).getTime(),
+                    );
+                  }
 
                   return (
                     <tr class={user.email == loggedInUser && !user.deleted ? styles["logged-in-user"] : ""}>
