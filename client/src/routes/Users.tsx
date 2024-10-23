@@ -215,7 +215,6 @@ const Users: Component = () => {
   // const [_animation] = createSignal(animation.scale);
   // const [_theme, setTheme] = createSignal<"light" | "dark">("light");
 
-
   return (
     <Header>
       <main class={styles["users-main"]}>
@@ -309,7 +308,7 @@ const Users: Component = () => {
                             <ContextMenu.Item
                               class={menu_styles["context-menu__item"]}
                               onSelect={() => handleLogOutUser(user.id, user.name)}
-                              disabled={!onlineStatus}
+                              disabled={user.userRole == "Administrator" || !onlineStatus}
                             >
                               🔒 Log out
                             </ContextMenu.Item>
