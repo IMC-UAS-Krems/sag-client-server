@@ -22,6 +22,7 @@
   --background-color: #f0f0f0;
 
   --primary-text: #000000;
+  --primary-text-rgb: 0, 0, 0;
   --secondary-text: #006a67;
 
   --primary-color: #c7d5ef;
@@ -34,6 +35,7 @@
   --background-color: #292929;
 
   --primary-text: #ffffff;
+  --primary-text-rgb: 255, 255, 255;
   --secondary-text: #6a679e;
 
   --primary-color: #5d54a4;

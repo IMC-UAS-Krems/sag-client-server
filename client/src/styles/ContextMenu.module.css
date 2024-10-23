@@ -26,3 +26,7 @@
   color: var(--primary-text);
   cursor: pointer;
 }
+
+.context-menu__item[data-disabled] {
+  color: rgba(var(--primary-text-rgb), 0.5);
+}

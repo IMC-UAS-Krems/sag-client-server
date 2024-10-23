@@ -220,7 +220,8 @@ export const auth = new Elysia({ prefix: "/auth" })
       }),
       detail: {
         tags: ["auth"],
-        description: "Check if the cookie from the request contains an access token and returns the user's email",
+        description:
+          "Check if the cookie from the request contains an access token and returns the user's name, email and role",
       },
     },
   )
