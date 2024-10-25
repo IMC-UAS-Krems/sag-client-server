@@ -129,11 +129,13 @@ const Users: Component = () => {
             return;
           }
 
-          if (!deletedUser.data || deletedUser.error) {
+          if (deletedUser.status !== 200 || (deletedUser.data && "error" in deletedUser.data)) {
             console.log("Failed to delete user:", deletedUser.error);
+            const errorMessage =
+              deletedUser.data && "error" in deletedUser.data ? deletedUser.data.error : "Couldn't delete the user";
             Swal.fire({
               title: "Error",
-              text: "Couldn't delete the user",
+              text: errorMessage,
               icon: "error",
             });
             return;
@@ -187,9 +189,10 @@ const Users: Component = () => {
 
           if (response.status !== 200 || (response.data && response.data.error)) {
             console.log("Failed to log out user: ", response.data ? response.data.error : "Unknown error");
+            const errorMessage = response.data ? response.data.error : "Couldn't log out the user";
             Swal.fire({
               title: "Error",
-              text: "Couldn't log out the user",
+              text: errorMessage,
               icon: "error",
             });
             return;
