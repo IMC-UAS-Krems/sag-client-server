@@ -123,7 +123,7 @@ const Register: Component<NavigateProps> = ({ navigate }) => {
         },
       });
 
-      if (response.status !== 200) {
+      if (response.status !== 201) {
         if (response.data && "error" in response.data) {
           throw new Error(response.data.error);
         } else {
@@ -133,10 +133,8 @@ const Register: Component<NavigateProps> = ({ navigate }) => {
 
       authStore.setState({ isAuthenticated: true, email: formEmail, name: formName, userRole: "Developer" });
       navigate("/editor", { replace: true });
-
-      Swal.fire({
-        title: "Success",
-        text: `Registration successful.`,
+      Notification.fire({
+        titleText: "Registration successful",
         icon: "success",
       });
     } catch (error) {
