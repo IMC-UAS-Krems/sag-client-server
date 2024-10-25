@@ -1,13 +1,14 @@
-import { eden } from "@client/api";
 import { createSignal, onMount, Component } from "solid-js";
-import { useNavigate } from "@solidjs/router";
-import { Menu, Item, useContextMenu, animation } from "solid-contextmenu";
-import { FaSolidEllipsis } from "solid-icons/fa";
-import Swal from "sweetalert2";
-import styles from "@styles/Organisations.module.css";
-import { theme } from "@store/index";
 
+import { FaSolidEllipsis } from "solid-icons/fa";
+import { ContextMenu } from "@kobalte/core/context-menu";
+import { useNavigate } from "@solidjs/router";
+import Swal from "sweetalert2";
+
+import { eden } from "@client/api";
 import { handleUnauthorized } from "@client/utils/authUtils";
+import styles from "@styles/Organisations.module.css";
+import menu_styles from "@styles/ContextMenu.module.css";
 import { OrganisationDetails } from "@server/types";
 import Header from "@client/components/Header";
 
@@ -16,7 +17,6 @@ const Organisations: Component = () => {
 
   const [error, setError] = createSignal<string | null>(null);
   const [loading, setLoading] = createSignal(true);
-  const [_animation] = createSignal(animation.scale);
 
   const [organisations, setOrganisations] = createSignal<OrganisationDetails[]>([]);
 
@@ -169,7 +169,6 @@ const Organisations: Component = () => {
 
               <tbody>
                 {organisations().map((organisation) => {
-                  const { show } = useContextMenu({ id: organisation.id });
                   const verifiedStatus = organisation.verified ? "✅" : "❌";
 
                   return (
@@ -180,27 +179,26 @@ const Organisations: Component = () => {
                       <td>{organisation.users.length}</td>
                       <td>{new Date(organisation.createdAt).toLocaleString()}</td>
                       <td>{organisation.updatedAt ? new Date(organisation.updatedAt).toLocaleString() : ""}</td>
-                      <td
-                        onClick={(e) => {
-                          show(e, { props: organisation.id });
-                        }}
-                        class={styles.actions}
-                      >
-                        <FaSolidEllipsis />
-                        <Menu
-                          id={organisation.id}
-                          animation={_animation()}
-                          theme={theme() === "dark" ? "dark" : "light"}
-                        >
-                          <Item
-                            onClick={() => {
-                              handleEditOrganisation(organisation.id);
-                            }}
-                          >
-                            ✏️ Edit
-                          </Item>
-                          <Item onClick={() => handleDeleteOrganisation(organisation.id)}>🗑️ Delete</Item>
-                        </Menu>
+                      <td class={menu_styles.actions}>
+                        <ContextMenu>
+                          <ContextMenu.Trigger>
+                            <FaSolidEllipsis />
+                          </ContextMenu.Trigger>
+                          <ContextMenu.Content class={menu_styles["context-menu__content"]}>
+                            <ContextMenu.Item
+                              onClick={() => handleEditOrganisation(organisation.id)}
+                              class={menu_styles["context-menu__item"]}
+                            >
+                              ✏️ Edit
+                            </ContextMenu.Item>
+                            <ContextMenu.Item
+                              onClick={() => handleDeleteOrganisation(organisation.id)}
+                              class={menu_styles["context-menu__item"]}
+                            >
+                              🗑️ Delete
+                            </ContextMenu.Item>
+                          </ContextMenu.Content>
+                        </ContextMenu>
                       </td>
                     </tr>
                   );
