@@ -12,6 +12,7 @@ import FormField from "@client/components/FormField";
 import styles from "@styles/Signin.module.css";
 import { UpdateUserBody } from "@server/types";
 import { UserRole } from "@utils/roles";
+import { Notification } from "@client/common";
 
 const UsersEdit: Component = () => {
   const navigate = useNavigate();
@@ -210,13 +211,11 @@ const UsersEdit: Component = () => {
         return;
       }
 
-      Swal.fire({
-        title: "Success",
-        text: `User updated successfully.`,
+      navigate("/users", { replace: true });
+      Notification.fire({
+        titleText: "User updated successfully",
         icon: "success",
       });
-
-      navigate("/users", { replace: true });
     } catch (error) {
       console.error("Error updating user:", error);
       Swal.fire({

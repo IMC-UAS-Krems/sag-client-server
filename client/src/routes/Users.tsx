@@ -13,6 +13,7 @@ import styles from "@styles/Users.module.css";
 import menu_styles from "@styles/ContextMenu.module.css";
 import { UserDetails } from "@server/types";
 import { panic } from "@utils/panic";
+import { Notification } from "@client/common";
 
 interface UsersResponse {
   data: UserDetails[] | { error: string } | null;
@@ -140,7 +141,10 @@ const Users: Component = () => {
             });
             return;
           } else {
-            Swal.fire("Deleted!", "The user has been deleted.", "success");
+            Notification.fire({
+              titleText: "User deleted successfully",
+              icon: "success",
+            });
             setUsers((prevUsers) =>
               prevUsers.map((user) =>
                 user.id === userId ? { ...user, needsToBeLoggedOut: true, deleted: true } : user,
@@ -201,7 +205,10 @@ const Users: Component = () => {
             });
             return;
           } else {
-            Swal.fire("Logged out!", "The user has been logged out.", "success");
+            Notification.fire({
+              titleText: "User logged out successfully",
+              icon: "success",
+            });
             setUsers((prevUsers) =>
               prevUsers.map((user) => (user.id === userId ? { ...user, needsToBeLoggedOut: true } : user)),
             );
