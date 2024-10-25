@@ -228,6 +228,7 @@ try {
         connect: { name: "St. Pölten" },
       },
       deleted: true,
+      needsToBeLoggedOut: true,
     },
   });
 

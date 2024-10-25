@@ -141,7 +141,11 @@ const Users: Component = () => {
             return;
           } else {
             Swal.fire("Deleted!", "The user has been deleted.", "success");
-            setUsers((prevUsers) => prevUsers.map((user) => (user.id === userId ? { ...user, deleted: true } : user)));
+            setUsers((prevUsers) =>
+              prevUsers.map((user) =>
+                user.id === userId ? { ...user, needsToBeLoggedOut: true, deleted: true } : user,
+              ),
+            );
           }
         } catch (error) {
           console.error("Failed to delete user:", error);
