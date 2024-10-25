@@ -123,9 +123,9 @@ const Register: Component<NavigateProps> = ({ navigate }) => {
         },
       });
 
-      if (response.error) {
-        if (response.error.message) {
-          throw new Error(response.error.message);
+      if (response.status !== 200) {
+        if (response.data && "error" in response.data) {
+          throw new Error(response.data.error);
         } else {
           throw new Error("An unknown error occurred during registration.");
         }
