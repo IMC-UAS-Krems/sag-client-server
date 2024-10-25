@@ -41,8 +41,8 @@ model User {
 
     // Personal Data
     name     String
-    username String   @unique
-    email    String   @unique
+    username String // Uniqueness of username is achieved through partial index in the admin_dash migration
+    email    String // Uniqueness of email is achieved through partial index in the admin_dash migration
     password String
     userRole UserRole @default(Developer)
     userType UserType @default(DEFAULT)

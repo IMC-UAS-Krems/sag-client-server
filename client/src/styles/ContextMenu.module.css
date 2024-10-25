@@ -29,4 +29,5 @@
 
 .context-menu__item[data-disabled] {
   color: rgba(var(--primary-text-rgb), 0.5);
+  cursor: not-allowed;
 }
