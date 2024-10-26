@@ -594,14 +594,6 @@ export function LeftSideBar() {
       });
   });
 
-  //createEffect(() => {
-  //  on(
-  //    () => tree,
-  //    () => console.log("tree updated"),
-  //    { defer: true },
-  //  );
-  //});
-
   return (
     <>
       <FileContextMenu>
