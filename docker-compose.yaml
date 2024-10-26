@@ -79,6 +79,8 @@ services:
       context: .
       args:
         - VITE_SERVER_URL=${SERVER_URL}
+        - VITE_AUTH_CHECK_INTERVAL=${VITE_AUTH_CHECK_INTERVAL}
+        - VITE_COOKIES_EXPIRATION=${VITE_COOKIES_EXPIRATION}
     depends_on:
       db-setup:
         condition:
