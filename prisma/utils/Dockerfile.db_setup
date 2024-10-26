@@ -1,8 +1,6 @@
-FROM node:20-slim
+FROM node:20-slim AS builder
 
 WORKDIR /app
-
-RUN apt-get update -y && apt-get install -y openssl
 
 RUN echo '{ \n\
   "name": "db-init", \n\
@@ -21,12 +19,22 @@ RUN echo '{ \n\
   } \n\
 }' > package.json
 
+RUN yarn install --no-lockfile --production
+
 COPY ./utils/init_database.ts /app/init_database.ts
+
+RUN npx bun build ./init_database.ts --compile --minify --outfile init_database
+
+FROM node:20-slim
+
+WORKDIR /app
+
+RUN apt-get update -y && apt-get install -y openssl --no-install-recommends
+
 COPY ./schema.prisma /app/prisma/schema.prisma
 COPY ./migrations /app/prisma/migrations
 
-
-RUN yarn install --no-lockfile
-RUN npx bun build ./init_database.ts --compile --outfile init_database
+COPY --from=builder /app/init_database /app/init_database
+COPY --from=builder /app/node_modules /app/node_modules
 
 CMD ["bash", "-c", "npx prisma migrate reset --force"]
