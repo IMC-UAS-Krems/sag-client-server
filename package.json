@@ -52,6 +52,7 @@
     "@types/node": "^20.14.12",
     "autoprefixer": "^10.4.19",
     "bun-types": "^1.1.21",
+    "cssnano": "^7.0.6",
     "dotenv": "^16.4.5",
     "dotenv-expand": "^11.0.6",
     "eslint": "^9.8.0",
