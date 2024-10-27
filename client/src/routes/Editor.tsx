@@ -5,8 +5,7 @@ import { EditorView, lineNumbers, keymap } from "@codemirror/view";
 import { Button } from "@kobalte/core";
 
 import { eden } from "@client/api";
-import "../styles/Editor.css";
-import "../styles/Editor.css";
+import styles from "@client/styles/Editor.module.css";
 import { errors, setErrors, Error } from "@store/index";
 import { RightSideBar } from "../components/RightSideBar";
 import Header from "@client/components/Header";
@@ -67,7 +66,7 @@ async function compile(code: string): Promise<CompileResult | undefined> {
     Notification.update({
       title: `<span>Dash deployed successfully to Azure<br>`,
       titleText: undefined,
-      html: `<a href="${url}" target="_blank">${url}</a><span>`,
+      html: `<a href="${url}" class="text-gray-500 decoration-dotted underline" target="_blank">Click here to access</a><span>`,
       icon: "success",
     });
 
@@ -288,9 +287,9 @@ function Editor(): JSX.Element {
             Save File
           </Button.Root>
         </div>
-        <div class="editor-container">
+        <div class={styles["editor-container"]}>
           <LeftSideBar />
-          <div class="middle-column">
+          <div class={styles["middle-column"]}>
             <div ref={editorRef}></div>
           </div>
           <RightSideBar />
