@@ -7,6 +7,7 @@ import { eden } from "@client/api";
 import { theme } from "@store/index";
 import authStore from "@store/authStore";
 import styles from "@styles/Header.module.css";
+import { Notification } from "@client/common";
 
 import logoLight from "@assets/logos/sagittarius-logo-bnc.webp";
 import logoDark from "@assets/logos/sagittarius-logo-blk.webp";
@@ -24,16 +25,19 @@ const Header: Component<{ children: JSX.Element }> = (props) => {
           method: "POST",
         },
       });
-      if (response.status === 200 && response.data) {
-        authStore.setState({ isAuthenticated: true, user: response.data });
-      } else {
-        authStore.setState({ isAuthenticated: false, user: "" });
-      }
     } catch (error) {
       console.error("Failed to log out:", error);
+      Notification.fire({
+        titleText: "Logout failed",
+        icon: "error",
+      });
     } finally {
       authStore.resetAuth();
       navigate("/home", { replace: true });
+      Notification.fire({
+        titleText: "Logged out successfully",
+        icon: "success",
+      });
     }
   };
 

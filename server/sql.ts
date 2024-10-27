@@ -160,7 +160,15 @@ export async function selectUser(
       },
     });
   } else if (email != undefined) {
-    user = await prisma.user.findUnique({
+    user = await prisma.user.findFirst({
+      include: {
+        municipality: {
+          select: { name: true },
+        },
+        organization: {
+          select: { name: true },
+        },
+      },
       where: {
         email,
         deleted: false,
@@ -352,6 +360,7 @@ export async function deleteUser(userId: string): Promise<void> {
     },
     data: {
       deleted: true,
+      needsToBeLoggedOut: true,
     },
   });
 }
