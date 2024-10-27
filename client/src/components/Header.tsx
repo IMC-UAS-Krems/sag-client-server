@@ -18,13 +18,26 @@ const Header: Component<{ children: JSX.Element }> = (props) => {
 
   const handleLogout = async () => {
     try {
-      await eden.auth.logout.post({
+      const response = await eden.auth.logout.post({
         $fetch: {
           mode: "cors",
           credentials: "include",
           method: "POST",
         },
       });
+
+      if (response?.data?.success){
+        Notification.fire({
+          titleText: "Logged out successfully",
+          icon: "success",
+        });
+      }else{
+        console.error("Failed to log out. Server response:", response);
+        Notification.fire({
+          titleText: "Logout failed",
+          icon: "error",
+        });
+      }
     } catch (error) {
       console.error("Failed to log out:", error);
       Notification.fire({
@@ -34,10 +47,6 @@ const Header: Component<{ children: JSX.Element }> = (props) => {
     } finally {
       authStore.resetAuth();
       navigate("/home", { replace: true });
-      Notification.fire({
-        titleText: "Logged out successfully",
-        icon: "success",
-      });
     }
   };
 

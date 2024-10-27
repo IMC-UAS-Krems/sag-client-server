@@ -182,6 +182,7 @@ export const auth = new Elysia({ prefix: "/auth" })
 
       log.info("User logged out: " + userId);
       set.status = 200;
+      return { success: true, message: "User logged out successfully" };
     },
     {
       cookie: t.Cookie({
