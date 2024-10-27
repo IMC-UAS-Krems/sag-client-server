@@ -9,6 +9,8 @@ RUN curl https://bun.sh/install | bash
 
 COPY package.json .
 COPY bun.lockb .
+RUN /root/.bun/bin/bun install --frozen-lockfile
+
 COPY postcss.config.cjs .
 COPY tsconfig.json .
 COPY tailwind.config.js .
@@ -16,8 +18,6 @@ COPY tailwind.config.js .
 COPY server server
 COPY client client
 COPY utils utils
-
-RUN /root/.bun/bin/bun install --frozen-lockfile
 
 ARG VITE_SERVER_URL
 ENV VITE_SERVER_URL $VITE_SERVER_URL
