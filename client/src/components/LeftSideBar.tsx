@@ -117,7 +117,7 @@ export class TreeNode implements GetChildren {
     const resp = await eden.api.document.post({
       name: name,
       documentType: docType.toString().toLowerCase() as "file" | "folder",
-      path: path,
+      path: path || "", // path can be empty resulting in nil or null
       projectName: this.projectName as string,
       organizationName: this.orgName as string,
       municipalityName: this.municipalityName as string,
@@ -240,7 +240,7 @@ export class TreeNode implements GetChildren {
       projectName: this.projectName as string,
       organizationName: this.orgName as string,
       municipalityName: this.municipalityName as string,
-      path: this.path() as string,
+      path: (this.path() as string) || "", // path can be empty resulting in nil or null
       possibleName: name,
       isNew: isNew,
       $fetch: {
