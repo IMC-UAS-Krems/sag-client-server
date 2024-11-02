@@ -7,6 +7,12 @@
   background-color: var(--secondary-color);
 }
 
+.trigger{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
 .context-menu__content {
   background-color: var(--background-color);
   border: 1px solid var(--primary-text);
@@ -19,6 +25,7 @@
   padding: 0.5rem;
   border-radius: 4px;
   transition: background-color 0.2s ease;
+  margin: 0 auto;
 }
 
 .context-menu__item[data-highlighted] {
@@ -29,4 +36,5 @@
 
 .context-menu__item[data-disabled] {
   color: rgba(var(--primary-text-rgb), 0.5);
+  cursor: not-allowed;
 }

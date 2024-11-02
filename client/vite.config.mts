@@ -19,6 +19,7 @@ For more info see https://github.com/thetarnav/solid-devtools/tree/main/packages
     // WARNING: This option is insecure, use it in development mode only.
     cors: true,
   },
+  envDir: "..",
   build: {
     target: "esnext",
   },

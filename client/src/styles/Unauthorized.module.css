@@ -23,12 +23,12 @@
   padding: 1rem 0 1rem 0;
 }
 
-h1 {
+.unauth-h1 {
   color: var(--primary-text);
   margin: 0 3rem 1.5rem 3rem;
 }
 
-button {
+.unauth-button {
   background-color: transparent;
   color: var(--primary-text);
   font-size: 18px;
@@ -45,7 +45,7 @@ button {
   transition: all 0.25s;
 }
 
-button:hover {
+.unauth-button:hover {
   background-color: var(--primary-text);
   color: var(--secondary-color);
 }

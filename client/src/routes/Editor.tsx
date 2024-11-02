@@ -1,29 +1,32 @@
-import { JSX, Component, createSignal, Show, createEffect } from "solid-js";
-
-import { createCodeMirror, createEditorControlledValue } from "solid-codemirror";
+import { JSX, createSignal, useContext, createEffect } from "solid-js";
+import { createEditorControlledValue } from "solid-codemirror";
 import { linter, Diagnostic, lintGutter } from "@codemirror/lint";
 import { EditorView, lineNumbers, keymap } from "@codemirror/view";
-import { Button, Alert } from "@kobalte/core";
+import { Button } from "@kobalte/core";
 
-import Header from "@client/components/Header";
-import { errors, setErrors, Error } from "@store/index";
 import { eden } from "@client/api";
-import authStore from "@store/authStore";
-import "../styles/Editor.css";
-
+import styles from "@client/styles/Editor.module.css";
+import { errors, setErrors, Error } from "@store/index";
 import { RightSideBar } from "../components/RightSideBar";
-import { LeftSideBar } from "../components/LeftSideBar";
-
-const DEPLOYER_URL = import.meta.env.VITE_DEPLOYER_URL || "http://localhost:9000";
+import Header from "@client/components/Header";
+import { LeftSideBar, TreeNode } from "@client/components/LeftSideBar";
+import { EditorContext, IEditorContext } from "@client/contexts/editor";
+import { Notification } from "@client/common";
 
 type CompileResult = {
   error: string | undefined;
   url: string | undefined;
 };
 
-const compile = async (code: string): Promise<CompileResult | undefined> => {
+async function compile(code: string): Promise<CompileResult | undefined> {
   // Perform the compilation logic here
   try {
+    Notification.fire({
+      icon: "info",
+      titleText: "Compiling",
+      timer: 5000,
+    });
+    Notification.stopTimer();
     const compileResult = await eden.api.compile.post({
       code,
       $fetch: {
@@ -32,7 +35,18 @@ const compile = async (code: string): Promise<CompileResult | undefined> => {
         method: "POST",
       },
     });
-    console.log("compileResult: ", compileResult);
+
+    if (compileResult.error) {
+      Notification.update({
+        title: "Error",
+        titleText: compileResult.error.value.name,
+        icon: "error",
+      });
+
+      Notification.toggleTimer();
+
+      return;
+    }
 
     if (compileResult.data?.status === "error" && code.trim() !== "") {
       if (compileResult.data?.hasOwnProperty("errors")) {
@@ -44,29 +58,28 @@ const compile = async (code: string): Promise<CompileResult | undefined> => {
         return;
       } else {
         setErrors([]);
-
-        return {
-          error: compileResult.data?.error,
-          url: undefined,
-        };
       }
     }
     setErrors([]);
     const url = compileResult.data?.url;
 
-    return {
-      error: undefined,
-      url: url,
-    };
+    Notification.update({
+      title: `<span>Dash deployed successfully to Azure<br>`,
+      titleText: undefined,
+      html: `<a href="${url}" class="text-gray-500 decoration-dotted underline" target="_blank">Click here to access</a><span>`,
+      icon: "success",
+    });
+
+    Notification.toggleTimer();
 
     // Handle the compilation result as needed
   } catch (error) {
     console.error("Error during compilation: ", error);
     // Handle the error during compilation
   }
-};
+}
 
-const check = async (code: string): Promise<CompileResult | undefined> => {
+export async function check(code: string): Promise<void> {
   // Perform the compilation logic here
   try {
     const compileResult = await eden.api.check.post({
@@ -77,7 +90,6 @@ const check = async (code: string): Promise<CompileResult | undefined> => {
         method: "POST",
       },
     });
-    console.log("compileResult: ", compileResult);
 
     if (compileResult.data?.status === "error" && code.trim() !== "") {
       const errors = compileResult.data?.errors as Error[];
@@ -91,7 +103,7 @@ const check = async (code: string): Promise<CompileResult | undefined> => {
     console.error("Error during compilation: ", error);
     // Handle the error during compilation
   }
-};
+}
 
 const checkErrors = () => {
   const errorList = errors();
@@ -103,57 +115,16 @@ const checkErrors = () => {
       errorMap.set(error.line_start, [error]);
     }
   }
-  console.log(errorMap);
   return errorMap;
 };
 
-export const Editor: Component = () => {
-  const [code, setCode] = createSignal("");
-  // const [t, { add, locale, dict }] = useI18n();
-  const [url, setUrl] = createSignal<JSX.Element | undefined>(undefined);
-  const handleFileClick = (content: string | undefined) => {
-    if (content && content.length > 0) {
-      console.log("content: ", content);
-      setCode(content);
-      editorView().dispatch({
-        changes: {
-          from: 0,
-          to: editorView().state.doc.length,
-          insert: content,
-        },
-      });
-    } else if (content === "") {
-      setCode("");
-      editorView().dispatch({
-        changes: {
-          from: 0,
-          to: editorView().state.doc.length,
-          insert: "",
-        },
-      });
-    }
-  };
+function Editor(): JSX.Element {
+  const { editorView, editorRef, createExtension, code, selectedNode } = useContext(EditorContext) as IEditorContext;
+
+  const [lastSelectedFile, setLastSelectedFile] = createSignal<TreeNode | null>(null);
 
   createEffect(() => {
-    if (authStore.state().isAuthenticated) {
-      check(code());
-    }
-  });
-
-  const {
-    editorView,
-    ref: editorRef,
-    createExtension,
-  } = createCodeMirror({
-    value: code(),
-    onValueChange: (value) => {
-      // console.log("value changed", value);
-      setCode(value);
-    },
-    // onModelViewUpdate: (modelView) =>
-    //     console.log("modelView updated", modelView),
-    // onTransactionDispatched: (tr: Transaction, view: EditorView) =>
-    //     console.log("Transaction", tr),
+    if (selectedNode()?.isFile()) setLastSelectedFile(selectedNode());
   });
 
   createEditorControlledValue(editorView, code);
@@ -164,7 +135,7 @@ export const Editor: Component = () => {
       // { tag: "test1", color: "blue" }, // Custom style for "test1"
       // { tag: "test2", color: "green" }, // Custom style for "test2"
     ]);
-  
+
     // make myHighlightStyle into extension
     createExtension(syntaxHighlighting(styles));*/
 
@@ -292,44 +263,33 @@ export const Editor: Component = () => {
   return (
     <Header>
       <main>
-        <Show when={url() !== undefined}>
-          <Alert.Root class="alert">{url()}</Alert.Root>
-        </Show>
-        <Button.Root
-          class="compile"
-          onClick={async () => {
-            setUrl("Compiling...");
-
-            const result = await compile(code());
-
-            if (result === undefined) {
-              setUrl("Something went wrong. Please try again.");
-            } else {
-              if (result.error) {
-                setUrl(<span>Error: {result.error}\nPlease check your code and try again.</span>);
-              } else {
-                setUrl(
-                  <span>
-                    Success! Navigate to{" "}
-                    <a href={result.url?.replaceAll('"', "")} target="_blank">
-                      {result.url}
-                    </a>{" "}
-                    to visualize the dashboard.
-                  </span>,
-                );
-              }
-
-              setTimeout(() => {
-                setUrl(undefined);
-              }, 10000);
-            }
-          }}
-        >
-          Compile
-        </Button.Root>
-        <div class="editor-container">
-          <LeftSideBar onFileClick={handleFileClick} code={code()} />
-          <div class="middle-column">
+        <div class="flex flex-row justify-end mx-1 space-x-2">
+          <Button.Root
+            class={"bg-gray-900 hover:bg-black text-white font-bold py-1 px-5 rounded-xl focus:outline-none focus:shadow-outline text-lg w-32".concat(
+              lastSelectedFile()?.isFile() ? "" : " cursor-not-allowed",
+            )}
+            {...(lastSelectedFile()?.isFile() ? {} : { disabled: true })}
+            onClick={async () => {
+              await compile(code());
+            }}
+          >
+            Compile
+          </Button.Root>
+          <Button.Root
+            class={"bg-gray-900 hover:bg-black text-white font-bold py-1 px-5 rounded-xl focus:outline-none focus:shadow-outline text-lg w-32".concat(
+              lastSelectedFile()?.isFile() ? "" : " cursor-not-allowed",
+            )}
+            onClick={async () => {
+              const node = selectedNode();
+              if (node !== null) node.saveContent(code());
+            }}
+          >
+            Save File
+          </Button.Root>
+        </div>
+        <div class={styles["editor-container"]}>
+          <LeftSideBar />
+          <div class={styles["middle-column"]}>
             <div ref={editorRef}></div>
           </div>
           <RightSideBar />
@@ -337,6 +297,6 @@ export const Editor: Component = () => {
       </main>
     </Header>
   );
-};
+}
 
 export default Editor;

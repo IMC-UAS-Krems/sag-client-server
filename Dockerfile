@@ -3,20 +3,21 @@ FROM node:20-slim AS builder
 WORKDIR /app
 
 RUN apt-get update
-RUN apt-get install curl unzip -y
+RUN apt-get install curl unzip python3 git build-essential -y
 
 RUN curl https://bun.sh/install | bash
 
 COPY package.json .
 COPY bun.lockb .
+RUN /root/.bun/bin/bun install --frozen-lockfile
+
+COPY postcss.config.cjs .
 COPY tsconfig.json .
+COPY tailwind.config.js .
 
-RUN /root/.bun/bin/bun install --frozen-lockfile --production
-
-# ----
-FROM oven/bun
-
-WORKDIR /app
+COPY server server
+COPY client client
+COPY utils utils
 
 ARG VITE_SERVER_URL
 ENV VITE_SERVER_URL $VITE_SERVER_URL
@@ -24,21 +25,29 @@ ENV VITE_SERVER_URL $VITE_SERVER_URL
 ARG VITE_DEPLOYER_URL
 ENV VITE_DEPLOYER_URL $VITE_DEPLOYER_URL
 
+ARG VITE_COOKIES_EXPIRATION
+ENV VITE_COOKIES_EXPIRATION $VITE_COOKIES_EXPIRATION
 
-# COPY --from=builder /root/.bun/bin/bun bun
-# COPY --from=builder /root/.bun/bin/bunx bunx
-COPY --from=builder /app/node_modules node_modules
+ARG VITE_AUTH_CHECK_INTERVAL
+ENV VITE_AUTH_CHECK_INTERVAL $VITE_AUTH_CHECK_INTERVAL
 
-COPY package.json .
-COPY server server
-COPY client client
-# COPY public public
-COPY tsconfig.json .
-COPY utils utils
+ARG VITE_LOGGED_IN_TIMESPAN
+ENV VITE_LOGGED_IN_TIMESPAN $VITE_LOGGED_IN_TIMESPAN
+
+RUN /root/.bun/bin/bun run build
+
+# ----
+FROM oven/bun
+
+WORKDIR /app
+
+# COPY --from=builder /app/node_modules node_modules
+COPY --from=builder /app/dist dist
+
+RUN bun add vite
 
 ENV ENV production
-RUN bun run build
 
-# CMD ["bun", "vite", "dist", "--host", "0.0.0.0", "--port", "8100"]
-CMD ["bun", "run", "dev", "--host", "0.0.0.0", "--port", "8100"]
+CMD ["bun", "vite", "dist", "--host", "0.0.0.0", "--port", "8100"]
+
 EXPOSE 8100

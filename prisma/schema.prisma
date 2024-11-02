@@ -41,8 +41,8 @@ model User {
 
     // Personal Data
     name     String
-    username String
-    email    String
+    username String // Uniqueness of username is achieved through partial index in the admin_dash migration
+    email    String // Uniqueness of email is achieved through partial index in the admin_dash migration
     password String
     userRole UserRole @default(Developer)
     userType UserType @default(DEFAULT)
@@ -66,10 +66,10 @@ model User {
     // Meta
     registered DateTime  @default(now())
     updatedAt  DateTime? @updatedAt
-    deleted Boolean @default(false)
+    deleted    Boolean   @default(false)
 
     // Tracking user tokens
-    lastLoginTime DateTime @default(now())
+    lastTimeActive DateTime @default(now())
     needsToBeLoggedOut Boolean @default(false)
 
     @@map("users")
