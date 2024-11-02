@@ -181,7 +181,7 @@ const Organisations: Component = () => {
                       <td>{organisation.updatedAt ? new Date(organisation.updatedAt).toLocaleString() : ""}</td>
                       <td class={menu_styles.actions}>
                         <ContextMenu>
-                          <ContextMenu.Trigger>
+                          <ContextMenu.Trigger class={menu_styles["trigger"]}>
                             <FaSolidEllipsis />
                           </ContextMenu.Trigger>
                           <ContextMenu.Content class={menu_styles["context-menu__content"]}>
