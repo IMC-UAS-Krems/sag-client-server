@@ -35,14 +35,15 @@ const OrganisationCreate: Component = () => {
 
   const validateForm = () => {
     const newErrors: { [key: string]: string } = {};
-    if (!organisationName()) newErrors.name = "Name is required";
-    else if (organisationName()!.length < 2) newErrors.name = "Name must be at least 2 characters long";
+    if (!organisationName()) newErrors.organisationName = "Name is required";
+    else if (organisationName()!.length < 2) newErrors.organisationName = "Name must be at least 2 characters long";
     if (!organisationDescription()) newErrors.description = "Description is required";
     if (!municipalityName()) newErrors.municipality = "Municipality is required";
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
+
 
   createEffect(() => {
     fetchMunicipalities();
@@ -128,7 +129,7 @@ const OrganisationCreate: Component = () => {
                   labelText="Municipality"
                   options={municipalities()}
                 />
-                {errors().municipalityName && <p class={styles["error-text"]}>{errors().municipalityName}</p>}
+                {errors().municipality && <p class={styles["error-text"]}>{errors().municipality}</p>}
                 <FormField
                   getter={organisationDescription}
                   setter={setOrganisationDescription}
