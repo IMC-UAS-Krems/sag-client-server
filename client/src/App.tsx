@@ -24,6 +24,7 @@ const App: Component = () => {
   //   const newLocale = locale() === "en" ? "de" : "en";
   //   locale(newLocale);
   // };
+  // TODO: change EditorProvider scope (probably is not needed for the entire app)
   return (
     <>
       <EditorProvider>
