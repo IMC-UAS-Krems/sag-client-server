@@ -66,7 +66,9 @@ const Verify: Component = () => {
         {verified ? (
           <div class={styles.card}>
             <h1>You have already verified your email</h1>
-            <button onClick={() => navigate("/home")}>Go back to home page</button>
+            <button onClick={() => navigate("/home")} class={styles["unauth-button"]}>
+              Go back to home page
+            </button>
           </div>
         ) : (
           <div class={styles.card}>
@@ -74,14 +76,18 @@ const Verify: Component = () => {
             {hasSentVerification() ? (
               <>
                 <p>Verification email has been sent to: {authStore.state().email}</p>
-                <button onClick={() => navigate("/home")}>Go back to home page</button>
+                <button onClick={() => navigate("/home")} class={styles["unauth-button"]}>
+                  Go back to home page
+                </button>
               </>
             ) : loading() ? (
               <div class={styles.loader}></div>
             ) : (
               <>
                 <p>Please check your inbox or request a new verification link here</p>
-                <button onClick={sendVerificationEmail}>Send verification email</button>
+                <button onClick={sendVerificationEmail} class={styles["unauth-button"]}>
+                  Send verification email
+                </button>
               </>
             )}
           </div>

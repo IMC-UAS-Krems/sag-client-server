@@ -24,10 +24,12 @@
   min-width: 40%;
 }
 
-h1 {
+.card h1 {
   color: var(--primary-text);
   margin: 0 3rem 1.5rem 3rem;
   text-align: center;
+  font-size: x-large;
+  font-weight: bolder;
 }
 
 p {
@@ -37,7 +39,7 @@ p {
   text-align: center;
 }
 
-button {
+.unauth-button {
   background-color: transparent;
   color: var(--primary-text);
   font-size: 18px;
@@ -54,7 +56,27 @@ button {
   transition: all 0.25s;
 }
 
-button:hover {
+.unauth-button:hover {
+  background-color: var(--primary-text);
+  color: var(--secondary-color);
+}
+
+.unauth-button {
+  flex: 1;
+  margin: 0 10px;
+  padding: 10px;
+  background-color: transparent;
+  color: var(--primary-text);
+  font-size: 18px;
+  font-weight: 500;
+  max-height: 40px;
+  border-radius: 6px;
+  border: 1px solid var(--primary-text);
+  transition: all 0.25s;
+  line-height: 0;
+}
+
+.unauth-button:hover {
   background-color: var(--primary-text);
   color: var(--secondary-color);
 }

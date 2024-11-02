@@ -46,11 +46,23 @@ td {
 
 .nav-button-container {
   display: flex;
+  justify-content: space-between;
   width: 80%;
   gap: 2rem;
 }
 
+.nav-button-container button:first-child {
+  margin-left: 0;
+}
+
+.nav-button-container button:last-child {
+  margin-right: 0;
+}
+
 .nav-button {
+  flex: 1;
+  margin: 0 10px;
+  padding: 10px;
   background-color: transparent;
   color: var(--primary-text);
   font-size: 18px;
@@ -59,6 +71,7 @@ td {
   border-radius: 6px;
   border: 1px solid var(--primary-text);
   transition: all 0.25s;
+  line-height: 0;
 }
 
 .nav-button:hover {
@@ -67,6 +80,9 @@ td {
 }
 
 .nav-button-inverse {
+  flex: 1;
+  margin: 0 10px;
+  padding: 10px;
   background-color: var(--primary-text);
   color: var(--secondary-color);
   font-size: 18px;
@@ -75,6 +91,7 @@ td {
   border-radius: 6px;
   border: 1px solid var(--primary-text);
   transition: all 0.25s;
+  line-height: 0;
 }
 
 .nav-button-inverse:hover {
@@ -90,15 +107,6 @@ td {
 }
 
 .logged-in-user {
-  background-color: var(--secondary-color);
-}
-
-.actions {
-  font-size: 2rem;
-}
-
-.actions:hover {
-  cursor: pointer;
   background-color: var(--secondary-color);
 }
 

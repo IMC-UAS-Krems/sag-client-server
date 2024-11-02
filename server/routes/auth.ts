@@ -70,15 +70,15 @@ export const auth = new Elysia({ prefix: "/auth" })
           if (error.message.includes("already exists")) {
             log.warn(error.message);
             set.status = 409; // Conflict
-            throw error;
+            return { error: error.message };
           }
           log.error(error.message);
           set.status = 500; // Internal Server Error
-          throw error;
+          return { error: error.message };
         } else {
           log.error("An unknown error occurred");
           set.status = 500; // Internal Server Error
-          throw new Error("An unknown error occurred");
+          return { error: "An unknown error occurred" };
         }
       }
     },
@@ -193,6 +193,7 @@ export const auth = new Elysia({ prefix: "/auth" })
 
       log.info("User logged out: " + userId);
       set.status = 200;
+      return { success: true, message: "User logged out successfully" };
     },
     {
       cookie: t.Cookie({
@@ -228,10 +229,12 @@ export const auth = new Elysia({ prefix: "/auth" })
       }),
       detail: {
         tags: ["auth"],
-        description: "Check if the cookie from the request contains an access token and returns the user's email",
+        description:
+          "Check if the cookie from the request contains an access token and returns the user's name, email and role",
       },
     },
   )
+
   .get(
     "/check-if-must-logout",
     async ({ set, userId, cookie: { jwtToken } }: AuthContextWithRequest) => {

@@ -7,7 +7,7 @@ import { eden } from "@client/api";
 
 const checkInterval =
   Number(import.meta.env.VITE_AUTH_CHECK_INTERVAL) * 1000 ||
-  panic("VITE_COOKIES_EXPIRATION environment variable not set");
+  panic("VITE_AUTH_CHECK_INTERVAL environment variable not set");
 
 interface AuthGuardProps {
   role: string | string[];

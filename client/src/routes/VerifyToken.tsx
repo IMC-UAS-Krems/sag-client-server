@@ -62,9 +62,13 @@ const VerifyToken: Component = () => {
               <p>{verificationResult()}</p>
               {verificationResult() === "You have successfully verified your email" ||
               verificationResult()?.includes("already verified") ? (
-                <button onClick={() => navigate("/home")}>Go back to home page</button>
+                <button onClick={() => navigate("/home")} class={styles["unauth-button"]}>
+                  Go back to home page
+                </button>
               ) : (
-                <button onClick={() => navigate("/verify")}>Get a new verification link</button>
+                <button onClick={() => navigate("/verify")} class={styles["unauth-button"]}>
+                  Get a new verification link
+                </button>
               )}
             </>
           )}
