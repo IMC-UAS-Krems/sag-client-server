@@ -37,6 +37,13 @@ interface GetChildren {
   getChildren(): TreeNode[];
 }
 
+type expandState = JSON & {
+  [key: string]: boolean;
+};
+
+const DEFAULT_IS_EXPANDED: boolean = false;
+const DEFAULT_EXPAND_STATE: string = `{}`;
+
 export class TreeNode implements GetChildren {
   children: TreeNode[];
   name: Accessor<string>;
@@ -44,7 +51,8 @@ export class TreeNode implements GetChildren {
   docType: SagDocumentType;
   path: Accessor<string | undefined>;
   setPath: Setter<string | undefined>;
-  isExpanded: boolean;
+  isExpanded: Accessor<boolean | undefined>;
+  setIsExpanded: Setter<boolean | undefined>;
   projectName: string | undefined;
   orgName: string | undefined;
   municipalityName: string | undefined;
@@ -53,6 +61,7 @@ export class TreeNode implements GetChildren {
   constructor(params: {
     name: string;
     docType: SagDocumentType;
+    isExpanded?: boolean;
     path?: string;
     projectName?: string;
     orgName?: string;
@@ -62,16 +71,61 @@ export class TreeNode implements GetChildren {
     [this.name, this.setName] = createSignal(params.name);
     this.docType = params.docType;
     [this.path, this.setPath] = createSignal(params.path);
-    this.isExpanded = false;
+    [this.isExpanded, this.setIsExpanded] = createSignal(params.isExpanded);
     this.projectName = params.projectName;
     this.orgName = params.orgName;
     this.municipalityName = params.municipalityName;
     this.children = createMutable([]);
     this.parent = params.parent;
+
+    if (this.isExpanded()) this.saveExpandedState(this.isExpanded());
   }
 
   addChild(child: TreeNode) {
     this.children.push(child);
+  }
+
+  toggleExpanded() {
+    this.setIsExpanded(!this.isExpanded());
+    this.saveExpandedState(this.isExpanded());
+  }
+
+  collapse() {
+    if (!this.isFile()) {
+      this.setIsExpanded(false);
+      this.saveExpandedState(this.isExpanded());
+
+      for (const child of this.children) {
+        child.collapse();
+      }
+    }
+  }
+
+  saveExpandedState(state: boolean | undefined) {
+    if (state === undefined) return;
+
+    const path = [];
+
+    if (this.municipalityName) {
+      path.push(this.municipalityName);
+    }
+    if (this.orgName) {
+      path.push(this.orgName);
+    }
+    if (this.projectName) {
+      path.push(this.projectName);
+    }
+    if (this.path()) {
+      path.push(this.path());
+    }
+
+    const pathStr = path.join(".");
+    const old_state: expandState = JSON.parse(localStorage.getItem("file_tree") || DEFAULT_EXPAND_STATE);
+
+    if (state) old_state[pathStr] = state;
+    else delete old_state[pathStr];
+
+    localStorage.setItem("file_tree", JSON.stringify(old_state));
   }
 
   getChildren() {
@@ -262,13 +316,13 @@ class FileTree implements GetChildren {
     this.root = createMutable(new TreeNode({ name: "root", docType: SagDocumentType.FOLDER }));
   }
 
-  addDocument(doc: SagDocument) {
+  addDocument(doc: SagDocument, old_state: expandState) {
     const pathSplit = doc.documentPath.lastIndexOf(".");
     const path = pathSplit === -1 ? doc.documentPath : doc.documentPath.slice(0, pathSplit);
 
-    this.addMunicipality(doc.municipalityName);
-    this.addOrg(doc.orgName, doc.municipalityName);
-    this.addProject(doc.projectName, doc.orgName, doc.municipalityName);
+    this.addMunicipality(doc.municipalityName, old_state);
+    this.addOrg(doc.orgName, doc.municipalityName, old_state);
+    this.addProject(doc.projectName, doc.orgName, doc.municipalityName, old_state);
 
     let currentNode = this.root
       .findChild({ name: doc.municipalityName })
@@ -287,19 +341,35 @@ class FileTree implements GetChildren {
         orgName: doc.orgName,
         municipalityName: doc.municipalityName,
         parent: currentNode,
+        isExpanded: this.parse_old_state(
+          old_state,
+          `${doc.municipalityName}.${doc.orgName}.${doc.projectName}.${doc.documentPath}`,
+        ),
       }),
     );
   }
 
-  addMunicipality(municipality: string) {
+  parse_old_state(old_state: expandState, path: string): boolean | undefined {
+    if (old_state[path] !== undefined) {
+      return old_state[path];
+    }
+    return DEFAULT_IS_EXPANDED;
+  }
+
+  addMunicipality(municipality: string, old_state: expandState) {
     if (this.root.findChild({ name: municipality }) == null) {
       this.root.addChild(
-        new TreeNode({ name: municipality, docType: SagDocumentType.MUNICIPALITY, municipalityName: municipality }),
+        new TreeNode({
+          name: municipality,
+          docType: SagDocumentType.MUNICIPALITY,
+          municipalityName: municipality,
+          isExpanded: this.parse_old_state(old_state, municipality),
+        }),
       );
     }
   }
 
-  addOrg(org: string, municipality: string) {
+  addOrg(org: string, municipality: string, old_state: expandState) {
     const municipalityNode = this.root.findChild({ name: municipality });
     if (municipalityNode?.findChild({ name: org }) == null) {
       municipalityNode?.addChild(
@@ -308,12 +378,13 @@ class FileTree implements GetChildren {
           docType: SagDocumentType.ORG,
           municipalityName: municipalityNode.municipalityName,
           orgName: org,
+          isExpanded: this.parse_old_state(old_state, `${municipality}.${org}`),
         }),
       );
     }
   }
 
-  addProject(project: string, org: string, municipality: string) {
+  addProject(project: string, org: string, municipality: string, old_state: expandState) {
     const municipalityNode = this.root.findChild({ name: municipality });
     const orgNode = municipalityNode?.findChild({ name: org });
     if (orgNode?.findChild({ name: project }) == null) {
@@ -324,6 +395,7 @@ class FileTree implements GetChildren {
           municipalityName: orgNode.municipalityName,
           orgName: orgNode.orgName,
           projectName: project,
+          isExpanded: this.parse_old_state(old_state, `${municipality}.${org}.${project}`),
         }),
       );
     }
@@ -339,12 +411,20 @@ function FileNode(props: { node: TreeNode }) {
   const { handleFileClick, setSelectedNode } = useContext(EditorContext) as IEditorContext;
 
   function toggleExpanded() {
-    if (!props.node.isExpanded) {
-      expandDiv.style.gridTemplateRows = "1fr";
+    if (!props.node.isExpanded()) {
+      expandDiv.classList.add(styles["file-node-container-expanded"]);
+      expandDiv.classList.remove(styles["file-node-container-collapsed"]);
     } else {
-      expandDiv.style.gridTemplateRows = "0fr";
+      expandDiv.classList.remove(styles["file-node-container-expanded"]);
+      expandDiv.classList.add(styles["file-node-container-collapsed"]);
     }
-    props.node.isExpanded = !props.node.isExpanded;
+    props.node.toggleExpanded();
+    if (!props.node.isExpanded()) {
+      for (const child of props.node.getChildren()) {
+        child.collapse();
+      }
+    }
+    console.log(props.node);
   }
 
   return (
@@ -388,7 +468,10 @@ function FileNode(props: { node: TreeNode }) {
       <div
         //@ts-expect-error - original message: Variable 'expandDiv' is used before being assigned
         ref={expandDiv}
-        class={styles["file-node-container"]}
+        class={styles["file-node-container"].concat(
+          " ",
+          props.node.isExpanded() ? styles["file-node-container-expanded"] : styles["file-node-container-collapsed"],
+        )}
       >
         <div class={styles["file-node-list"]}>
           <For each={props.node.getChildren()}>{(child) => <FileNode node={child} />}</For>
@@ -509,18 +592,6 @@ function FileContextMenu(props: { children: JSXElement }) {
                   {MenuOption.Rename}
                 </ContextMenu.Item>
               </Show>
-              {
-                //<Show when={selectedNode()?.docType === SagDocumentType.FILE}>
-                //  <ContextMenu.Item
-                //    class="px-4 py-2 cursor-pointer hover:bg-gray-100"
-                //    onSelect={async () => {
-                //      await handleContextMenu(MenuOption.Save);
-                //    }}
-                //  >
-                //    {MenuOption.Save}
-                //  </ContextMenu.Item>
-                //</Show>
-              }
               <Show
                 when={[SagDocumentType.FOLDER, SagDocumentType.FILE].includes(
                   selectedNode()?.docType as SagDocumentType,
@@ -586,9 +657,11 @@ export function LeftSideBar() {
       })
       .then((docs) => {
         batch(() => {
+          const old_state: expandState = JSON.parse(localStorage.getItem("file_tree") || DEFAULT_EXPAND_STATE);
+          localStorage.removeItem("file_tree");
           const docArray = docs.data as SagDocument[];
           docArray.forEach((doc: SagDocument) => {
-            tree.addDocument(doc);
+            tree.addDocument(doc, old_state);
           });
         });
       });
