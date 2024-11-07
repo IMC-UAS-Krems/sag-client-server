@@ -1,40 +1,69 @@
 .file-node {
-    @apply flex flex-col;
+  display: flex;
+  flex-direction: column;
 }
 
 .file-node-btn {
-    @apply flex flex-row;
+  display: flex;
+  flex-direction: row;
 }
 
-.file-node-btn-icon{
-    @apply mr-2;
+.file-node-btn-icon {
+  margin-right: 0.5rem;
 }
 
-.file-node-container{
-    grid-template-rows: 0fr;
-    @apply transition-all duration-500 overflow-hidden grid;
+.file-node-container {
+  transition: all;
+  transition-duration: 500ms;
+  overflow: hidden;
+  display: grid;
 }
 
-.file-node-list{
-    @apply ml-4 min-h-0;
+.file-node-container-expanded {
+  grid-template-rows: 1fr;
 }
 
-.context-menu{
-    @apply bg-white border border-gray-200 rounded shadow-lg;
+.file-node-container-collapsed {
+
+  grid-template-rows: 0fr;
+}
+
+.file-node-list {
+  margin-left: 1rem;
+  min-height: 0px;
+}
+
+.context-menu {
+  background-color: var(--background-color);
+  border-color: lightgray;
+  border-radius: 0.25rem;
+  border-width: 1px;
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  color: var(--primary-text);
 }
 
 .context-menu-ul {
-    @apply py-1;
+  padding: 0.25rem;
 }
 
-.context-menu-item{
-    @apply px-4 py-2 cursor-pointer hover:bg-gray-100;
+.context-menu-item {
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  color: inherit;
+}
+
+.context-menu-item:hover {
+  background-color: lightgray;
 }
 
 .file-tree {
-    @apply w-1/4 max-h-screen overflow-auto;
+  width: 25%;
+  max-height: 100vh;
+  overflow: auto;
+  background-color: var(--background-color);
+  color: var(--primary-text);
 }
 
 .file-tree-item {
-    @apply ml-4;
+  margin-left: 1rem;
 }
