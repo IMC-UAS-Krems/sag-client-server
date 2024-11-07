@@ -49,15 +49,29 @@ export class TreeNode implements GetChildren {
   name: Accessor<string>;
   setName: Setter<string>;
   docType: SagDocumentType;
+  /** can be undefined when `docType` is not `FILE` or `FOLDER` since other act as a path properties in the DB  */
   path: Accessor<string | undefined>;
   setPath: Setter<string | undefined>;
+  /** can the undefinded when `docType` is `FILE` */
   isExpanded: Accessor<boolean | undefined>;
   setIsExpanded: Setter<boolean | undefined>;
+  municipalityName: string;
+  /** can be undefined when `docType` is `MUNICIPALITY` */
   projectName: string | undefined;
+  /** can be undefined when `docType` is `MUNICIPALITY` or `PROJECT`  */
   orgName: string | undefined;
-  municipalityName: string | undefined;
   parent: TreeNode | undefined;
 
+  /**
+   * @param params.name - name of the document that will be displayed
+   * @param params.docType - type of the document
+   * @param params.isExpanded - whether the document is expanded or not, can be undefined when `docType` is `FILE`
+   * @param params.path - path of the document, can be undefined when `docType` is not `FILE` or `FOLDER`
+   * @param params.projectName - name of the project, can be undefined when `docType` is `MUNICIPALITY`
+   * @param params.orgName - name of the organization, can be undefined when `docType` is `MUNICIPALITY` or `PROJECT`
+   * @param params.municipalityName - name of the municipality
+   * @param params.parent - parent of the document
+   */
   constructor(params: {
     name: string;
     docType: SagDocumentType;
@@ -65,7 +79,7 @@ export class TreeNode implements GetChildren {
     path?: string;
     projectName?: string;
     orgName?: string;
-    municipalityName?: string;
+    municipalityName: string;
     parent?: TreeNode;
   }) {
     [this.name, this.setName] = createSignal(params.name);
@@ -190,6 +204,7 @@ export class TreeNode implements GetChildren {
           projectName: this.projectName,
           orgName: this.orgName,
           municipalityName: this.municipalityName,
+          isExpanded: true,
         }),
       );
     }
@@ -206,6 +221,7 @@ export class TreeNode implements GetChildren {
         credentials: "include",
       },
     });
+    this.collapse();
 
     if (resp.status === 200) {
       const index = this.parent?.children.findIndex((child) => child.name() === this.name());
@@ -313,6 +329,7 @@ class FileTree implements GetChildren {
   root: TreeNode;
 
   constructor() {
+    // @ts-expect-error: this is a special node that does not renderen thus can have many undefined properties
     this.root = createMutable(new TreeNode({ name: "root", docType: SagDocumentType.FOLDER }));
   }
 
@@ -644,7 +661,6 @@ function FileContextMenu(props: { children: JSXElement }) {
 }
 
 export function LeftSideBar() {
-  //const tree = createMutable(new FileTree());
   const tree = new FileTree();
 
   onMount(() => {
