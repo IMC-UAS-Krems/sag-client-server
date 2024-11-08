@@ -1,7 +1,7 @@
 import { Component, createSignal, onMount, createEffect } from "solid-js";
 
 import { FaSolidEllipsis } from "solid-icons/fa";
-import { Menu, Item, useContextMenu, animation, Separator } from "solid-contextmenu";
+import { ContextMenu } from "@kobalte/core/context-menu";
 import { useNavigate } from "@solidjs/router";
 import Swal from "sweetalert2";
 
@@ -10,11 +10,10 @@ import { handleUnauthorized } from "@client/utils/authUtils";
 import Header from "@client/components/Header";
 import authStore from "@store/authStore";
 import styles from "@styles/Users.module.css";
-import { theme } from "@store/index";
+import menu_styles from "@styles/ContextMenu.module.css";
 import { UserDetails } from "@server/types";
 import { panic } from "@utils/panic";
-
-import "../../../node_modules/solid-contextmenu/dist/style.css";
+import { Notification } from "@client/common";
 
 interface UsersResponse {
   data: UserDetails[] | { error: string } | null;
@@ -131,17 +130,26 @@ const Users: Component = () => {
             return;
           }
 
-          if (!deletedUser.data || deletedUser.error) {
+          if (deletedUser.status !== 200 || (deletedUser.data && "error" in deletedUser.data)) {
             console.log("Failed to delete user:", deletedUser.error);
+            const errorMessage =
+              deletedUser.data && "error" in deletedUser.data ? deletedUser.data.error : "Couldn't delete the user";
             Swal.fire({
               title: "Error",
-              text: "Couldn't delete the user",
+              text: errorMessage,
               icon: "error",
             });
             return;
           } else {
-            Swal.fire("Deleted!", "The user has been deleted.", "success");
-            setUsers((prevUsers) => prevUsers.map((user) => (user.id === userId ? { ...user, deleted: true } : user)));
+            Notification.fire({
+              titleText: "User deleted successfully",
+              icon: "success",
+            });
+            setUsers((prevUsers) =>
+              prevUsers.map((user) =>
+                user.id === userId ? { ...user, needsToBeLoggedOut: true, deleted: true } : user,
+              ),
+            );
           }
         } catch (error) {
           console.error("Failed to delete user:", error);
@@ -189,14 +197,18 @@ const Users: Component = () => {
 
           if (response.status !== 200 || (response.data && response.data.error)) {
             console.log("Failed to log out user: ", response.data ? response.data.error : "Unknown error");
+            const errorMessage = response.data ? response.data.error : "Couldn't log out the user";
             Swal.fire({
               title: "Error",
-              text: "Couldn't log out the user",
+              text: errorMessage,
               icon: "error",
             });
             return;
           } else {
-            Swal.fire("Logged out!", "The user has been logged out.", "success");
+            Notification.fire({
+              titleText: "User logged out successfully",
+              icon: "success",
+            });
             setUsers((prevUsers) =>
               prevUsers.map((user) => (user.id === userId ? { ...user, needsToBeLoggedOut: true } : user)),
             );
@@ -214,7 +226,7 @@ const Users: Component = () => {
     setReload(!reload());
   }
 
-  const [_animation] = createSignal(animation.scale);
+  // const [_animation] = createSignal(animation.scale);
   // const [_theme, setTheme] = createSignal<"light" | "dark">("light");
 
   return (
@@ -257,7 +269,7 @@ const Users: Component = () => {
 
               <tbody>
                 {filteredUsers().map((user) => {
-                  const { show } = useContextMenu({ id: user.id });
+                  // const { show } = useContextMenu({ id: user.id });
                   // const onlineStatus = onlineStatuses()[user.id];
                   let onlineStatus = false;
                   if (!user.lastTimeActive) {
@@ -286,36 +298,36 @@ const Users: Component = () => {
                       <td>{user.organization?.name}</td>
                       <td>{user.userRole}</td>
                       <td>{user.deleted ? "🗑️" : onlineStatus ? "🟢" : "🔴"}</td>
-                      <td
-                        onClick={(e) => {
-                          show(e, { props: user.id });
-                        }}
-                        class={styles.actions}
-                      >
-                        <FaSolidEllipsis />
-                        <Menu id={user.id} animation={_animation()} theme={theme() === "dark" ? "dark" : "light"}>
-                          <Item onClick={() => handleEditUser(user.id)} disabled={user.userRole == "Administrator"}>
-                            ✏️ Edit
-                          </Item>
-                          <Item
-                            onClick={() => handleDeleteUser(user.id)}
-                            disabled={user.userRole === "Administrator" || user.deleted}
-                          >
-                            🗑️ Delete
-                          </Item>
-                          <Separator />
-                          <Item
-                            onClick={() => handleLogOutUser(user.id, user.username)}
-                            disabled={
-                              user.userRole === "Administrator" ||
-                              !onlineStatus ||
-                              user.needsToBeLoggedOut ||
-                              user.deleted
-                            }
-                          >
-                            🚶 Log out
-                          </Item>
-                        </Menu>
+                      <td class={menu_styles.actions}>
+                        <ContextMenu>
+                          <ContextMenu.Trigger class={menu_styles["trigger"]}>
+                            <FaSolidEllipsis />
+                          </ContextMenu.Trigger>
+                          <ContextMenu.Content class={menu_styles["context-menu__content"]}>
+                            <ContextMenu.Item
+                              class={menu_styles["context-menu__item"]}
+                              onSelect={() => handleEditUser(user.id)}
+                              disabled={user.userRole == "Administrator"}
+                            >
+                              ✏️ Edit
+                            </ContextMenu.Item>
+                            <ContextMenu.Item
+                              class={menu_styles["context-menu__item"]}
+                              onSelect={() => handleDeleteUser(user.id)}
+                              disabled={user.userRole === "Administrator" || user.deleted}
+                            >
+                              🗑️ Delete
+                            </ContextMenu.Item>
+                            <ContextMenu.Separator />
+                            <ContextMenu.Item
+                              class={menu_styles["context-menu__item"]}
+                              onSelect={() => handleLogOutUser(user.id, user.name)}
+                              disabled={user.userRole == "Administrator" || !onlineStatus}
+                            >
+                              🔒 Log out
+                            </ContextMenu.Item>
+                          </ContextMenu.Content>
+                        </ContextMenu>
                       </td>
                     </tr>
                   );

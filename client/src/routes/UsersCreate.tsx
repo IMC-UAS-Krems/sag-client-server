@@ -11,6 +11,7 @@ import { UserRole } from "@utils/roles";
 import Header from "@client/components/Header";
 import FormField from "@client/components/FormField";
 import styles from "@styles/Signin.module.css";
+import { Notification } from "@client/common";
 
 const UsersCreate: Component = () => {
   const navigate = useNavigate();
@@ -133,13 +134,11 @@ const UsersCreate: Component = () => {
         throw new Error(errorMessage);
       }
 
-      await Swal.fire({
-        title: "Success",
-        text: `User created successfully.`,
+      navigate("/users", { replace: true });
+      Notification.fire({
+        titleText: "User created successfully",
         icon: "success",
       });
-
-      navigate("/users", { replace: true });
     } catch (error) {
       console.error("Error creating user:", error);
 
