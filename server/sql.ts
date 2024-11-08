@@ -1,7 +1,7 @@
 import { createId } from "@paralleldrive/cuid2";
 import { prisma } from "@∆";
 import { UserRole } from "@utils/roles";
-import { UserDetails } from "@server/types";
+import { UserDetails, OrganisationDetails, UpdateOrganisationBody } from "@server/types";
 import { Organization, Project, User, Municipality, UserType, DocumentType } from "@prisma/client";
 import { SagError } from "./errors";
 
@@ -17,6 +17,9 @@ export type Document = {
 /** UserDocument is a `User` object with an additional `documents` field */
 export type UserDocument = User & { documents: Document[] };
 
+/*****************************************************/
+/**                Municipalities                    */
+/*****************************************************/
 export async function createMunicipality(name: string): Promise<Municipality> {
   return await prisma.municipality.create({
     data: {
@@ -33,19 +36,35 @@ export async function selectMunicipality(name: string): Promise<Municipality | n
   });
 }
 
-/**
- * throws an error if the organization does not exist
- */
-export async function createOrganization(name: string, municipalityName: string): Promise<Organization> {
-  if (selectMunicipality(municipalityName) === null) {
+export async function selectMunicipalityById(id: string): Promise<Municipality | null> {
+  return await prisma.municipality.findUnique({
+    where: {
+      id,
+    },
+  });
+}
+
+/*****************************************************/
+/**                Organisations                     */
+/*****************************************************/
+
+export async function createOrganization(
+  name: string,
+  description: string,
+  municipalityName: string,
+  verified?: boolean,
+): Promise<Organization> {
+  if (await selectMunicipality(municipalityName) === null) {
     throw new SagError(`Municipality ${municipalityName} does not exist`);
   }
   return await prisma.organization.create({
     data: {
       name: name,
+      description: description,
       municipality: {
         connect: { name: municipalityName },
       },
+      verified: verified ?? false,
     },
   });
 }
@@ -57,6 +76,170 @@ export async function selectOrganization(name: string): Promise<Organization | n
     },
   });
 }
+
+export async function getOrganisationById(organisationId: string): Promise<OrganisationDetails | null> {
+  return await prisma.organization.findUnique({
+    where: {
+      id: organisationId,
+    },
+    select: {
+      id: true,
+      name: true,
+      description: true,
+      verified: true,
+      createdAt: true,
+      updatedAt: true,
+      users: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          userRole: true,
+          municipality: {
+            select: {
+              name: true,
+            },
+          },
+        },
+      },
+      municipality: {
+        select: {
+          name: true,
+          id: true,
+        },
+      },
+      municipalityId: true,
+    },
+  });
+}
+
+export async function getAllOrganisations(): Promise<OrganisationDetails[]> {
+  return await prisma.organization.findMany({
+    include: {
+      users: {
+        select: {
+          name: true,
+        },
+      },
+      municipality: {
+        select: {
+          name: true,
+        },
+      },
+    },
+  });
+}
+
+export async function deleteOrganisation(
+  organisationId: string,
+): Promise<{ success: boolean; users?: object[]; error?: string }> {
+  const organisation = await prisma.organization.findUnique({
+    where: {
+      id: organisationId,
+    },
+    include: {
+      users: {
+        select: {
+          name: true,
+        },
+      },
+    },
+  });
+
+  if (!organisation) {
+    return { success: false, error: `Organisation with ID ${organisationId} does not exist.` };
+  }
+
+  if (organisation.users.length > 0) {
+    const users = organisation.users;
+    return { success: false, users: users, error: "Organisation has assigned users." };
+  }
+
+  await prisma.organization.delete({
+    where: {
+      id: organisationId,
+    },
+  });
+  return { success: true };
+}
+
+export async function updateOrganisation(
+  organisationId: string,
+  {
+    name,
+    description,
+    municipalityName,
+    verified,
+    updatedAt,
+  }: {
+    name?: string;
+    description?: string;
+    municipalityName?: string;
+    verified?: boolean;
+    updatedAt?: Date;
+  },
+): Promise<OrganisationDetails> {
+  // Check if the organization exists
+  const existingOrganisation = await prisma.organization.findUnique({
+    where: { id: organisationId },
+  });
+
+  if (!existingOrganisation) {
+    throw new Error(`Organisation ${organisationId} does not exist`);
+  }
+
+  const updateData: UpdateOrganisationBody = {
+    id: organisationId,
+    updatedAt: updatedAt ?? new Date(),
+  };
+
+  if (name && name !== existingOrganisation.name) {
+    const organisationWithName = await prisma.organization.findFirst({
+      where: {
+        name: name,
+      },
+    });
+    if (organisationWithName) {
+      throw new Error(`Organisation with name "${name}" already exists`);
+    }
+    updateData.name = name;
+  }
+
+  if (description) updateData.description = description;
+
+  if (municipalityName) {
+    const municipality = await selectMunicipality(municipalityName);
+    if (!municipality) {
+      throw new Error(`Municipality ${municipalityName} does not exist`);
+    }
+    updateData.municipalityId = municipality.id;
+  }
+
+  if (verified !== undefined) updateData.verified = verified;
+  updateData.updatedAt = updatedAt || new Date();
+
+  const updatedOrganisation = await prisma.organization.update({
+    where: { id: organisationId },
+    data: updateData,
+    select: {
+      id: true,
+      name: true,
+      description: true,
+      municipality: { select: { name: true } },
+      municipalityId: true,
+      users: { select: { name: true } },
+      verified: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+  });
+
+  return updatedOrganisation;
+}
+
+/*****************************************************/
+/**                   Projects                       */
+/*****************************************************/
 
 /**
  * throws an error if the organization does not exist
@@ -75,6 +258,10 @@ export async function createProject(name: string, organizationName: string): Pro
     },
   });
 }
+
+/*****************************************************/
+/**                        User                      */
+/*****************************************************/
 
 export async function createUser(data: {
   username: string;
@@ -364,6 +551,10 @@ export async function deleteUser(userId: string): Promise<void> {
     },
   });
 }
+
+/*****************************************************/
+/**                    Documents                     */
+/*****************************************************/
 
 export async function getDocumentFolderPath(
   path: string,

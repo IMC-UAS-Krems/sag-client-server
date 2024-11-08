@@ -77,6 +77,11 @@ const Header: Component<{ children: JSX.Element }> = (props) => {
             </li>
             <Show when={authStore.state().userRole === "Administrator"}>
               <li>
+                <A href="/organisations">Organisations</A>
+              </li>
+            </Show>
+            <Show when={authStore.state().userRole === "Administrator"}>
+              <li>
                 <A href="/users">Users</A>
               </li>
             </Show>

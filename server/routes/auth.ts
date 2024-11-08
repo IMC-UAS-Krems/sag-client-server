@@ -207,7 +207,7 @@ export const auth = new Elysia({ prefix: "/auth" })
 
       if (user == null) {
         set.status = 401;
-        return { error: "User not logged in" }; // Return an error message
+        return { error: "User not logged in" };
       }
       set.status = 200;
       return { name: user.name, email: user.email, userRole: user.userRole };
@@ -227,6 +227,11 @@ export const auth = new Elysia({ prefix: "/auth" })
   .get(
     "/check-if-must-logout",
     async ({ set, userId, cookie: { jwtToken } }: AuthContextWithRequest) => {
+      if (!userId) {
+        set.status = 401;
+        return { error: "User not logged in" };
+      }
+
       const user = await sql.selectUser(userId);
       if (user == null) {
         set.status = 401;
