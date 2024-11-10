@@ -30,9 +30,6 @@ ADD COLUMN     "lastTimeActive" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 ADD COLUMN     "needsToBeLoggedOut" BOOLEAN NOT NULL DEFAULT false,
 ALTER COLUMN "userRole" SET DEFAULT 'Developer';
 
--- DropIndex
-DROP INDEX "users_email_key";
-DROP INDEX "users_username_key";
 
 -- Add Partial Unique Indexes
 CREATE UNIQUE INDEX "users_username_deleted_unique" ON "users" ("username") WHERE "deleted" = false;
