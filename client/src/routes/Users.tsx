@@ -357,6 +357,7 @@ const Users: Component = () => {
       },
     });
     setTable(newTable); // Set the table after it is created
+    showDeleted();
   });
   // console.log("HeaderGroups:", table.getHeaderGroups());
   // console.log("Table:", table.getCoreRowModel().rows);
