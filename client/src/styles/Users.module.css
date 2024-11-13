@@ -57,6 +57,11 @@ td {
   color: var(--primary-text);
 }
 
+.sortable {
+  cursor: pointer;
+  user-select: none;
+}
+
 .nav-button-container {
   display: flex;
   justify-content: space-between;

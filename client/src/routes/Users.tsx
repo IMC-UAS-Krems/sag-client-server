@@ -10,6 +10,7 @@ import {
   flexRender,
   getPaginationRowModel,
   getFilteredRowModel,
+  getSortedRowModel,
   Table,
 } from "@tanstack/solid-table";
 import Swal from "sweetalert2";
@@ -346,6 +347,7 @@ const Users: Component = () => {
       getCoreRowModel: getCoreRowModel(),
       getPaginationRowModel: getPaginationRowModel(),
       getFilteredRowModel: getFilteredRowModel(),
+      getSortedRowModel: getSortedRowModel(),
       globalFilterFn: globalFilterFunction,
       initialState: {
         pagination: {
@@ -406,9 +408,31 @@ const Users: Component = () => {
                             <For each={headerGroup.headers}>
                               {(header) => (
                                 <th>
-                                  {header.isPlaceholder
-                                    ? null
-                                    : flexRender(header.column.columnDef.header, header.getContext())}
+                                  {header.column.getCanSort() ? (
+                                    <div
+                                      class={styles.sortable}
+                                      onClick={header.column.getToggleSortingHandler()}
+                                      title={
+                                        header.column.getCanSort()
+                                          ? header.column.getNextSortingOrder() === "asc"
+                                            ? "Sort ascending"
+                                            : header.column.getNextSortingOrder() === "desc"
+                                              ? "Sort descending"
+                                              : "Clear sort"
+                                          : undefined
+                                      }
+                                    >
+                                      {header.isPlaceholder
+                                        ? null
+                                        : flexRender(header.column.columnDef.header, header.getContext())}
+                                      {{
+                                        asc: " 🔼",
+                                        desc: " 🔽",
+                                      }[header.column.getIsSorted() as string] ?? null}
+                                    </div>
+                                  ) : header.isPlaceholder ? null : (
+                                    flexRender(header.column.columnDef.header, header.getContext())
+                                  )}
                                 </th>
                               )}
                             </For>
