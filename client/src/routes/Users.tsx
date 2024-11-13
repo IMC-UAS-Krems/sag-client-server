@@ -1,6 +1,14 @@
 import { Component, createSignal, onMount, createEffect, For } from "solid-js";
 
-import { FaSolidEllipsis } from "solid-icons/fa";
+import {
+  FaSolidEllipsis,
+  FaSolidAngleLeft,
+  FaSolidAnglesLeft,
+  FaSolidAngleRight,
+  FaSolidAnglesRight,
+  FaSolidArrowDownAZ,
+  FaSolidArrowUpAZ,
+} from "solid-icons/fa";
 import { ContextMenu } from "@kobalte/core/context-menu";
 import { useNavigate } from "@solidjs/router";
 import {
@@ -12,6 +20,7 @@ import {
   getFilteredRowModel,
   getSortedRowModel,
   Table,
+  PaginationState,
 } from "@tanstack/solid-table";
 import Swal from "sweetalert2";
 
@@ -55,7 +64,6 @@ const Users: Component = () => {
   const loggedInTimespan =
     Number(import.meta.env.VITE_LOGGED_IN_TIMESPAN) || panic("VITE_LOGGED_IN_TIMESPAN environment variable not set");
 
-  const [data, setData] = createSignal<User[]>([]);
   const [loading, setLoading] = createSignal(true);
   const [error, setError] = createSignal<string | null>(null);
   const [now, setNow] = createSignal(new Date().getTime());
@@ -296,6 +304,7 @@ const Users: Component = () => {
       id: "actions",
       header: "Actions",
       cell: (props) => (
+        // TODO: Make interaction with the context menu easier
         <ContextMenu>
           <ContextMenu.Trigger class={menu_styles["trigger"]}>
             <FaSolidEllipsis />
@@ -339,30 +348,47 @@ const Users: Component = () => {
     }
   };
 
-  const [table, setTable] = createSignal<Table<User> | null>(null); // Use a signal to manage the table's initialization
-  createEffect(() => {
-    const newTable = createSolidTable({
-      columns,
-      data: data(),
-      getCoreRowModel: getCoreRowModel(),
-      getPaginationRowModel: getPaginationRowModel(),
-      getFilteredRowModel: getFilteredRowModel(),
-      getSortedRowModel: getSortedRowModel(),
-      globalFilterFn: globalFilterFunction,
-      initialState: {
-        pagination: {
-          pageSize: 5,
-        },
-      },
-      state: {
-        globalFilter: true,
-      },
-    });
-    setTable(newTable); // Set the table after it is created
-    showDeleted();
+  const [data, setData] = createSignal<User[]>([]);
+  const [pagination, setPagination] = createSignal<PaginationState>({
+    pageIndex: 0,
+    pageSize: 5,
   });
-  // console.log("HeaderGroups:", table.getHeaderGroups());
-  // console.log("Table:", table.getCoreRowModel().rows);
+  const [filters, setFilters] = createSignal([]);
+  const [sorting, setSorting] = createSignal([]);
+  // Initialize the table using signals directly
+  const table = createSolidTable({
+    get data() {
+      return data();
+    },
+    get columns() {
+      return columns;
+    },
+    state: {
+      get pagination() {
+        return pagination();
+      },
+      get filters() {
+        return filters();
+      },
+      get sorting() {
+        return sorting();
+      },
+      globalFilter: true,
+    },
+    onPaginationChange: setPagination,
+    onFiltersChange: setFilters,
+    onSortingChange: setSorting,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    get globalFilterFn() {
+      return globalFilterFunction;
+    },
+    autoResetPageIndex: false,
+    autoResetFilters: false,
+    autoResetSorting: false,
+  });
 
   // Function to get unique values for the filter dropdown
   const getUniqueValues = (data, columnId) => {
@@ -396,12 +422,12 @@ const Users: Component = () => {
         ) : error() ? (
           <p class={styles["error-text"]}>Error: {error()}</p>
         ) : (
-          table() && (
+          table && (
             <>
               <div class={styles["table-wrapper"]}>
                 <table>
                   <thead>
-                    <For each={table().getHeaderGroups()}>
+                    <For each={table.getHeaderGroups()}>
                       {(headerGroup) => (
                         <>
                           <tr>
@@ -426,8 +452,8 @@ const Users: Component = () => {
                                         ? null
                                         : flexRender(header.column.columnDef.header, header.getContext())}
                                       {{
-                                        asc: " 🔼",
-                                        desc: " 🔽",
+                                        asc: <FaSolidArrowDownAZ />,
+                                        desc: <FaSolidArrowUpAZ />,
                                       }[header.column.getIsSorted() as string] ?? null}
                                     </div>
                                   ) : header.isPlaceholder ? null : (
@@ -482,7 +508,7 @@ const Users: Component = () => {
                     </For>
                   </thead>
                   <tbody>
-                    <For each={table().getRowModel().rows}>
+                    <For each={table.getRowModel().rows}>
                       {(row) => (
                         <tr>
                           <For each={row.getVisibleCells()}>
@@ -494,38 +520,41 @@ const Users: Component = () => {
                   </tbody>
                 </table>
               </div>
-              <div>
+              <div class={styles["pagination-container"]}>
                 <button
-                  onClick={() => table().firstPage()}
-                  disabled={!table().getCanPreviousPage()}
+                  onClick={() => table.firstPage()}
+                  disabled={!table.getCanPreviousPage()}
                   class={styles["nav-button"]}
                 >
-                  &lt;&lt;
+                  <FaSolidAnglesLeft />
                 </button>
                 <button
-                  onClick={() => table().previousPage()}
-                  disabled={!table().getCanPreviousPage()}
+                  onClick={() => table.previousPage()}
+                  disabled={!table.getCanPreviousPage()}
                   class={styles["nav-button"]}
                 >
-                  &lt;
+                  <FaSolidAngleLeft />
                 </button>
+                <span>
+                  Page <strong>{table.getState().pagination.pageIndex + 1}</strong> of{" "}
+                  {table.getPageCount().toLocaleString()}
+                </span>
                 <button
-                  onClick={() => table().nextPage()}
-                  disabled={!table().getCanNextPage()}
+                  onClick={() => table.nextPage()}
+                  disabled={!table.getCanNextPage()}
                   class={styles["nav-button"]}
                 >
-                  &gt;
+                  <FaSolidAngleRight />
                 </button>
                 <button
                   onClick={() => {
-                    table().lastPage();
+                    table.lastPage();
                   }}
-                  disabled={!table().getCanNextPage()}
+                  disabled={!table.getCanNextPage()}
                   class={styles["nav-button"]}
                 >
-                  &gt;&gt;
+                  <FaSolidAnglesRight />
                 </button>
-                {/* <p>{table.getPageCount()}</p> */}
               </div>
             </>
           )
