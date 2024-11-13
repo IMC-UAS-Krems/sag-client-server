@@ -68,7 +68,6 @@ const Users: Component = () => {
   const [error, setError] = createSignal<string | null>(null);
   const [now, setNow] = createSignal(new Date().getTime());
   const [reload, setReload] = createSignal(false);
-  const [showDeleted, setShowDeleted] = createSignal(false);
 
   onMount(async () => {
     await fetchUsers();
@@ -338,9 +337,28 @@ const Users: Component = () => {
     }),
   ];
 
-  // This is done so that the table is rerendered upon data change
-  // let table;
-  const globalFilterFunction = (row, columnId, filterValue) => {
+  // TansStack Solid Table - Signals
+  const [data, setData] = createSignal<User[]>([]);
+  const [pagination, setPagination] = createSignal<PaginationState>({
+    pageIndex: 0,
+    pageSize: 5,
+  });
+  const [columnFilters, setColumnFilters] = createSignal([]);
+  const [sorting, setSorting] = createSignal([]);
+  const [showDeleted, setShowDeleted] = createSignal(false);
+  const [globalFilter, setGlobalFilter] = createSignal(showDeleted());
+
+  createEffect(() => {
+    const filterValue = showDeleted() ? "showAll" : "hideDeleted";
+    setGlobalFilter(filterValue);
+  });
+
+  // TODO: Global filtering works for now with this, but it's not the nicest, refactor later
+  // createEffect(() => {
+  //   console.log("Global Filter Value:", globalFilter());
+  // });
+
+  const globalFilterFunction = (row, columnId) => {
     if (showDeleted()) {
       return true;
     } else {
@@ -348,43 +366,35 @@ const Users: Component = () => {
     }
   };
 
-  const [data, setData] = createSignal<User[]>([]);
-  const [pagination, setPagination] = createSignal<PaginationState>({
-    pageIndex: 0,
-    pageSize: 5,
-  });
-  const [filters, setFilters] = createSignal([]);
-  const [sorting, setSorting] = createSignal([]);
-  // Initialize the table using signals directly
+  // TanStack Solid Table - Table definition
   const table = createSolidTable({
     get data() {
       return data();
     },
-    get columns() {
-      return columns;
-    },
+    columns,
     state: {
       get pagination() {
         return pagination();
       },
-      get filters() {
-        return filters();
+      get columnFilters() {
+        return columnFilters();
+      },
+      get globalFilter() {
+        return globalFilter();
       },
       get sorting() {
         return sorting();
       },
-      globalFilter: true,
     },
     onPaginationChange: setPagination,
-    onFiltersChange: setFilters,
+    onColumnFiltersChange: setColumnFilters,
+    onGlobalFilterChange: setGlobalFilter,
     onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    get globalFilterFn() {
-      return globalFilterFunction;
-    },
+    globalFilterFn: globalFilterFunction,
     autoResetPageIndex: false,
     autoResetFilters: false,
     autoResetSorting: false,
@@ -411,7 +421,10 @@ const Users: Component = () => {
             Refresh data
           </button>
           <button
-            onClick={() => setShowDeleted(!showDeleted())}
+            onClick={() => {
+              const newShowDeleted = !showDeleted();
+              setShowDeleted(newShowDeleted);
+            }}
             class={showDeleted() ? styles["nav-button-inverse"] : styles["nav-button"]}
           >
             {showDeleted() ? "Hide deleted" : "Show deleted"}
