@@ -28,6 +28,7 @@
     "@prisma/client": "5.17.0",
     "@solid-primitives/i18n": "^2.1.1",
     "@solidjs/router": "^0.14.1",
+    "@tanstack/solid-table": "^8.20.5",
     "@types/nodemailer": "^6.4.16",
     "elysia": "1.1.4",
     "mapbox-gl": "^3.5.2",

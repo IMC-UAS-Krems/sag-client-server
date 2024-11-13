@@ -44,6 +44,19 @@ td {
   background-color: var(--secondary-color);
 }
 
+.table-wrapper th select {
+  width: 100%;
+  margin-top: 5px;
+}
+
+.table-wrapper th input {
+  padding: 5px;
+  width: 90%;
+  /* background-color: rgba(var(--secondary-color-rgb), 0.5); */
+  background-color: var(--secondary-color);
+  color: var(--primary-text);
+}
+
 .nav-button-container {
   display: flex;
   justify-content: space-between;

@@ -1,8 +1,17 @@
-import { Component, createSignal, onMount, createEffect } from "solid-js";
+import { Component, createSignal, onMount, createEffect, For } from "solid-js";
 
 import { FaSolidEllipsis } from "solid-icons/fa";
 import { ContextMenu } from "@kobalte/core/context-menu";
 import { useNavigate } from "@solidjs/router";
+import {
+  createColumnHelper,
+  createSolidTable,
+  getCoreRowModel,
+  flexRender,
+  getPaginationRowModel,
+  getFilteredRowModel,
+  Table,
+} from "@tanstack/solid-table";
 import Swal from "sweetalert2";
 
 import { eden } from "@client/api";
@@ -23,13 +32,29 @@ interface UsersResponse {
   headers: Record<string, string>;
 }
 
+// TData type for TanStack Solid Table
+type User = {
+  userId: string;
+  username: string;
+  name: string;
+  email: string;
+  municipality: string;
+  organization: string;
+  userRole: string;
+  loggedIn: boolean;
+  deleted: boolean | undefined;
+};
+
 const Users: Component = () => {
   const navigate = useNavigate();
+
+  // TODO: Highlighting of current user?
   const loggedInUser = authStore.state().email;
+
   const loggedInTimespan =
     Number(import.meta.env.VITE_LOGGED_IN_TIMESPAN) || panic("VITE_LOGGED_IN_TIMESPAN environment variable not set");
 
-  const [users, setUsers] = createSignal<UserDetails[]>([]);
+  const [data, setData] = createSignal<User[]>([]);
   const [loading, setLoading] = createSignal(true);
   const [error, setError] = createSignal<string | null>(null);
   const [now, setNow] = createSignal(new Date().getTime());
@@ -45,10 +70,6 @@ const Users: Component = () => {
     setNow(new Date().getTime());
     await fetchUsers();
   });
-
-  const filteredUsers = () => {
-    return showDeleted() ? users() : users().filter((user) => !user.deleted);
-  };
 
   async function fetchUsers() {
     setLoading(true);
@@ -76,7 +97,28 @@ const Users: Component = () => {
           }
         } else {
           if (Array.isArray(fetchedUsers.data)) {
-            setUsers(fetchedUsers.data);
+            // *** TANSTACK SOLID TABLE ***
+            setData(
+              fetchedUsers.data.map((user) => ({
+                userId: user.id,
+                username: user.username,
+                name: user.name,
+                email: user.email,
+                municipality: user.municipality.name || "",
+                organization: user.organization.name || "",
+                userRole: user.userRole,
+                loggedIn:
+                  !user.needsToBeLoggedOut && now() - new Date(user.lastTimeActive).getTime() < loggedInTimespan * 1000
+                    ? true
+                    : false,
+                deleted: user.deleted,
+              })),
+            );
+            // console.log("Data() in fetch:", data());
+            // const table = createSolidTable({ columns, data: data(), getCoreRowModel: getCoreRowModel() });
+            // console.log("Table:", table.getCoreRowModel().rows);
+            // *** END TANSTACK SOLID TABLE ***
+
             // console.log("Fetch:", fetchedUsers);
             // console.log("Fetched users:", fetchedUsers.data);
           } else {
@@ -145,11 +187,11 @@ const Users: Component = () => {
               titleText: "User deleted successfully",
               icon: "success",
             });
-            setUsers((prevUsers) =>
-              prevUsers.map((user) =>
-                user.id === userId ? { ...user, needsToBeLoggedOut: true, deleted: true } : user,
-              ),
-            );
+            setData((prevUsers) => {
+              return prevUsers.map((user) =>
+                user.userId === userId ? { ...user, needsToBeLoggedOut: true, deleted: true } : user,
+              );
+            });
           }
         } catch (error) {
           console.error("Failed to delete user:", error);
@@ -209,9 +251,11 @@ const Users: Component = () => {
               titleText: "User logged out successfully",
               icon: "success",
             });
-            setUsers((prevUsers) =>
-              prevUsers.map((user) => (user.id === userId ? { ...user, needsToBeLoggedOut: true } : user)),
-            );
+            setData((prevUsers) => {
+              return prevUsers.map((user) =>
+                user.userId === userId ? { ...user, needsToBeLoggedOut: true, loggedIn: false } : user,
+              );
+            });
           }
         } catch (error) {
           console.error("Failed to log out user:", error);
@@ -228,6 +272,103 @@ const Users: Component = () => {
 
   // const [_animation] = createSignal(animation.scale);
   // const [_theme, setTheme] = createSignal<"light" | "dark">("light");
+
+  // TanStack Solid Table - Column definitions
+  const columnHelper = createColumnHelper<User>();
+  const columns = [
+    columnHelper.accessor("username", { header: "Username", filterFn: "includesString" }),
+    columnHelper.accessor("name", { header: "Name", filterFn: "includesString" }),
+    columnHelper.accessor("email", { header: "E-mail address", filterFn: "includesString" }),
+    columnHelper.accessor("municipality", { header: "Municipality", filterFn: "equals" }),
+    columnHelper.accessor("organization", { header: "Organization", filterFn: "equals" }),
+    columnHelper.accessor("userRole", { header: "User Role", filterFn: "equals" }),
+    columnHelper.accessor("loggedIn", {
+      header: "Logged in",
+      filterFn: (row, columnId, filterValue) => {
+        if (filterValue === "all") return true;
+        const loggedIn = row.getValue(columnId);
+        return filterValue === "loggedIn" ? loggedIn : !loggedIn;
+      },
+      cell: (props) => (props.row.original.deleted ? "🗑️" : props.getValue() ? "🟢" : "🔴"),
+    }),
+    columnHelper.display({
+      id: "actions",
+      header: "Actions",
+      cell: (props) => (
+        <ContextMenu>
+          <ContextMenu.Trigger class={menu_styles["trigger"]}>
+            <FaSolidEllipsis />
+          </ContextMenu.Trigger>
+          <ContextMenu.Content class={menu_styles["context-menu__content"]}>
+            <ContextMenu.Item
+              class={menu_styles["context-menu__item"]}
+              onSelect={() => handleEditUser(props.row.original.userId)}
+              disabled={props.row.original.userRole == "Administrator"}
+            >
+              ✏️ Edit
+            </ContextMenu.Item>
+            <ContextMenu.Item
+              class={menu_styles["context-menu__item"]}
+              onSelect={() => handleDeleteUser(props.row.original.userId)}
+              disabled={props.row.original.userRole === "Administrator" || props.row.original.deleted}
+            >
+              🗑️ Delete
+            </ContextMenu.Item>
+            <ContextMenu.Separator />
+            <ContextMenu.Item
+              class={menu_styles["context-menu__item"]}
+              onSelect={() => handleLogOutUser(props.row.original.userId, props.row.original.name)}
+              disabled={props.row.original.userRole == "Administrator" || !props.row.original.loggedIn}
+            >
+              🔒 Log out
+            </ContextMenu.Item>
+          </ContextMenu.Content>
+        </ContextMenu>
+      ),
+    }),
+  ];
+
+  // This is done so that the table is rerendered upon data change
+  // let table;
+  const globalFilterFunction = (row, columnId, filterValue) => {
+    if (showDeleted()) {
+      return true;
+    } else {
+      return !row.original.deleted;
+    }
+  };
+
+  const [table, setTable] = createSignal<Table<User> | null>(null); // Use a signal to manage the table's initialization
+  createEffect(() => {
+    const newTable = createSolidTable({
+      columns,
+      data: data(),
+      getCoreRowModel: getCoreRowModel(),
+      getPaginationRowModel: getPaginationRowModel(),
+      getFilteredRowModel: getFilteredRowModel(),
+      globalFilterFn: globalFilterFunction,
+      initialState: {
+        pagination: {
+          pageSize: 5,
+        },
+      },
+      state: {
+        globalFilter: true,
+      },
+    });
+    setTable(newTable); // Set the table after it is created
+  });
+  // console.log("HeaderGroups:", table.getHeaderGroups());
+  // console.log("Table:", table.getCoreRowModel().rows);
+
+  // Function to get unique values for the filter dropdown
+  const getUniqueValues = (data, columnId) => {
+    const uniqueValues = new Set();
+    data.forEach((row) => {
+      uniqueValues.add(row[columnId]);
+    });
+    return Array.from(uniqueValues);
+  };
 
   return (
     <Header>
@@ -252,89 +393,117 @@ const Users: Component = () => {
         ) : error() ? (
           <p class={styles["error-text"]}>Error: {error()}</p>
         ) : (
-          <div class={styles["table-wrapper"]}>
-            <table>
-              <thead>
-                <tr>
-                  <th>Username</th>
-                  <th>Name</th>
-                  <th>E-mail address</th>
-                  <th>Municipality</th>
-                  <th>Organisation</th>
-                  <th>User Role</th>
-                  <th>Logged in</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {filteredUsers().map((user) => {
-                  // const { show } = useContextMenu({ id: user.id });
-                  // const onlineStatus = onlineStatuses()[user.id];
-                  let onlineStatus = false;
-                  if (!user.lastTimeActive) {
-                    onlineStatus = false;
-                  } else {
-                    console.log("Now is:", now());
-                    onlineStatus =
-                      !user.needsToBeLoggedOut &&
-                      now() - new Date(user.lastTimeActive).getTime() < loggedInTimespan * 1000;
-                    console.log(
-                      "User:",
-                      user.username,
-                      "Online status:",
-                      onlineStatus,
-                      "Login difference:",
-                      now() - new Date(user.lastTimeActive).getTime(),
-                    );
-                  }
-
-                  return (
-                    <tr class={user.email == loggedInUser && !user.deleted ? styles["logged-in-user"] : ""}>
-                      <td>{user.username}</td>
-                      <td>{user.name}</td>
-                      <td>{user.email}</td>
-                      <td>{user.municipality?.name}</td>
-                      <td>{user.organization?.name}</td>
-                      <td>{user.userRole}</td>
-                      <td>{user.deleted ? "🗑️" : onlineStatus ? "🟢" : "🔴"}</td>
-                      <td class={menu_styles.actions}>
-                        <ContextMenu>
-                          <ContextMenu.Trigger class={menu_styles["trigger"]}>
-                            <FaSolidEllipsis />
-                          </ContextMenu.Trigger>
-                          <ContextMenu.Content class={menu_styles["context-menu__content"]}>
-                            <ContextMenu.Item
-                              class={menu_styles["context-menu__item"]}
-                              onSelect={() => handleEditUser(user.id)}
-                              disabled={user.userRole == "Administrator"}
-                            >
-                              ✏️ Edit
-                            </ContextMenu.Item>
-                            <ContextMenu.Item
-                              class={menu_styles["context-menu__item"]}
-                              onSelect={() => handleDeleteUser(user.id)}
-                              disabled={user.userRole === "Administrator" || user.deleted}
-                            >
-                              🗑️ Delete
-                            </ContextMenu.Item>
-                            <ContextMenu.Separator />
-                            <ContextMenu.Item
-                              class={menu_styles["context-menu__item"]}
-                              onSelect={() => handleLogOutUser(user.id, user.name)}
-                              disabled={user.userRole == "Administrator" || !onlineStatus}
-                            >
-                              🔒 Log out
-                            </ContextMenu.Item>
-                          </ContextMenu.Content>
-                        </ContextMenu>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          table() && (
+            <>
+              <div class={styles["table-wrapper"]}>
+                <table>
+                  <thead>
+                    <For each={table().getHeaderGroups()}>
+                      {(headerGroup) => (
+                        <>
+                          <tr>
+                            <For each={headerGroup.headers}>
+                              {(header) => (
+                                <th>
+                                  {header.isPlaceholder
+                                    ? null
+                                    : flexRender(header.column.columnDef.header, header.getContext())}
+                                </th>
+                              )}
+                            </For>
+                          </tr>
+                          <tr>
+                            <For each={headerGroup.headers}>
+                              {(header) => (
+                                <th class={styles["filter-row"]}>
+                                  {(header.column.id === "userRole" ||
+                                    header.column.id === "organization" ||
+                                    header.column.id === "municipality") && (
+                                    <select
+                                      value={header.column.getFilterValue() || ""}
+                                      onChange={(e) => header.column.setFilterValue(e.currentTarget.value)}
+                                    >
+                                      <option value="">All</option>
+                                      <For each={getUniqueValues(data(), header.column.id)}>
+                                        {(value) => <option value={value}>{value}</option>}
+                                      </For>
+                                    </select>
+                                  )}
+                                  {(header.column.id === "username" ||
+                                    header.column.id === "email" ||
+                                    header.column.id === "name") && (
+                                    <input
+                                      value={header.column.getFilterValue() || ""}
+                                      onChange={(e) => header.column.setFilterValue(e.currentTarget.value)}
+                                      placeholder={`Search`}
+                                    />
+                                  )}
+                                  {header.column.id === "loggedIn" && (
+                                    <select
+                                      value={header.column.getFilterValue() || "all"}
+                                      onChange={(e) => header.column.setFilterValue(e.currentTarget.value)}
+                                    >
+                                      <option value="all">All</option>
+                                      <option value="loggedIn">Logged in</option>
+                                      <option value="loggedOut">Logged out</option>
+                                    </select>
+                                  )}
+                                </th>
+                              )}
+                            </For>
+                          </tr>
+                        </>
+                      )}
+                    </For>
+                  </thead>
+                  <tbody>
+                    <For each={table().getRowModel().rows}>
+                      {(row) => (
+                        <tr>
+                          <For each={row.getVisibleCells()}>
+                            {(cell) => <td>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>}
+                          </For>
+                        </tr>
+                      )}
+                    </For>
+                  </tbody>
+                </table>
+              </div>
+              <div>
+                <button
+                  onClick={() => table().firstPage()}
+                  disabled={!table().getCanPreviousPage()}
+                  class={styles["nav-button"]}
+                >
+                  &lt;&lt;
+                </button>
+                <button
+                  onClick={() => table().previousPage()}
+                  disabled={!table().getCanPreviousPage()}
+                  class={styles["nav-button"]}
+                >
+                  &lt;
+                </button>
+                <button
+                  onClick={() => table().nextPage()}
+                  disabled={!table().getCanNextPage()}
+                  class={styles["nav-button"]}
+                >
+                  &gt;
+                </button>
+                <button
+                  onClick={() => {
+                    table().lastPage();
+                  }}
+                  disabled={!table().getCanNextPage()}
+                  class={styles["nav-button"]}
+                >
+                  &gt;&gt;
+                </button>
+                {/* <p>{table.getPageCount()}</p> */}
+              </div>
+            </>
+          )
         )}
       </main>
     </Header>
