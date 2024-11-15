@@ -125,12 +125,15 @@ function Editor(): JSX.Element {
 
   // track the saved content
   const [savedContent, setSavedContent] = createSignal<string | null>(null);
+
   const hasUnsavedChanges = () => savedContent() !== code();
 
   createEffect(() => {
-    if (selectedNode()?.isFile()) {
-      setLastSelectedFile(selectedNode());
-      setSavedContent(code()); 
+    const node = selectedNode();
+    if (node !== null) {
+      setLastSelectedFile(node);
+      node.getContent().then(content => setSavedContent(content));
+      
     }
   });
 
@@ -283,10 +286,10 @@ function Editor(): JSX.Element {
             Compile
           </Button.Root>
           <Button.Root
-            class={"bg-gray-900 hover:bg-black text-white font-bold py-1 px-5 rounded-xl focus:outline-none focus:shadow-outline text-lg w-32".concat(
-              lastSelectedFile()?.isFile() && hasUnsavedChanges() ? "" : " cursor-not-allowed",
-            )}
-            {...(lastSelectedFile()?.isFile() && hasUnsavedChanges() ? {} : { disabled: true })}
+            class={`bg-gray-900 hover:bg-black text-white font-bold py-1 px-5 rounded-xl focus:outline-none focus:shadow-outline text-lg w-32${
+              lastSelectedFile()?.isFile() && hasUnsavedChanges() ? "" : " cursor-not-allowed"
+            }`}
+            disabled={!(lastSelectedFile()?.isFile() && hasUnsavedChanges())}
             onClick={async () => {
               const node = selectedNode();
               if (node !== null) {
