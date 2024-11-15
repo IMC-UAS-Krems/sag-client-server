@@ -123,8 +123,15 @@ function Editor(): JSX.Element {
 
   const [lastSelectedFile, setLastSelectedFile] = createSignal<TreeNode | null>(null);
 
+  // track the saved content
+  const [savedContent, setSavedContent] = createSignal<string | null>(null);
+  const hasUnsavedChanges = () => savedContent() !== code();
+
   createEffect(() => {
-    if (selectedNode()?.isFile()) setLastSelectedFile(selectedNode());
+    if (selectedNode()?.isFile()) {
+      setLastSelectedFile(selectedNode());
+      setSavedContent(code()); 
+    }
   });
 
   createEditorControlledValue(editorView, code);
@@ -277,11 +284,15 @@ function Editor(): JSX.Element {
           </Button.Root>
           <Button.Root
             class={"bg-gray-900 hover:bg-black text-white font-bold py-1 px-5 rounded-xl focus:outline-none focus:shadow-outline text-lg w-32".concat(
-              lastSelectedFile()?.isFile() ? "" : " cursor-not-allowed",
+              lastSelectedFile()?.isFile() && hasUnsavedChanges() ? "" : " cursor-not-allowed",
             )}
+            {...(lastSelectedFile()?.isFile() && hasUnsavedChanges() ? {} : { disabled: true })}
             onClick={async () => {
               const node = selectedNode();
-              if (node !== null) node.saveContent(code());
+              if (node !== null) {
+                node.saveContent(code());
+                setSavedContent(code());
+              }
             }}
           >
             Save File
