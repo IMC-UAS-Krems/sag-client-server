@@ -429,6 +429,19 @@ const Users: Component = () => {
           >
             {showDeleted() ? "Hide deleted" : "Show deleted"}
           </button>
+          <div class={styles["page-size-selector"]}>
+            <span>Page size: </span>
+            <select
+              value={table?.getState().pagination.pageSize}
+              onChange={(e) => {
+                table.setPageSize(Number(e.target.value));
+              }}
+            >
+              {[5, 10, 20, 40].map((pageSize) => (
+                <option value={pageSize}>{pageSize}</option>
+              ))}
+            </select>
+          </div>
         </div>
         {loading() ? (
           <div class={styles.loader}></div>

@@ -75,6 +75,27 @@ td {
   margin: 0 10px;
 }
 
+.page-size-selector {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+}
+
+.page-size-selector select {
+  padding: 5px;
+  background: none;
+  color: var(--primary-text);
+  height: 40px;
+  border-radius: 6px;
+  border: 1px solid var(--primary-text);
+  cursor: pointer;
+}
+
+.page-size-selector select:hover {
+  background-color: var(--secondary-color);
+}
+
 .nav-button-container {
   display: flex;
   justify-content: space-between;
