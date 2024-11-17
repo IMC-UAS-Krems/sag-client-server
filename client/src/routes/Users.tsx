@@ -21,13 +21,14 @@ import {
   getSortedRowModel,
   Table,
   PaginationState,
+  Row,
 } from "@tanstack/solid-table";
 import Swal from "sweetalert2";
 
 import { eden } from "@client/api";
 import { handleUnauthorized } from "@client/utils/authUtils";
 import Header from "@client/components/Header";
-import authStore from "@store/authStore";
+// import authStore from "@store/authStore"; // Not used anymore but could be used for highlighting the current user
 import styles from "@styles/Users.module.css";
 import menu_styles from "@styles/ContextMenu.module.css";
 import { UserDetails } from "@server/types";
@@ -122,13 +123,6 @@ const Users: Component = () => {
                 deleted: user.deleted,
               })),
             );
-            // console.log("Data() in fetch:", data());
-            // const table = createSolidTable({ columns, data: data(), getCoreRowModel: getCoreRowModel() });
-            // console.log("Table:", table.getCoreRowModel().rows);
-            // *** END TANSTACK SOLID TABLE ***
-
-            // console.log("Fetch:", fetchedUsers);
-            // console.log("Fetched users:", fetchedUsers.data);
           } else {
             throw new Error("Failed to fetch users, data is not an array");
           }
@@ -294,7 +288,7 @@ const Users: Component = () => {
       header: "Logged in",
       filterFn: (row, columnId, filterValue) => {
         if (filterValue === "all") return true;
-        const loggedIn = row.getValue(columnId);
+        const loggedIn = row.getValue(columnId) as boolean;
         return filterValue === "loggedIn" ? loggedIn : !loggedIn;
       },
       cell: (props) => (props.row.original.deleted ? "🗑️" : props.getValue() ? "🟢" : "🔴"),
@@ -346,7 +340,7 @@ const Users: Component = () => {
   const [columnFilters, setColumnFilters] = createSignal([]);
   const [sorting, setSorting] = createSignal([]);
   const [showDeleted, setShowDeleted] = createSignal(false);
-  const [globalFilter, setGlobalFilter] = createSignal(showDeleted());
+  const [globalFilter, setGlobalFilter] = createSignal<string>(showDeleted() ? "showAll" : "hideDeleted");
 
   createEffect(() => {
     const filterValue = showDeleted() ? "showAll" : "hideDeleted";
@@ -358,7 +352,7 @@ const Users: Component = () => {
   //   console.log("Global Filter Value:", globalFilter());
   // });
 
-  const globalFilterFunction = (row, columnId) => {
+  const globalFilterFunction = (row: Row<User>): boolean => {
     if (showDeleted()) {
       return true;
     } else {
@@ -396,12 +390,12 @@ const Users: Component = () => {
     getSortedRowModel: getSortedRowModel(),
     globalFilterFn: globalFilterFunction,
     autoResetPageIndex: false,
-    autoResetFilters: false,
-    autoResetSorting: false,
+    // autoResetFilters: false,
+    // autoResetSorting: false,
   });
 
   // Function to get unique values for the filter dropdown
-  const getUniqueValues = (data, columnId) => {
+  const getUniqueValues = (data: User[], columnId: keyof User) => {
     const uniqueValues = new Set();
     data.forEach((row) => {
       uniqueValues.add(row[columnId]);
@@ -497,12 +491,12 @@ const Users: Component = () => {
                                     header.column.id === "organization" ||
                                     header.column.id === "municipality") && (
                                     <select
-                                      value={header.column.getFilterValue() || ""}
+                                      value={(header.column.getFilterValue() as string) ?? ""}
                                       onChange={(e) => header.column.setFilterValue(e.currentTarget.value)}
                                     >
                                       <option value="">All</option>
                                       <For each={getUniqueValues(data(), header.column.id)}>
-                                        {(value) => <option value={value}>{value}</option>}
+                                        {(value) => <option value={value as string}>{value as string}</option>}
                                       </For>
                                     </select>
                                   )}
@@ -510,14 +504,14 @@ const Users: Component = () => {
                                     header.column.id === "email" ||
                                     header.column.id === "name") && (
                                     <input
-                                      value={header.column.getFilterValue() || ""}
+                                      value={(header.column.getFilterValue() as string) ?? ""}
                                       onChange={(e) => header.column.setFilterValue(e.currentTarget.value)}
                                       placeholder={`Search`}
                                     />
                                   )}
                                   {header.column.id === "loggedIn" && (
                                     <select
-                                      value={header.column.getFilterValue() || "all"}
+                                      value={(header.column.getFilterValue() as string) ?? "all"}
                                       onChange={(e) => header.column.setFilterValue(e.currentTarget.value)}
                                     >
                                       <option value="all">All</option>
