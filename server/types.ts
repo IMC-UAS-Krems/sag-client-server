@@ -82,13 +82,13 @@ export interface UserDetails {
   username: string;
   email: string;
   userRole: string;
-  deleted?: boolean;
-  municipality?: { name: string };
-  municipalityName?: string;
-  organization?: { name: string };
+  deleted: boolean;
+  municipality: { name: string };
+  organization: { name: string };
+  needsToBeLoggedOut: boolean;
+  lastTimeActive: Date;
   organizationName?: string;
-  needsToBeLoggedOut?: boolean;
-  lastTimeActive?: Date;
+  municipalityName?: string;
 }
 
 export interface CreateUserBody {

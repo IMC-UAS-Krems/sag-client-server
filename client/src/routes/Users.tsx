@@ -22,6 +22,7 @@ import {
   Table,
   PaginationState,
   Row,
+  ColumnFiltersState,
 } from "@tanstack/solid-table";
 import Swal from "sweetalert2";
 
@@ -43,24 +44,8 @@ interface UsersResponse {
   headers: Record<string, string>;
 }
 
-// TData type for TanStack Solid Table
-type User = {
-  userId: string;
-  username: string;
-  name: string;
-  email: string;
-  municipality: string;
-  organization: string;
-  userRole: string;
-  loggedIn: boolean;
-  deleted: boolean | undefined;
-};
-
 const Users: Component = () => {
   const navigate = useNavigate();
-
-  // TODO: Highlighting of current user as possible future feature for convenience?
-  // const loggedInUser = authStore.state().email;
 
   const loggedInTimespan =
     Number(import.meta.env.VITE_LOGGED_IN_TIMESPAN) || panic("VITE_LOGGED_IN_TIMESPAN environment variable not set");
@@ -80,6 +65,10 @@ const Users: Component = () => {
     await fetchUsers();
   });
 
+  // TODO: Highlighting of current user as possible future feature for convenience?
+  // const loggedInUser = authStore.state().email;
+
+  // Function to fetch users
   async function fetchUsers() {
     setLoading(true);
     try {
@@ -106,23 +95,8 @@ const Users: Component = () => {
           }
         } else {
           if (Array.isArray(fetchedUsers.data)) {
-            // *** TANSTACK SOLID TABLE ***
-            setData(
-              fetchedUsers.data.map((user) => ({
-                userId: user.id,
-                username: user.username,
-                name: user.name,
-                email: user.email,
-                municipality: user.municipality.name || "",
-                organization: user.organization.name || "",
-                userRole: user.userRole,
-                loggedIn:
-                  !user.needsToBeLoggedOut && now() - new Date(user.lastTimeActive).getTime() < loggedInTimespan * 1000
-                    ? true
-                    : false,
-                deleted: user.deleted,
-              })),
-            );
+            // Set data for TanStack Solid Table
+            setData(fetchedUsers.data);
           } else {
             throw new Error("Failed to fetch users, data is not an array");
           }
@@ -146,6 +120,7 @@ const Users: Component = () => {
     navigate(`/users/edit/${userId}`);
   }
 
+  // Function to delete user
   async function handleDeleteUser(userId: string) {
     Swal.fire({
       title: "Are you sure?",
@@ -191,7 +166,7 @@ const Users: Component = () => {
             });
             setData((prevUsers) => {
               return prevUsers.map((user) =>
-                user.userId === userId ? { ...user, needsToBeLoggedOut: true, deleted: true } : user,
+                user.id === userId ? { ...user, needsToBeLoggedOut: true, deleted: true } : user,
               );
             });
           }
@@ -207,6 +182,7 @@ const Users: Component = () => {
     });
   }
 
+  // Function to log out user
   async function handleLogOutUser(userId: string, userName: string) {
     // console.log("Logging out user:", userId);
     Swal.fire({
@@ -255,7 +231,7 @@ const Users: Component = () => {
             });
             setData((prevUsers) => {
               return prevUsers.map((user) =>
-                user.userId === userId ? { ...user, needsToBeLoggedOut: true, loggedIn: false } : user,
+                user.id === userId ? { ...user, needsToBeLoggedOut: true, loggedIn: false } : user,
               );
             });
           }
@@ -272,32 +248,45 @@ const Users: Component = () => {
     setReload(!reload());
   }
 
-  // const [_animation] = createSignal(animation.scale);
-  // const [_theme, setTheme] = createSignal<"light" | "dark">("light");
-
   // TanStack Solid Table - Column definitions
-  const columnHelper = createColumnHelper<User>();
+  const columnHelper = createColumnHelper<UserDetails>();
   const columns = [
     columnHelper.accessor("username", { header: "Username", filterFn: "includesString" }),
     columnHelper.accessor("name", { header: "Name", filterFn: "includesString" }),
     columnHelper.accessor("email", { header: "E-mail address", filterFn: "includesString" }),
-    columnHelper.accessor("municipality", { header: "Municipality", filterFn: "equals" }),
-    columnHelper.accessor("organization", { header: "Organization", filterFn: "equals" }),
+    columnHelper.accessor((row) => row.municipality.name, {
+      id: "municipality",
+      header: "Municipality",
+      filterFn: "equals",
+    }),
+    columnHelper.accessor((row) => row.organization.name, {
+      id: "organization",
+      header: "Organization",
+      filterFn: "equals",
+    }),
     columnHelper.accessor("userRole", { header: "User Role", filterFn: "equals" }),
-    columnHelper.accessor("loggedIn", {
+    columnHelper.display({
+      id: "loggedIn",
       header: "Logged in",
+      cell: (props) => {
+        const loggedIn =
+          !props.row.original.needsToBeLoggedOut &&
+          now() - new Date(props.row.original.lastTimeActive).getTime() < loggedInTimespan * 1000;
+        return props.row.original.deleted ? "🗑️" : loggedIn ? "🟢" : "🔴";
+      },
       filterFn: (row, columnId, filterValue) => {
         if (filterValue === "all") return true;
-        const loggedIn = row.getValue(columnId) as boolean;
+        const loggedIn =
+          !row.original.needsToBeLoggedOut &&
+          now() - new Date(row.original.lastTimeActive).getTime() < loggedInTimespan * 1000;
         return filterValue === "loggedIn" ? loggedIn : !loggedIn;
       },
-      cell: (props) => (props.row.original.deleted ? "🗑️" : props.getValue() ? "🟢" : "🔴"),
     }),
     columnHelper.display({
       id: "actions",
       header: "Actions",
       cell: (props) => (
-        // TODO: Make interaction with the context menu easier
+        // TODO: Maybe we can refactor from actions button to whole row clickable?
         <ContextMenu>
           <ContextMenu.Trigger class={(menu_styles["trigger"], styles["trigger"])}>
             <FaSolidEllipsis />
@@ -305,14 +294,14 @@ const Users: Component = () => {
           <ContextMenu.Content class={menu_styles["context-menu__content"]}>
             <ContextMenu.Item
               class={menu_styles["context-menu__item"]}
-              onSelect={() => handleEditUser(props.row.original.userId)}
+              onSelect={() => handleEditUser(props.row.original.id)}
               disabled={props.row.original.userRole == "Administrator"}
             >
               ✏️ Edit
             </ContextMenu.Item>
             <ContextMenu.Item
               class={menu_styles["context-menu__item"]}
-              onSelect={() => handleDeleteUser(props.row.original.userId)}
+              onSelect={() => handleDeleteUser(props.row.original.id)}
               disabled={props.row.original.userRole === "Administrator" || props.row.original.deleted}
             >
               🗑️ Delete
@@ -320,8 +309,12 @@ const Users: Component = () => {
             <ContextMenu.Separator />
             <ContextMenu.Item
               class={menu_styles["context-menu__item"]}
-              onSelect={() => handleLogOutUser(props.row.original.userId, props.row.original.name)}
-              disabled={props.row.original.userRole == "Administrator" || !props.row.original.loggedIn}
+              onSelect={() => handleLogOutUser(props.row.original.id, props.row.original.name)}
+              disabled={
+                props.row.original.userRole == "Administrator" ||
+                props.row.original.needsToBeLoggedOut ||
+                now() - new Date(props.row.original.lastTimeActive).getTime() > loggedInTimespan * 1000
+              }
             >
               🔒 Log out
             </ContextMenu.Item>
@@ -331,28 +324,24 @@ const Users: Component = () => {
     }),
   ];
 
-  // TansStack Solid Table - Signals
-  const [data, setData] = createSignal<User[]>([]);
+  // TansStack Solid Table - Signals, filters
+  const [data, setData] = createSignal<UserDetails[]>([]);
   const [pagination, setPagination] = createSignal<PaginationState>({
     pageIndex: 0,
     pageSize: 5,
   });
-  const [columnFilters, setColumnFilters] = createSignal([]);
+  const [columnFilters, setColumnFilters] = createSignal<ColumnFiltersState>([]);
   const [sorting, setSorting] = createSignal([]);
   const [showDeleted, setShowDeleted] = createSignal(false);
   const [globalFilter, setGlobalFilter] = createSignal<string>(showDeleted() ? "showAll" : "hideDeleted");
 
+  // TODO: Global filtering works for now with this, but it's not the nicest, maybe refactor later
   createEffect(() => {
     const filterValue = showDeleted() ? "showAll" : "hideDeleted";
     setGlobalFilter(filterValue);
   });
 
-  // TODO: Global filtering works for now with this, but it's not the nicest, refactor later
-  // createEffect(() => {
-  //   console.log("Global Filter Value:", globalFilter());
-  // });
-
-  const globalFilterFunction = (row: Row<User>): boolean => {
+  const globalFilterFunction = (row: Row<UserDetails>): boolean => {
     if (showDeleted()) {
       return true;
     } else {
@@ -360,8 +349,12 @@ const Users: Component = () => {
     }
   };
 
+  const resetPagination = () => {
+    setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+  };
+
   // TanStack Solid Table - Table definition
-  const table: Table<User> = createSolidTable({
+  const table: Table<UserDetails> = createSolidTable({
     get data() {
       return data();
     },
@@ -381,7 +374,10 @@ const Users: Component = () => {
       },
     },
     onPaginationChange: setPagination,
-    onColumnFiltersChange: setColumnFilters,
+    onColumnFiltersChange: (filters) => {
+      setColumnFilters(filters);
+      resetPagination();
+    },
     onGlobalFilterChange: setGlobalFilter,
     onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),
@@ -395,10 +391,18 @@ const Users: Component = () => {
   });
 
   // Function to get unique values for the filter dropdown
-  const getUniqueValues = (data: User[], columnId: keyof User) => {
+  const getUniqueValues = (data: UserDetails[], columnId: string) => {
     const uniqueValues = new Set();
     data.forEach((row) => {
-      uniqueValues.add(row[columnId]);
+      let value;
+      if (columnId === "municipality") {
+        value = row.municipality.name;
+      } else if (columnId === "organization") {
+        value = row.organization.name;
+      } else {
+        value = row[columnId as keyof UserDetails];
+      }
+      uniqueValues.add(value);
     });
     return Array.from(uniqueValues);
   };
