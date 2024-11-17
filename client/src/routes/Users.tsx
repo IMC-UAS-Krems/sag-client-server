@@ -58,8 +58,8 @@ type User = {
 const Users: Component = () => {
   const navigate = useNavigate();
 
-  // TODO: Highlighting of current user?
-  const loggedInUser = authStore.state().email;
+  // TODO: Highlighting of current user as possible future feature for convenience?
+  // const loggedInUser = authStore.state().email;
 
   const loggedInTimespan =
     Number(import.meta.env.VITE_LOGGED_IN_TIMESPAN) || panic("VITE_LOGGED_IN_TIMESPAN environment variable not set");
@@ -305,7 +305,7 @@ const Users: Component = () => {
       cell: (props) => (
         // TODO: Make interaction with the context menu easier
         <ContextMenu>
-          <ContextMenu.Trigger class={menu_styles["trigger"]}>
+          <ContextMenu.Trigger class={(menu_styles["trigger"], styles["trigger"])}>
             <FaSolidEllipsis />
           </ContextMenu.Trigger>
           <ContextMenu.Content class={menu_styles["context-menu__content"]}>
@@ -367,7 +367,7 @@ const Users: Component = () => {
   };
 
   // TanStack Solid Table - Table definition
-  const table = createSolidTable({
+  const table: Table<User> = createSolidTable({
     get data() {
       return data();
     },
@@ -538,7 +538,11 @@ const Users: Component = () => {
                       {(row) => (
                         <tr>
                           <For each={row.getVisibleCells()}>
-                            {(cell) => <td>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>}
+                            {(cell) => (
+                              <td class={cell.column.id === "actions" ? styles["actions-column"] : ""}>
+                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                              </td>
+                            )}
                           </For>
                         </tr>
                       )}
