@@ -9,7 +9,7 @@ import {
   FaSolidArrowDownAZ,
   FaSolidArrowUpAZ,
 } from "solid-icons/fa";
-import { ContextMenu } from "@kobalte/core/context-menu";
+import { DropdownMenu } from "@kobalte/core/dropdown-menu";
 import { useNavigate } from "@solidjs/router";
 import {
   createColumnHelper,
@@ -287,27 +287,37 @@ const Users: Component = () => {
       header: "Actions",
       cell: (props) => (
         // TODO: Maybe we can refactor from actions button to whole row clickable?
-        <ContextMenu>
-          <ContextMenu.Trigger class={(menu_styles["trigger"], styles["trigger"])}>
+        <DropdownMenu>
+          <DropdownMenu.Trigger
+            class={(menu_styles["trigger"], styles["trigger"])}
+            aria-haspopup="menu"
+            aria-expanded={false}
+          >
             <FaSolidEllipsis />
-          </ContextMenu.Trigger>
-          <ContextMenu.Content class={menu_styles["context-menu__content"]}>
-            <ContextMenu.Item
+          </DropdownMenu.Trigger>
+          <DropdownMenu.Content class={menu_styles["context-menu__content"]} role="menu">
+            <div class={styles["context-menu-title"]} role="presentation">
+              {props.row.original.name}
+            </div>
+            <DropdownMenu.Separator role="separator" />
+            <DropdownMenu.Item
               class={menu_styles["context-menu__item"]}
               onSelect={() => handleEditUser(props.row.original.id)}
               disabled={props.row.original.userRole == "Administrator"}
+              role="menuitem"
             >
               ✏️ Edit
-            </ContextMenu.Item>
-            <ContextMenu.Item
+            </DropdownMenu.Item>
+            <DropdownMenu.Item
               class={menu_styles["context-menu__item"]}
               onSelect={() => handleDeleteUser(props.row.original.id)}
               disabled={props.row.original.userRole === "Administrator" || props.row.original.deleted}
+              role="menuitem"
             >
               🗑️ Delete
-            </ContextMenu.Item>
-            <ContextMenu.Separator />
-            <ContextMenu.Item
+            </DropdownMenu.Item>
+            <DropdownMenu.Separator role="separator" />
+            <DropdownMenu.Item
               class={menu_styles["context-menu__item"]}
               onSelect={() => handleLogOutUser(props.row.original.id, props.row.original.name)}
               disabled={
@@ -315,11 +325,12 @@ const Users: Component = () => {
                 props.row.original.needsToBeLoggedOut ||
                 now() - new Date(props.row.original.lastTimeActive).getTime() > loggedInTimespan * 1000
               }
+              role="menuitem"
             >
               🔒 Log out
-            </ContextMenu.Item>
-          </ContextMenu.Content>
-        </ContextMenu>
+            </DropdownMenu.Item>
+          </DropdownMenu.Content>
+        </DropdownMenu>
       ),
     }),
   ];

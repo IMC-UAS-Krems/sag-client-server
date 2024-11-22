@@ -49,6 +49,7 @@ td {
   justify-content: center;
   align-items: center;
   min-height: 55px;
+  width: 100%;
   overflow-y: hidden;
   cursor: pointer;
   transition: all 0.25s;
@@ -56,6 +57,12 @@ td {
 
 .trigger:hover {
   background-color: var(--secondary-color);
+}
+
+.context-menu-title {
+  padding: 0.5rem;
+  border-radius: 4px;
+  font-weight: bold;
 }
 
 .table-wrapper th {
@@ -82,6 +89,10 @@ td {
   justify-content: center;
   align-items: center;
   gap: 10px;
+}
+
+.filter-row > * {
+  cursor: pointer;
 }
 
 .pagination-container {
