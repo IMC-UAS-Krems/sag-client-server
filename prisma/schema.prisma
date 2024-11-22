@@ -133,6 +133,7 @@ model Organization {
     id String @id @unique @default(cuid())
 
     name String @unique
+    description String @default("Organisation Description")
 
     municipality   Municipality @relation(fields: [municipalityId], references: [id])
     municipalityId String

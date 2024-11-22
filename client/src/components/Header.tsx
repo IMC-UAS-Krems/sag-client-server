@@ -9,8 +9,8 @@ import authStore from "@store/authStore";
 import styles from "@styles/Header.module.css";
 import { Notification } from "@client/common";
 
-import logoLight from "@assets/logos/sagittarius-logo-bnc.webp";
-import logoDark from "@assets/logos/sagittarius-logo-blk.webp";
+import logoLight from "@assets/logos/logo_imc_inverse.png";
+import logoDark from "@assets/logos/logo_imc.png";
 import ThemeToggle from "./ThemeToggle";
 
 const Header: Component<{ children: JSX.Element }> = (props) => {
@@ -57,7 +57,7 @@ const Header: Component<{ children: JSX.Element }> = (props) => {
           <Image.Img
             class={styles["img-img"]}
             src={theme() === "light" ? logoDark : logoLight}
-            alt="Sagittarius Logo"
+            alt="IMC Krems logo"
           />
           <Image.Fallback class={styles["img-fallback"]}>Sagittarius Logo</Image.Fallback>
         </Image.Root>
@@ -85,6 +85,11 @@ const Header: Component<{ children: JSX.Element }> = (props) => {
             <li>
               <A href="/about">About Us</A>
             </li>
+            <Show when={authStore.state().userRole === "Administrator"}>
+              <li>
+                <A href="/organisations">Organisations</A>
+              </li>
+            </Show>
             <Show when={authStore.state().userRole === "Administrator"}>
               <li>
                 <A href="/users">Users</A>
