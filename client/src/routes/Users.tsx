@@ -286,7 +286,6 @@ const Users: Component = () => {
       id: "actions",
       header: "Actions",
       cell: (props) => (
-        // TODO: Maybe we can refactor from actions button to whole row clickable?
         <DropdownMenu>
           <DropdownMenu.Trigger
             class={(menu_styles["trigger"], styles["trigger"])}
