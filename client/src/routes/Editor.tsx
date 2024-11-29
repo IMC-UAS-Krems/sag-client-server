@@ -19,6 +19,9 @@ type CompileResult = {
   url: string | undefined;
 };
 
+const [isCompiled, setIsCompiled] = createSignal(false);
+const [dashboardUrl, setDashboardUrl] = createSignal<string | null>(null);
+
 async function compile(code: string): Promise<CompileResult | undefined> {
   // Perform the compilation logic here
   try {
@@ -77,12 +80,19 @@ async function compile(code: string): Promise<CompileResult | undefined> {
 
     Notification.toggleTimer();
 
+    setIsCompiled(true);
+    setDashboardUrl(url);
+
     // Handle the compilation result as needed
   } catch (error) {
     console.error("Error during compilation: ", error);
     // Handle the error during compilation
   }
 }
+
+const handleOpenWindow = (url: string) => {
+  window.open(url, "_blank");
+};
 
 export async function check(code: string): Promise<void> {
   // Perform the compilation logic here
@@ -138,6 +148,9 @@ function Editor(): JSX.Element {
     if (node !== null) {
       setLastSelectedFile(node);
       node.getContent().then((content) => setSavedContent(content));
+
+      setIsCompiled(false);
+      setDashboardUrl(null);
     }
   });
 
@@ -286,6 +299,27 @@ function Editor(): JSX.Element {
             }}
           >
             Compile
+          </Button.Root>
+          <Button.Root
+            // TODO: convert to pure CSS
+            class={"border-2 bg-white text-black hover:bg-black hover:text-white font-bold py-1 px-5 rounded-xl focus:outline-none focus:shadow-outline text-lg".concat(
+              isCompiled() ? "" : " cursor-not-allowed",
+            )}
+            onClick={() => {
+              const url = dashboardUrl();
+              if (url) {
+                handleOpenWindow(url);
+              } else {
+                Notification.fire({
+                  icon: "error",
+                  titleText: "Dashboard not deployed yet",
+                  timer: 5000,
+                });
+              }
+            }}
+            disabled={!isCompiled()}
+          >
+            Open Dashboard
           </Button.Root>
           <Button.Root
             class={[styles.btn, lastSelectedFile()?.isFile() ? "" : styles["btn-disabled"]].join(" ")}
