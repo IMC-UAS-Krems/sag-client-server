@@ -4,8 +4,12 @@
 }
 
 .file-node-btn {
+  font: inherit;
   display: flex;
   flex-direction: row;
+  border: none;
+  background-color: inherit;
+
 }
 
 .file-node-btn-icon {

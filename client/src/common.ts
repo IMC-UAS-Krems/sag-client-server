@@ -1,4 +1,5 @@
 import Swal from "sweetalert2";
+import styles from "@client/styles/Common.module.css";
 
 /**
  * Notification that is displayed in the top-right corner
@@ -44,8 +45,8 @@ export const Prompt = Swal.mixin({
     autocomplete: "off",
   },
   customClass: {
-    confirmButton:
-      "bg-green-500 hover:bg-green-700 text-white font-bold py-1 px-2 rounded focus:outline-none focus:shadow-outline",
-    popup: "bg-white shadow-xl rounded px-8 pt-6 pb-8 mb-4  flex flex-col gap gap-4",
+    confirmButton: styles["input-dialog-confirm-btn"],
+
+    popup: styles["input-dialog-popup"],
   },
 });

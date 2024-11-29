@@ -11,9 +11,7 @@ COPY package.json .
 COPY bun.lockb .
 RUN /root/.bun/bin/bun install --frozen-lockfile
 
-COPY postcss.config.cjs .
 COPY tsconfig.json .
-COPY tailwind.config.js .
 
 COPY server server
 COPY client client
