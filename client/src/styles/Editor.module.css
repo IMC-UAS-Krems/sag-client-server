@@ -65,8 +65,9 @@
 
 .btn {
   font: inherit;
-  background-color: rgb(15 23 42);
-  color: rgb(255 255 255);
+  border-width: 2px;
+  background-color: rgb(255 255 255);
+  color: rgb(0 0 0);
   font-weight: 700;
   padding-top: 0.25rem;
   padding-bottom: 0.25rem;
@@ -76,15 +77,42 @@
   font-size: 1.125rem;
   line-height: 1.75rem;
   width: 8rem;
-  border: none;
 
 }
 
 .btn:hover {
-  background-color: rgb(0, 0, 0);
+  background-color: rgb(0 0 0);
+  color: rgb(255 255 255);
 }
 
 .btn:focus {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.5);
+}
+
+.btn-dashboard {
+  font: inherit;
+  border-width: 2px;
+  background-color: rgb(255 255 255);
+  color: rgb(0 0 0);
+  font-weight: 700;
+  padding-top: 0.25rem;
+  padding-bottom: 0.25rem;
+  padding-left: 1.25rem;
+  padding-right: 1.25rem;
+  border-radius: 0.75rem;
+  font-size: 1.125rem;
+  line-height: 1.75rem;
+}
+
+.btn-dashboard:hover {
+  background-color: rgb(0 0 0);
+  color: rgb(255 255 255);
+
+}
+
+.btn-dashboard:focus {
   outline: 2px solid transparent;
   outline-offset: 2px;
   box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.5);

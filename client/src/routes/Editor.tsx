@@ -301,10 +301,7 @@ function Editor(): JSX.Element {
             Compile
           </Button.Root>
           <Button.Root
-            // TODO: convert to pure CSS
-            class={"border-2 bg-white text-black hover:bg-black hover:text-white font-bold py-1 px-5 rounded-xl focus:outline-none focus:shadow-outline text-lg".concat(
-              isCompiled() ? "" : " cursor-not-allowed",
-            )}
+            class={[styles["btn-dashboard"], isCompiled() ? "" : styles["btn-disabled"]].join(" ")}
             onClick={() => {
               const url = dashboardUrl();
               if (url) {
