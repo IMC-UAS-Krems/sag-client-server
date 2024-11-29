@@ -425,7 +425,7 @@ class FileTree implements GetChildren {
 
 function FileNode(props: { node: TreeNode }) {
   let expandDiv: HTMLDivElement;
-  const { handleFileClick, setSelectedNode } = useContext(EditorContext) as IEditorContext;
+  const { setSelectedNode, navigateToFile } = useContext(EditorContext) as IEditorContext;
 
   function toggleExpanded() {
     if (!props.node.isExpanded()) {
@@ -458,12 +458,7 @@ function FileNode(props: { node: TreeNode }) {
               if (
                 [SagDocumentType.FOLDER, SagDocumentType.FILE, SagDocumentType.PROJECT].includes(props.node.docType)
               ) {
-                setSelectedNode(props.node);
-              }
-
-              if (props.node.docType === SagDocumentType.FILE) {
-                const content = await props.node.getContent();
-                handleFileClick(content);
+                navigateToFile(props.node);
               } else {
                 toggleExpanded();
               }
