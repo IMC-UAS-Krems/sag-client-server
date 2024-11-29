@@ -29,7 +29,7 @@ const AuthGuard = (props: AuthGuardProps) => {
 
     await authStore.initializeAuth();
 
-    const { isAuthenticated, userRole } = authStore.state();
+    const { isAuthenticated, userRole, verified } = authStore.state();
     const currentPath = window.location.pathname;
     const requiredRoles = Array.isArray(props.role) ? props.role : [props.role];
 
@@ -38,6 +38,8 @@ const AuthGuard = (props: AuthGuardProps) => {
       navigate("/sign-in", { replace: true });
     } else if (!requiredRoles.includes(userRole)) {
       navigate("/unauthorized", { replace: true });
+    } else if (!verified && currentPath !== "/verify") {
+      navigate("/verify", { replace: true });
     } else {
       setLoading(false);
     }

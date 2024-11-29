@@ -74,6 +74,26 @@
   gap: 20px;
 }
 
+.checkbox-container {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.checkbox-container label {
+  color: var(--primary-text);
+  font-size: 18px;
+  font-weight: 500;
+}
+
+.checkbox-container input {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+}
+
 @media (max-width: 1000px) {
   .signin-card-container {
     width: 70%;
@@ -109,6 +129,7 @@
   color: var(--primary-text);
   font-size: 18px;
   font-weight: 500;
+  line-height: 0;
 
   width: 80%;
   height: 40px;

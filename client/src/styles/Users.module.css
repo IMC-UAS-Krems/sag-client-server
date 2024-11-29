@@ -20,7 +20,6 @@
   width: 80%;
   max-height: 60%;
   overflow: auto;
-  margin-bottom: 5%;
 }
 
 table {
@@ -40,7 +39,91 @@ td {
   padding: 15px;
 }
 
+.actions-column {
+  padding: 0;
+  height: 100%;
+}
+
+.trigger {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 55px;
+  width: 100%;
+  overflow-y: hidden;
+  cursor: pointer;
+  transition: all 0.25s;
+}
+
+.trigger:hover {
+  background-color: var(--secondary-color);
+}
+
+.context-menu-title {
+  padding: 0.5rem;
+  border-radius: 4px;
+  font-weight: bold;
+}
+
 .table-wrapper th {
+  background-color: var(--secondary-color);
+}
+
+.table-wrapper th select {
+  width: 100%;
+  margin-top: 5px;
+}
+
+.table-wrapper th input {
+  padding: 5px;
+  width: 90%;
+  /* background-color: rgba(var(--secondary-color-rgb), 0.5); */
+  background-color: var(--secondary-color);
+  color: var(--primary-text);
+}
+
+.sortable {
+  cursor: pointer;
+  user-select: none;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+}
+
+.filter-row > * {
+  cursor: pointer;
+}
+
+.pagination-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.pagination-container span {
+  margin: 0 10px;
+}
+
+.page-size-selector {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+}
+
+.page-size-selector select {
+  padding: 5px;
+  background: none;
+  color: var(--primary-text);
+  height: 40px;
+  border-radius: 6px;
+  border: 1px solid var(--primary-text);
+  cursor: pointer;
+  transition: all 0.25s;
+}
+
+.page-size-selector select:hover {
   background-color: var(--secondary-color);
 }
 
@@ -52,7 +135,7 @@ td {
 }
 
 .nav-button-container button:first-child {
-  margin-left: 0; 
+  margin-left: 0;
 }
 
 .nav-button-container button:last-child {
@@ -71,13 +154,18 @@ td {
   border-radius: 6px;
   border: 1px solid var(--primary-text);
   transition: all 0.25s;
+  line-height: 0;
 }
 
-.nav-button:hover {
+.nav-button:not(:disabled):hover {
   background-color: var(--primary-text);
   color: var(--secondary-color);
 }
 
+.nav-button:disabled {
+  cursor: not-allowed;
+  background-color: var(--secondary-color);
+}
 .nav-button-inverse {
   flex: 1;
   margin: 0 10px;
@@ -90,6 +178,7 @@ td {
   border-radius: 6px;
   border: 1px solid var(--primary-text);
   transition: all 0.25s;
+  line-height: 0;
 }
 
 .nav-button-inverse:hover {

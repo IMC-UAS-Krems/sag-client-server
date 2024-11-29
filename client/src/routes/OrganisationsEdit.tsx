@@ -244,7 +244,7 @@ const OrganisationsEdit: Component = () => {
                     />
                   </>
                 )}
-                <div class={styles["form-group"]}>
+                <div class={styles["checkbox-container"]}>
                   <label for="verified">Verified</label>
                   <input
                     type="checkbox"

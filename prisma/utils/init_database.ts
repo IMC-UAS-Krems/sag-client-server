@@ -113,6 +113,7 @@ try {
       municipality: {
         connect: { name: "Krems" },
       },
+      verified: true,
     },
   });
 
@@ -131,6 +132,7 @@ try {
       municipality: {
         connect: { name: "Krems" },
       },
+      verified: true,
     },
   });
 
@@ -149,6 +151,7 @@ try {
       municipality: {
         connect: { name: "Krems" },
       },
+      verified: true,
     },
   });
 
@@ -166,6 +169,7 @@ try {
       municipality: {
         connect: { name: "St. Pölten" },
       },
+      verified: true,
     },
   });
 
@@ -184,6 +188,7 @@ try {
       municipality: {
         connect: { name: "St. Pölten" },
       },
+      verified: true,
     },
   });
 
@@ -202,6 +207,7 @@ try {
       municipality: {
         connect: { name: "Krems" },
       },
+      verified: true,
     },
   });
 
@@ -219,6 +225,7 @@ try {
       municipality: {
         connect: { name: "St. Pölten" },
       },
+      verified: true,
     },
   });
 
@@ -238,6 +245,24 @@ try {
       },
       deleted: true,
       needsToBeLoggedOut: true,
+      verified: true,
+    },
+  });
+
+  await prisma.user.create({
+    data: {
+      id: "clxy0d4xo0003sw97z0cqzb9r",
+      name: "Unverified Example",
+      email: "unverified@example.com",
+      username: "unverified_example",
+      password: "password123",
+      userRole: "Developer",
+      organization: {
+        connect: { name: "FHSTP" },
+      },
+      municipality: {
+        connect: { name: "St. Pölten" },
+      },
     },
   });
 

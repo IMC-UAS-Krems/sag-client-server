@@ -10,11 +10,11 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
     healthcheck:
-        test: ["CMD-SHELL", "pg_isready -U postgres -d ${POSTGRES_DB}"]
-        interval: 10s
-        retries: 5
-        start_period: 30s
-        timeout: 10s
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ${POSTGRES_DB}"]
+      interval: 10s
+      retries: 5
+      start_period: 30s
+      timeout: 10s
     ports:
       - 5432:5432
     volumes:
@@ -34,8 +34,7 @@ services:
       dockerfile: utils/Dockerfile.db_setup
     depends_on:
       db:
-        condition:
-          service_healthy
+        condition: service_healthy
     environment:
       DATABASE_URL: ${DATABASE_URL}
     deploy:
@@ -47,7 +46,6 @@ services:
     extra_hosts:
       - "localhost:host-gateway"
 
-
   server:
     container_name: sagittarius-server
     build:
@@ -55,8 +53,7 @@ services:
       dockerfile: Dockerfile.server
     depends_on:
       db-setup:
-        condition:
-          service_completed_successfully
+        condition: service_completed_successfully
     ports:
       - ${WEB_SERVER_PORT}:9512
     environment:
@@ -64,6 +61,11 @@ services:
       DATABASE_URL: ${DATABASE_URL}
       COMPILER_URL: ${COMPILER_URL}
       VITE_COOKIES_EXPIRATION: ${VITE_COOKIES_EXPIRATION}
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PASS: ${SMTP_PASS}
+      SMTP_SENDER: ${SMTP_SENDER}
+      VERIFICATION_EXPIRY: ${VERIFICATION_EXPIRY}
+      EXAMPLE_RECEIVER: ${EXAMPLE_RECEIVER}
     deploy:
       resources:
         limits:
@@ -84,8 +86,7 @@ services:
         - VITE_LOGGED_IN_TIMESPAN=${VITE_LOGGED_IN_TIMESPAN}
     depends_on:
       db-setup:
-        condition:
-          service_completed_successfully
+        condition: service_completed_successfully
     ports:
       - ${WEB_CLIENT_PORT}:8100
     environment:

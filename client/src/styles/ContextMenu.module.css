@@ -7,13 +7,14 @@
   background-color: var(--secondary-color);
 }
 
-.trigger{
+.trigger {
   display: flex;
   justify-content: center;
   align-items: center;
 }
 
 .context-menu__content {
+  transform-origin: var(--kb-menu-content-transform-origin);
   background-color: var(--background-color);
   border: 1px solid var(--primary-text);
   border-radius: 6px;
