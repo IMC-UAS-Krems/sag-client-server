@@ -425,7 +425,10 @@ class FileTree implements GetChildren {
 
 function FileNode(props: { node: TreeNode }) {
   let expandDiv: HTMLDivElement;
-  const { setSelectedNode, navigateToFile } = useContext(EditorContext) as IEditorContext;
+
+  const { handleFileClick, setSelectedNode, selectedNode, navigateToFile } = useContext(
+    EditorContext,
+  ) as IEditorContext;
 
   function toggleExpanded() {
     if (!props.node.isExpanded()) {
@@ -444,6 +447,36 @@ function FileNode(props: { node: TreeNode }) {
     console.log(props.node);
   }
 
+  const isSelected = () => {
+    const currentNode = selectedNode();
+    if (!currentNode) return false;
+
+    const selectedContext = {
+      path: currentNode.path(),
+      municipality: currentNode.municipalityName,
+      organization: currentNode.orgName,
+      project: currentNode.projectName,
+      file_type: currentNode.docType,
+    };
+
+    const nodeContext = {
+      path: props.node.path(),
+      municipality: props.node.municipalityName,
+      organization: props.node.orgName,
+      project: props.node.projectName,
+      file_type: props.node.docType,
+    };
+
+    return (
+      selectedContext.path === nodeContext.path &&
+      selectedContext.municipality === nodeContext.municipality &&
+      selectedContext.organization === nodeContext.organization &&
+      selectedContext.project === nodeContext.project &&
+      selectedContext.file_type === SagDocumentType.FILE &&
+      nodeContext.file_type === SagDocumentType.FILE
+    );
+  };
+
   return (
     <div class={styles["file-node"]}>
       <Suspense>
@@ -453,7 +486,7 @@ function FileNode(props: { node: TreeNode }) {
           }
         >
           <button
-            class={styles["file-node-btn"]}
+            class={`${styles["file-node-btn"]} ${isSelected() ? styles["file-node-btn-selected"] : ""}`}
             onClick={async () => {
               if (
                 [SagDocumentType.FOLDER, SagDocumentType.FILE, SagDocumentType.PROJECT].includes(props.node.docType)
