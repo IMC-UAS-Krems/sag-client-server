@@ -12,6 +12,10 @@
 
 }
 
+.file-node-btn-selected{
+  font-weight: bold;
+}
+
 .file-node-btn-icon {
   margin-right: 0.5rem;
 }
