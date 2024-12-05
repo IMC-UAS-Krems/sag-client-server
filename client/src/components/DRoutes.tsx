@@ -11,6 +11,8 @@ import UsersEdit from "@client/routes/UsersEdit";
 import Unauthorized from "@client/routes/Unauthorized";
 import AuthGuard from "@client/guard/authGuard";
 import authStore from "@client/store/authStore";
+import Verify from "@client/routes/Verify";
+import VerifyToken from "@client/routes/VerifyToken";
 import Organisations from "@client/routes/Organisations";
 import OrganisationsCreate from "@client/routes/OrganisationsCreate";
 import OrganisationsEdit from "@client/routes/OrganisationsEdit";
@@ -27,6 +29,16 @@ const DRoutes: Component = () => {
       <Route path="/about" component={About} />
       <Route path="/sign-in" component={SignIn} />
       <Route path="/unauthorized" component={Unauthorized} />
+      <Route path="/verify/:token" component={VerifyToken} />
+
+      <Route
+        path="/verify"
+        component={() => (
+          <AuthGuard role={["Manager", "Developer"]}>
+            <Verify />
+          </AuthGuard>
+        )}
+      />
 
       <Route
         path="/editor"

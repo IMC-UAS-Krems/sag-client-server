@@ -67,7 +67,17 @@ const Header: Component<{ children: JSX.Element }> = (props) => {
             <li>
               <A href="/home">Home</A>
             </li>
-            <Show when={authStore.state().userRole === "Developer" || authStore.state().userRole === "Manager"}>
+            <Show when={authStore.state().isAuthenticated && authStore.state().verified === false}>
+              <li>
+                <A href="/verify">Verify</A>
+              </li>
+            </Show>
+            <Show
+              when={
+                (authStore.state().userRole === "Developer" || authStore.state().userRole === "Manager") &&
+                authStore.state().verified === true
+              }
+            >
               <li>
                 <A href="/editor">Editor</A>
               </li>

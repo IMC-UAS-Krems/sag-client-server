@@ -52,7 +52,7 @@ td {
 }
 
 .nav-button-container button:first-child {
-  margin-left: 0; 
+  margin-left: 0;
 }
 
 .nav-button-container button:last-child {
@@ -71,6 +71,7 @@ td {
   border-radius: 6px;
   border: 1px solid var(--primary-text);
   transition: all 0.25s;
+  line-height: 0;
 }
 
 .nav-button:hover {
@@ -90,6 +91,7 @@ td {
   border-radius: 6px;
   border: 1px solid var(--primary-text);
   transition: all 0.25s;
+  line-height: 0;
 }
 
 .nav-button-inverse:hover {

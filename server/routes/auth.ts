@@ -1,6 +1,7 @@
 import { Elysia, t } from "elysia";
 
 import { panic } from "@utils/panic";
+import { sendVerificationEmail } from "@utils/emailVerification";
 import { UserDocument, sql } from "@server/sql";
 import {
   AuthContext,
@@ -51,6 +52,16 @@ export const auth = new Elysia({ prefix: "/auth" })
         });
 
         log.info(`User ${user.name} registered.`);
+
+        // Send verification email
+        try {
+          const verificationToken = await sendVerificationEmail(jwt, email, username);
+          console.log("Verification token of newly registered user:", verificationToken.token);
+        } catch (error) {
+          console.error("Error sending verification email of registering user:", error);
+          set.status = 201;
+          return { error: "Error sending verification email, please try again later" };
+        }
 
         set.status = 201;
         return user as RegisteredUser;
@@ -210,7 +221,7 @@ export const auth = new Elysia({ prefix: "/auth" })
         return { error: "User not logged in" };
       }
       set.status = 200;
-      return { name: user.name, email: user.email, userRole: user.userRole };
+      return { name: user.name, email: user.email, userRole: user.userRole, verified: user.verified };
     },
     {
       cookie: t.Cookie({
@@ -267,6 +278,80 @@ export const auth = new Elysia({ prefix: "/auth" })
       detail: {
         tags: ["auth"],
         description: "Check if the user must log out",
+      },
+    },
+  )
+
+  .post(
+    "/send-verification",
+    async ({ jwt, set, body }: AuthContextWithBody<{ email: string; username: string }>) => {
+      try {
+        const verificationToken = await sendVerificationEmail(jwt, body.email, body.username);
+        set.status = 200;
+        // return { message: "Email sent" };
+        return verificationToken; // TODO: Replace this with the above line once SMTP is set up
+      } catch (error) {
+        console.error("Error sending email:", error);
+        set.status = 500;
+        return { error: "Error sending email" };
+      }
+    },
+    {
+      body: t.Object({
+        email: t.String({ format: "email" }),
+        username: t.String(),
+      }),
+      detail: {
+        tags: ["auth"],
+        description: "Send a verification email to the user",
+      },
+    },
+  )
+
+  .post(
+    "/verify-email",
+    async ({ jwt, set, body }: AuthContextWithBody<{ token: string }>) => {
+      try {
+        // console.log("Verifying token:", body.token);
+        const verifiedToken = (await jwt.verify(body.token)) as { email: string; expiresAt: string };
+        // console.log("Verified token:", verifiedToken);
+        // console.log("Email:", verifiedToken.email);
+        // console.log("Expires in:", verifiedToken.expiresAt);
+        if (typeof verifiedToken === "object" && verifiedToken !== null && "email" in verifiedToken) {
+          const expiresAt = new Date(verifiedToken.expiresAt);
+          if (expiresAt < new Date()) {
+            set.status = 400;
+            return { error: "Token expired, please request new verification email" };
+          }
+          await sql.verifyUserEmail(verifiedToken.email);
+          set.status = 200;
+          return { message: "Email succesfully verified" };
+        } else {
+          set.status = 400;
+          return { error: "Invalid verification token, please request new verification email" };
+        }
+      } catch (error) {
+        // console.error("Error during email verification:", error);
+        if (error instanceof Error) {
+          if (error.message.includes("does not exist")) {
+            set.status = 404;
+            return { error: error.message };
+          } else if (error.message.includes("already verified")) {
+            set.status = 409;
+            return { error: error.message };
+          }
+        }
+        set.status = 500;
+        return { error: "Failed to verify token" };
+      }
+    },
+    {
+      body: t.Object({
+        token: t.String(),
+      }),
+      detail: {
+        tags: ["auth"],
+        description: "Try and verify a user's email via a token",
       },
     },
   );

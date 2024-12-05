@@ -123,20 +123,35 @@ const Register: Component<NavigateProps> = ({ navigate }) => {
         },
       });
 
-      if (response.status !== 201) {
-        if (response.data && "error" in response.data) {
-          throw new Error(response.data.error);
-        } else {
+      authStore.setState({
+        isAuthenticated: true,
+        email: formEmail,
+        name: formName,
+        userRole: "Developer",
+        verified: false,
+      });
+
+      if (response.data) {
+        if ("error" in response.data && response.data.error.includes("verification email")) {
+          Swal.fire({
+            title: "Success",
+            text: `Registration successful, but could not send verification email, please request new email.`,
+            icon: "success",
+          });
+          navigate("/verify", { replace: true });
+          return;
+        } else if ("error" in response.data && !response.data.error.includes("verification email")) {
           throw new Error("An unknown error occurred during registration.");
         }
       }
 
-      authStore.setState({ isAuthenticated: true, email: formEmail, name: formName, userRole: "Developer" });
-      navigate("/editor", { replace: true });
-      Notification.fire({
-        titleText: "Registration successful",
+      Swal.fire({
+        title: "Success",
+        text: `Registration successful. We have sent you a verification email, please check your inbox.`,
         icon: "success",
       });
+      navigate("/home", { replace: true });
+      return;
     } catch (error) {
       let errorMessage = "An unknown error occurred.";
       if (error instanceof Error) {

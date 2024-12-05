@@ -111,6 +111,7 @@ export const admin = new Elysia({ prefix: "/admin" })
           userRole,
           organizationName,
           municipalityName,
+          verified: true,
         });
 
         set.status = 201;

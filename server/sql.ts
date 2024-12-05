@@ -271,6 +271,7 @@ export async function createUser(data: {
   organizationName: string;
   municipalityName: string;
   userRole: "Administrator" | "Developer" | "Manager";
+  verified?: boolean;
 }) {
   const userWithEmail = await prisma.user.findFirst({
     where: {
@@ -308,6 +309,7 @@ export async function createUser(data: {
         municipality: {
           connect: { name: data.municipalityName },
         },
+        verified: data.verified || false,
       },
     });
 
@@ -316,6 +318,34 @@ export async function createUser(data: {
   } catch (error) {
     console.error("Error creating user:", error);
     throw new Error(`User ${data.username} could not be created`);
+  }
+}
+
+export async function verifyUserEmail(email: string) {
+  const user = await prisma.user.findFirst({
+    where: {
+      email: email,
+      deleted: false,
+    },
+    select: {
+      id: true,
+      verified: true,
+    },
+  });
+
+  if (user === null) {
+    throw new Error(`User with email "${email}" does not exist`);
+  } else if (user.verified) {
+    throw new Error(`User with email "${email}" is already verified`);
+  } else {
+    await prisma.user.update({
+      where: {
+        id: user.id,
+      },
+      data: {
+        verified: true,
+      },
+    });
   }
 }
 

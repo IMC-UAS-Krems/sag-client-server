@@ -7,6 +7,7 @@ interface AuthStore {
   email: string;
   name: string;
   userRole: "Developer" | "Manager" | "Administrator" | "";
+  verified: boolean;
 }
 
 const createAuthStore = () => {
@@ -15,6 +16,7 @@ const createAuthStore = () => {
     email: "",
     name: "",
     userRole: "",
+    verified: false,
   });
 
   const deleteCookie = (name: string) => {
@@ -37,6 +39,7 @@ const createAuthStore = () => {
         email: response.data.email,
         name: response.data.name,
         userRole: response.data.userRole,
+        verified: response.data.verified,
       };
 
       setState(newState);
@@ -54,6 +57,7 @@ const createAuthStore = () => {
       name: "",
       email: "",
       userRole: "",
+      verified: false,
     });
     deleteCookie("jwtToken");
   };
