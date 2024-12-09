@@ -44,7 +44,6 @@ const OrganisationCreate: Component = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-
   createEffect(() => {
     fetchMunicipalities();
   });
@@ -141,7 +140,7 @@ const OrganisationCreate: Component = () => {
           </form>
           <div class={styles["signin-buttons"]}>
             <Button.Root onClick={submit}>Submit</Button.Root>
-            <Button.Root onClick={() => navigate("/users", { replace: true })}>Cancel</Button.Root>
+            <Button.Root onClick={() => navigate("/organisations", { replace: true })}>Cancel</Button.Root>
           </div>
         </div>
       </main>

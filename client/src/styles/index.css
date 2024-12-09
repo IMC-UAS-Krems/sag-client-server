@@ -20,13 +20,17 @@
 
 .lightMode {
   --background-color: #f0f0f0;
+  --background-color-rgb: 240, 240, 240;
 
   --primary-text: #000000;
   --primary-text-rgb: 0, 0, 0;
   --secondary-text: #006a67;
+  --secondary-text-rgb: 0, 106, 103;
 
   --primary-color: #c7d5ef;
+  --primary-color-rgb: 199, 213, 239;
   --secondary-color: #e0e0e0;
+  --secondary-color-rgb: 224, 224, 224;
 
   --card-color: linear-gradient(to top, #cfd9df 0%, #e2ebf0 100%);
 }
@@ -37,9 +41,12 @@
   --primary-text: #ffffff;
   --primary-text-rgb: 255, 255, 255;
   --secondary-text: #6a679e;
+  --secondary-text-rgb: 106, 103, 158;
 
   --primary-color: #5d54a4;
+  --primary-color-rgb: 93, 84, 164;
   --secondary-color: #121212;
+  --secondary-color-rgb: 18, 18, 18;
 
   --card-color: linear-gradient(270deg, var(--primary-color), var(--secondary-text));
 }
