@@ -8,6 +8,7 @@ import { eden } from "@client/api";
 import styles from "@client/styles/Editor.module.css";
 import { errors, setErrors, Error } from "@store/index";
 import { RightSideBar } from "../components/RightSideBar";
+import placeholderHighlightPlugin from "@client/editor_plugins/PlaceHolderHighlight";
 import Header from "@client/components/Header";
 import { LeftSideBar, TreeNode } from "@client/components/LeftSideBar";
 import { EditorContext, IEditorContext } from "@client/contexts/editor";
@@ -162,6 +163,7 @@ function Editor(): JSX.Element {
     createExtension(syntaxHighlighting(styles));*/
 
   createExtension(lineNumbers);
+  createExtension(placeholderHighlightPlugin);
 
   const lint = linter((view: EditorView) => {
     const diagnostics: Diagnostic[] = [];
