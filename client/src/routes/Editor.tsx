@@ -6,6 +6,7 @@ import { Button } from "@kobalte/core";
 
 import { eden } from "@client/api";
 import styles from "@client/styles/Editor.module.css";
+import commonStyles from "@client/styles/Common.module.css";
 import { errors, setErrors, Error } from "@store/index";
 import { RightSideBar } from "../components/RightSideBar";
 import Header from "@client/components/Header";
@@ -69,7 +70,11 @@ async function compile(code: string): Promise<CompileResult | undefined> {
     Notification.update({
       title: `<span>Dash deployed successfully to Azure<br>`,
       titleText: undefined,
-      html: `<a href="${url}" class="text-gray-500 decoration-dotted underline" target="_blank">Click here to access</a><span>`,
+      html: (
+        <a href={url} class={commonStyles["notification-deploy-link"]} target="_blank">
+          Click here to access
+        </a>
+      ),
       icon: "success",
     });
 
@@ -87,7 +92,7 @@ async function compile(code: string): Promise<CompileResult | undefined> {
 
 const handleOpenWindow = (url: string) => {
   window.open(url, "_blank");
-}
+};
 
 export async function check(code: string): Promise<void> {
   // Perform the compilation logic here
@@ -142,7 +147,7 @@ function Editor(): JSX.Element {
     const node = selectedNode();
     if (node !== null) {
       setLastSelectedFile(node);
-      node.getContent().then(content => setSavedContent(content));
+      node.getContent().then((content) => setSavedContent(content));
 
       setIsCompiled(false);
       setDashboardUrl(null);
@@ -285,11 +290,9 @@ function Editor(): JSX.Element {
   return (
     <Header>
       <main>
-        <div class="flex flex-row justify-end mx-1 space-x-2">
+        <div class={styles["button-row"]}>
           <Button.Root
-            class={"bg-gray-900 hover:bg-black text-white font-bold py-1 px-5 rounded-xl focus:outline-none focus:shadow-outline text-lg w-32".concat(
-              lastSelectedFile()?.isFile() ? "" : " cursor-not-allowed",
-            )}
+            class={[styles.btn, lastSelectedFile()?.isFile() ? "" : styles["btn-disabled"]].join(" ")}
             {...(lastSelectedFile()?.isFile() ? {} : { disabled: true })}
             onClick={async () => {
               await compile(code());
@@ -298,9 +301,7 @@ function Editor(): JSX.Element {
             Compile
           </Button.Root>
           <Button.Root
-            class={"border-2 bg-white text-black hover:bg-black hover:text-white font-bold py-1 px-5 rounded-xl focus:outline-none focus:shadow-outline text-lg".concat(
-              isCompiled() ? "" : " cursor-not-allowed",
-            )}
+            class={[styles["btn-dashboard"], isCompiled() ? "" : styles["btn-disabled"]].join(" ")}
             onClick={() => {
               const url = dashboardUrl();
               if (url) {
@@ -318,9 +319,7 @@ function Editor(): JSX.Element {
             Open Dashboard
           </Button.Root>
           <Button.Root
-            class={`bg-gray-900 hover:bg-black text-white font-bold py-1 px-5 rounded-xl focus:outline-none focus:shadow-outline text-lg w-32${
-              lastSelectedFile()?.isFile() && hasUnsavedChanges() ? "" : " cursor-not-allowed"
-            }`}
+            class={[styles.btn, lastSelectedFile()?.isFile() ? "" : styles["btn-disabled"]].join(" ")}
             disabled={!(lastSelectedFile()?.isFile() && hasUnsavedChanges())}
             onClick={async () => {
               const node = selectedNode();
