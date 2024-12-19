@@ -5,13 +5,14 @@ import { authMiddleware } from "@server/middleware";
 import { sql, Document } from "@server/sql";
 import { DocumentType } from "@prisma/client";
 import { SagError } from "@server/errors";
+import { AuthContext, AuthContextWithBody, AuthContextWithQuery } from "@server/types";
 
 const COMPILER_URL = Bun.env.COMPILER_URL || "http://localhost:8080";
 
 export const api = new Elysia({ prefix: "/api" })
   .get(
     "/municipalities",
-    async ({ log, set }) => {
+    async ({ log, set }: AuthContext) => {
       const municipalities = await prisma.municipality.findMany({
         select: {
           name: true,
@@ -30,7 +31,7 @@ export const api = new Elysia({ prefix: "/api" })
 
   .get(
     "/organizations",
-    async ({ log, set }) => {
+    async ({ log, set }: AuthContext) => {
       const organizations = await prisma.organization.findMany({
         select: {
           name: true,
@@ -49,7 +50,7 @@ export const api = new Elysia({ prefix: "/api" })
 
   .post(
     "/organizationsByMunicipality",
-    async ({ set, body: { municipalityName } }) => {
+    async ({ set, body: { municipalityName } }: AuthContextWithBody<{ municipalityName: string }>) => {
       try {
         const organizations = await prisma.organization.findMany({
           where: {
@@ -166,7 +167,11 @@ export const api = new Elysia({ prefix: "/api" })
 
   .get(
     "/documents",
-    async ({ log, set, userId }): Promise<Document[]> => {
+    async ({ log, set, userId }: AuthContext): Promise<Document[] | { error: string }> => {
+      if (!userId) {
+        set.status = 401;
+        return { error: "Unauthorized" };
+      }
       const documents = sql.getDocuments(userId);
       set.status = 200;
       return documents;
@@ -186,8 +191,19 @@ export const api = new Elysia({ prefix: "/api" })
       set,
       body: { name, projectName, organizationName, municipalityName, path, documentType },
       userId,
-    }): Promise<string> => {
+    }: AuthContextWithBody<{
+      name: string;
+      projectName: string;
+      organizationName: string;
+      municipalityName: string;
+      path: string;
+      documentType: "file" | "folder";
+    }>): Promise<string | { error: string }> => {
       let result: string | null;
+      if (!userId) {
+        set.status = 401;
+        return { error: "Unauthorized" };
+      }
 
       try {
         result = await sql.createDocument(
@@ -197,16 +213,17 @@ export const api = new Elysia({ prefix: "/api" })
           organizationName,
           municipalityName,
           path,
-          DocumentType[documentType.toUpperCase()],
+          DocumentType[documentType.toUpperCase() as keyof typeof DocumentType],
         );
       } catch (e) {
         if (e instanceof SagError) {
-          log.error(e);
+          log.error(e.message);
           set.status = 400;
           return e.message;
         }
 
-        log.error(e);
+        log.error(e instanceof Error ? e.message : String(e));
+        log.error("An unknown error occurred");
         set.status = 500;
         return "An error occurred";
       }
@@ -228,13 +245,28 @@ export const api = new Elysia({ prefix: "/api" })
         path: t.String(),
         documentType: t.Union([t.Literal("file"), t.Literal("folder")]),
       }),
-      beforeHandle: authMiddleware,
       detail: { tags: ["api"], description: "Create a new document" },
     },
   )
   .put(
     "/document",
-    async ({ log, set, body: { projectName, organizationName, municipalityName, path, newName }, userId }) => {
+    async ({
+      log,
+      set,
+      body: { projectName, organizationName, municipalityName, path, newName },
+      userId,
+    }: AuthContextWithBody<{
+      projectName: string;
+      organizationName: string;
+      municipalityName: string;
+      path: string;
+      newName: string;
+    }>) => {
+      if (!userId) {
+        set.status = 401;
+        return { error: "Unauthorized" };
+      }
+
       const result = await sql.renameDocument(userId, municipalityName, organizationName, projectName, path, newName);
 
       if (result === null) {
@@ -253,12 +285,28 @@ export const api = new Elysia({ prefix: "/api" })
         path: t.String(),
         newName: t.String(),
       }),
-      beforeHandle: authMiddleware,
     },
   )
   .put(
     "/document_content",
-    async ({ log, set, body: { projectName, organizationName, municipalityName, path, content }, userId }) => {
+    async ({
+      log,
+      set,
+      body: { projectName, organizationName, municipalityName, path, content },
+      userId,
+    }: AuthContextWithBody<{
+      projectName: string;
+      organizationName: string;
+      municipalityName: string;
+      path: string;
+      newName: string;
+      content: string;
+    }>) => {
+      if (!userId) {
+        set.status = 401;
+        return { error: "Unauthorized" };
+      }
+
       const result = await sql.updateContent(userId, municipalityName, organizationName, projectName, path, content);
       if (result === null || result < 1) {
         set.status = 400;
@@ -275,13 +323,27 @@ export const api = new Elysia({ prefix: "/api" })
         path: t.String(),
         content: t.String(),
       }),
-      beforeHandle: authMiddleware,
       detail: { tags: ["api"], description: "Update document's content" },
     },
   )
   .get(
     "/document_content",
-    async ({ log, set, query: { projectName, organizationName, municipalityName, path }, userId }) => {
+    async ({
+      log,
+      set,
+      query: { projectName, organizationName, municipalityName, path },
+      userId,
+    }: AuthContextWithQuery<{
+      projectName: string;
+      organizationName: string;
+      municipalityName: string;
+      path: string;
+    }>) => {
+      if (!userId) {
+        set.status = 401;
+        return { error: "Unauthorized" };
+      }
+
       const document = await sql.getContent(userId, municipalityName, organizationName, projectName, path);
       if (document === null || document.length < 1) {
         set.status = 400;
@@ -297,13 +359,26 @@ export const api = new Elysia({ prefix: "/api" })
         municipalityName: t.String(),
         path: t.String(),
       }),
-      beforeHandle: authMiddleware,
       detail: { tags: ["api"], description: "Get document's content" },
     },
   )
   .delete(
     "/document",
-    async ({ log, set, body: { projectName, organizationName, municipalityName, path }, userId }) => {
+    async ({
+      log,
+      set,
+      body: { projectName, organizationName, municipalityName, path },
+      userId,
+    }: AuthContextWithBody<{
+      projectName: string;
+      organizationName: string;
+      municipalityName: string;
+      path: string;
+    }>) => {
+      if (!userId) {
+        set.status = 401;
+        return { error: "Unauthorized" };
+      }
       const result = await sql.deleteDocument(userId, municipalityName, organizationName, projectName, path);
       if (result === null || result < 1) {
         set.status = 400;
@@ -319,7 +394,6 @@ export const api = new Elysia({ prefix: "/api" })
         municipalityName: t.String(),
         path: t.String(),
       }),
-      beforeHandle: authMiddleware,
       detail: { tags: ["api"], description: "Delete document" },
     },
   )
@@ -330,7 +404,14 @@ export const api = new Elysia({ prefix: "/api" })
       set,
       body: { projectName, organizationName, municipalityName, path, possibleName, isNew },
       userId,
-    }) => {
+    }: AuthContextWithBody<{
+      projectName: string;
+      organizationName: string;
+      municipalityName: string;
+      path: string;
+      possibleName: string;
+      isNew: boolean;
+    }>) => {
       const result = await sql.checkPathExists(
         possibleName,
         municipalityName,
