@@ -489,7 +489,8 @@ function FileNode(props: { node: TreeNode }) {
             class={`${styles["file-node-btn"]} ${isSelected() ? styles["file-node-btn-selected"] : ""}`}
             onClick={async () => {
               if (
-                [SagDocumentType.FOLDER, SagDocumentType.FILE, SagDocumentType.PROJECT].includes(props.node.docType)
+                // [SagDocumentType.FOLDER, SagDocumentType.FILE, SagDocumentType.PROJECT].includes(props.node.docType)
+                props.node.docType === SagDocumentType.FILE
               ) {
                 navigateToFile(props.node);
               } else {
