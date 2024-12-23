@@ -87,7 +87,7 @@ async function compile(code: string): Promise<CompileResult | undefined> {
 
 const handleOpenWindow = (url: string) => {
   window.open(url, "_blank");
-}
+};
 
 export async function check(code: string): Promise<void> {
   // Perform the compilation logic here
@@ -135,14 +135,16 @@ function Editor(): JSX.Element {
 
   // track the saved content
   const [savedContent, setSavedContent] = createSignal<string | null>(null);
-
   const hasUnsavedChanges = () => savedContent() !== code();
+
+  // track selected node attributes
+  const isTemplate = () => lastSelectedFile()?.isTemplate || false;
 
   createEffect(() => {
     const node = selectedNode();
     if (node !== null) {
       setLastSelectedFile(node);
-      node.getContent().then(content => setSavedContent(content));
+      node.getContent().then((content) => setSavedContent(content));
 
       setIsCompiled(false);
       setDashboardUrl(null);
@@ -286,52 +288,57 @@ function Editor(): JSX.Element {
     <Header>
       <main>
         <div class="flex flex-row justify-end mx-1 space-x-2">
-          <Button.Root
-            class={"bg-gray-900 hover:bg-black text-white font-bold py-1 px-5 rounded-xl focus:outline-none focus:shadow-outline text-lg w-32".concat(
-              lastSelectedFile()?.isFile() ? "" : " cursor-not-allowed",
-            )}
-            {...(lastSelectedFile()?.isFile() ? {} : { disabled: true })}
-            onClick={async () => {
-              await compile(code());
-            }}
-          >
-            Compile
-          </Button.Root>
-          <Button.Root
-            class={"border-2 bg-white text-black hover:bg-black hover:text-white font-bold py-1 px-5 rounded-xl focus:outline-none focus:shadow-outline text-lg".concat(
-              isCompiled() ? "" : " cursor-not-allowed",
-            )}
-            onClick={() => {
-              const url = dashboardUrl();
-              if (url) {
-                handleOpenWindow(url);
-              } else {
-                Notification.fire({
-                  icon: "error",
-                  titleText: "Dashboard not deployed yet",
-                  timer: 5000,
-                });
-              }
-            }}
-            disabled={!isCompiled()}
-          >
-            Open Dashboard
-          </Button.Root>
-          <Button.Root
-            class={`bg-gray-900 hover:bg-black text-white font-bold py-1 px-5 rounded-xl focus:outline-none focus:shadow-outline text-lg w-32${
-              lastSelectedFile()?.isFile() && hasUnsavedChanges() ? "" : " cursor-not-allowed"
-            }`}
-            disabled={!(lastSelectedFile()?.isFile() && hasUnsavedChanges())}
-            onClick={async () => {
-              const node = selectedNode();
-              if (node !== null) {
-                node.saveContent(code());
-                setSavedContent(code());
-              }
-            }}
-          >
-            Save File
-          </Button.Root>
+          {!isTemplate() && (
+            <>
+              {" "}
+              <Button.Root
+                class={"bg-gray-900 hover:bg-black text-white font-bold py-1 px-5 rounded-xl focus:outline-none focus:shadow-outline text-lg w-32".concat(
+                  lastSelectedFile()?.isFile() ? "" : " cursor-not-allowed",
+                )}
+                {...(lastSelectedFile()?.isFile() ? {} : { disabled: true })}
+                onClick={async () => {
+                  await compile(code());
+                }}
+              >
+                Compile
+              </Button.Root>
+              <Button.Root
+                class={"border-2 bg-white text-black hover:bg-black hover:text-white font-bold py-1 px-5 rounded-xl focus:outline-none focus:shadow-outline text-lg".concat(
+                  isCompiled() ? "" : " cursor-not-allowed",
+                )}
+                onClick={() => {
+                  const url = dashboardUrl();
+                  if (url) {
+                    handleOpenWindow(url);
+                  } else {
+                    Notification.fire({
+                      icon: "error",
+                      titleText: "Dashboard not deployed yet",
+                      timer: 5000,
+                    });
+                  }
+                }}
+                disabled={!isCompiled()}
+              >
+                Open Dashboard
+              </Button.Root>
+              <Button.Root
+                class={`bg-gray-900 hover:bg-black text-white font-bold py-1 px-5 rounded-xl focus:outline-none focus:shadow-outline text-lg w-32${
+                  lastSelectedFile()?.isFile() && hasUnsavedChanges() ? "" : " cursor-not-allowed"
+                }`}
+                disabled={!(lastSelectedFile()?.isFile() && hasUnsavedChanges())}
+                onClick={async () => {
+                  const node = selectedNode();
+                  if (node !== null) {
+                    node.saveContent(code());
+                    setSavedContent(code());
+                  }
+                }}
+              >
+                Save File
+              </Button.Root>
+            </>
+          )}
         </div>
         <div class={styles["editor-container"]}>
           <LeftSideBar />

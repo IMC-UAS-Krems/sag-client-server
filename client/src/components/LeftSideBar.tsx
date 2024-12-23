@@ -31,6 +31,7 @@ type SagDocument = {
   projectName: string;
   documentType: string;
   documentPath: string;
+  isTemplate: boolean;
 };
 
 interface GetChildren {
@@ -61,6 +62,7 @@ export class TreeNode implements GetChildren {
   /** can be undefined when `docType` is `MUNICIPALITY` or `PROJECT`  */
   orgName: string | undefined;
   parent: TreeNode | undefined;
+  isTemplate: boolean | undefined;
 
   /**
    * @param params.name - name of the document that will be displayed
@@ -71,6 +73,7 @@ export class TreeNode implements GetChildren {
    * @param params.orgName - name of the organization, can be undefined when `docType` is `MUNICIPALITY` or `PROJECT`
    * @param params.municipalityName - name of the municipality
    * @param params.parent - parent of the document
+   * @param params.isTemplate - whether the document is a template or not
    */
   constructor(params: {
     name: string;
@@ -81,6 +84,7 @@ export class TreeNode implements GetChildren {
     orgName?: string;
     municipalityName: string;
     parent?: TreeNode;
+    isTemplate?: boolean;
   }) {
     [this.name, this.setName] = createSignal(params.name);
     this.docType = params.docType;
@@ -91,6 +95,7 @@ export class TreeNode implements GetChildren {
     this.municipalityName = params.municipalityName;
     this.children = createMutable([]);
     this.parent = params.parent;
+    this.isTemplate = params.isTemplate;
 
     if (this.isExpanded()) this.saveExpandedState(this.isExpanded());
   }
@@ -386,6 +391,7 @@ class FileTree implements GetChildren {
           old_state,
           `${doc.municipalityName}.${doc.orgName}.${doc.projectName}.${doc.documentPath}`,
         ),
+        isTemplate: doc.isTemplate
       }),
     );
   }

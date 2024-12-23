@@ -795,7 +795,8 @@ export async function getDocuments(userId: string): Promise<Document[]> {
             organisations.name AS "orgName", 
             projects.name AS "projectName",
             lower(documents."documentType"::text) AS "documentType", 
-            documents.path::text AS "documentPath"
+            documents.path::text AS "documentPath",
+            documents."isTemplate" AS "isTemplate"
           FROM users
           -- Joins and conditions for project-linked documents
           CROSS JOIN organisations
@@ -813,7 +814,8 @@ export async function getDocuments(userId: string): Promise<Document[]> {
             organisations.name AS "orgName", 
             NULL AS "projectName",
             lower(documents."documentType"::text) AS "documentType", 
-            documents.path::text AS "documentPath"
+            documents.path::text AS "documentPath",
+            documents."isTemplate" AS "isTemplate"
           FROM users
           -- Joins and conditions for organization-linked documents
           CROSS JOIN organisations
