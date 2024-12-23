@@ -334,7 +334,7 @@ export const api = new Elysia({ prefix: "/api" })
       query: { projectName, organizationName, municipalityName, path },
       userId,
     }: AuthContextWithQuery<{
-      projectName: string;
+      projectName: string | undefined;
       organizationName: string;
       municipalityName: string;
       path: string;
@@ -354,7 +354,7 @@ export const api = new Elysia({ prefix: "/api" })
     },
     {
       query: t.Object({
-        projectName: t.String(),
+        projectName: t.Optional(t.String()),
         organizationName: t.String(),
         municipalityName: t.String(),
         path: t.String(),

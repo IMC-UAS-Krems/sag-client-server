@@ -340,6 +340,48 @@ try {
         VALUES (${createId()}, 'File 1', 'text\ntext', (SELECT id from users WHERE users.name = 'Mike'),
         (SELECT id FROM projects WHERE projects.name = 'Project 2'
         AND projects."organizationId" = (SELECT id FROM organisations WHERE organisations.name = 'FHSTP')), 'file-1');`;
+
+  // Add template folder to the previously created organisation's top level
+  // await prisma.$executeRaw`
+  // INSERT INTO documents (id, name, content, "authorId", "projectId", path, "documentType")
+  // VALUES (${createId()}, 
+  // 'Folder 1', 
+  // 'text\ntext', 
+  // (SELECT id from users WHERE users.name = 'default'),
+  // (SELECT id FROM projects WHERE projects.name = 'Project 1' AND projects."organizationId" = (SELECT id FROM organisations WHERE organisations.name = 'Imc')),
+  // 'folder-1', 
+  // 'FOLDER'::"DocumentType");`;
+
+
+  // - Templates folder
+  await prisma.$executeRaw`
+    INSERT INTO documents (id, name, content, "authorId", "organizationId", path, "documentType", "isTemplate")
+    VALUES (
+      ${createId()},
+      'Templates',
+      'This is the template folder for the current organisation',
+      (SELECT id FROM users WHERE users.name = 'default'),
+      (SELECT id FROM organisations WHERE organisations.name = 'Imc'),
+      'templates',
+      'FOLDER'::"DocumentType",
+      true
+    );
+  `;
+
+  // - Example template
+  await prisma.$executeRaw`
+    INSERT INTO documents (id, name, content, "authorId", "organizationId", path, "documentType", "isTemplate")
+    VALUES (
+      ${createId()},
+      'Example Template',
+      'service:\n    title is Dash dashboard\n    version is 1.0.0\n    scope is Environment\n\ndata:\n    sources -> first\n\nfirst:\n    type is SmartMeter\n    provider is Fiware\n    uri is http://localhost:1026/v2/entities\n    query is AirQualityObserved\n    config:\n        measurements:\n            450 is temperature\n            330 is humidity\n        token is 1234567890\n        company is 23\n\napplication:\n    type is Web\n    dashboard is Dash\n    layout is SinglePage\n    roles -> User, SuperUser, Admin\n    panels -> Map, Pie, XY, TS, Bar\n\nMap:\n    label is map\n    type is geomap\n    source is first\n    area is Madrid\n    data -> location, stationName, O3, NO2, SO2, address\n\nPie:\n    label is pie\n    type is pie_chart\n    source is first\n    traces -> NOx, O3, NO2, SO2, id\n    pie_chart_type is pie\n\nXY:\n    label is xy\n    type is xy_chart\n    source is first\n    traces -> dateObserved, NOx, O3, NO2, SO2, id\n\nTS:\n    label is ts\n    type is timeseries\n    source is first\n    traces -> dateObserved, NOx, O3, NO2, SO2, id\n\nBar:\n    label is bar\n    type is bar_chart\n    source is first\n    traces -> dateObserved, NOx, O3, NO2, SO2, id\n\ndeployment:\n    environments -> <local | azure>\n\n<local:>\n    <uri is https://localhost.org:3000/test>\n    <port is 50055>\n    <type is Docker>',
+      (SELECT id FROM users WHERE users.name = 'default'),
+      (SELECT id FROM organisations WHERE organisations.name = 'Imc'),
+      'templates.example-template',
+      'FILE'::"DocumentType",
+      true
+    );
+  `;
 } catch (error) {
   console.error("Error seeding data:", error);
 } finally {

@@ -54,7 +54,7 @@ export async function createOrganization(
   municipalityName: string,
   verified?: boolean,
 ): Promise<Organization> {
-  if (await selectMunicipality(municipalityName) === null) {
+  if ((await selectMunicipality(municipalityName)) === null) {
     throw new SagError(`Municipality ${municipalityName} does not exist`);
   }
   return await prisma.organization.create({
@@ -707,43 +707,130 @@ export async function getDocuments(userId: string): Promise<Document[]> {
   switch (user.userType) {
     case UserType.DEFAULT: {
       return await prisma.$queryRaw<Document[]>`
-            SELECT documents.name,  municipalities.name as "municipalityName", organisations.name as "orgName", projects.name as "projectName",
-              lower(documents."documentType"::text) as "documentType", documents.path::text AS "documentPath"
-            FROM users
-            INNER JOIN organisations ON organisations.id = users."organizationId"
-            INNER JOIN projects ON organisations.id = "projects"."organizationId"
-            INNER JOIN documents ON "documents"."projectId" = projects.id
-            INNER JOIN municipalities ON municipalities.id = users."municipalityId"
-            WHERE "users"."id" = ${userId}
-            ORDER BY "municipalityName", "orgName", "projectName", CASE WHEN documents."documentType" = 'FOLDER'::"DocumentType" then 0 else 1 end,
-            "documentPath";`;
+        SELECT * FROM (
+          SELECT 
+            documents.name,  
+            municipalities.name AS "municipalityName", 
+            organisations.name AS "orgName", 
+            projects.name AS "projectName",
+            lower(documents."documentType"::text) AS "documentType", 
+            documents.path::text AS "documentPath"
+          FROM users
+          INNER JOIN organisations ON organisations.id = users."organizationId"
+          INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
+          LEFT JOIN projects ON organisations.id = projects."organizationId"
+          INNER JOIN documents ON documents."projectId" = projects.id
+          WHERE users.id = ${userId}
+          
+          UNION ALL
+          
+          SELECT 
+            documents.name, 
+            municipalities.name AS "municipalityName", 
+            organisations.name AS "orgName", 
+            NULL AS "projectName",
+            lower(documents."documentType"::text) AS "documentType", 
+            documents.path::text AS "documentPath"
+          FROM users
+          INNER JOIN organisations ON organisations.id = users."organizationId"
+          INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
+          INNER JOIN documents ON documents."organizationId" = organisations.id
+          WHERE users.id = ${userId}
+        ) AS combined_documents
+        ORDER BY 
+          "municipalityName", 
+          "orgName", 
+          "projectName" ASC NULLS LAST,
+          CASE WHEN "documentType" = 'FOLDER' THEN 0 ELSE 1 END,
+          "documentPath";
+      `;
     }
     case UserType.SUPERUSER_MUNICIPALITY: {
       return await prisma.$queryRaw<Document[]>`
-            SELECT documents.name, municipalities.name as "municipalityName", organisations.name as "orgName", projects.name as "projectName",
-              lower(documents."documentType"::text) as "documentType", documents.path::text AS "documentPath"
-            FROM users
-            INNER JOIN organisations ON organisations."municipalityId" = users."municipalityId"
-            INNER JOIN projects ON organisations.id = projects."organizationId"
-            INNER JOIN documents ON documents."projectId" = projects.id
-            INNER JOIN municipalities ON municipalities.id = users."municipalityId"
-            WHERE "users"."id" = ${userId}
-            ORDER BY "municipalityName", "orgName", "projectName", CASE WHEN documents."documentType" = 'FOLDER'::"DocumentType" then 0 else 1 end,
-            "documentPath";`;
+        SELECT * FROM (
+          SELECT 
+            documents.name, 
+            municipalities.name AS "municipalityName", 
+            organisations.name AS "orgName", 
+            projects.name AS "projectName",
+            lower(documents."documentType"::text) AS "documentType", 
+            documents.path::text AS "documentPath"
+          FROM users
+          INNER JOIN organisations ON organisations."municipalityId" = users."municipalityId"
+          INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
+          LEFT JOIN projects ON organisations.id = projects."organizationId"
+          INNER JOIN documents ON documents."projectId" = projects.id
+          WHERE users.id = ${userId}
+          
+          UNION ALL
+          
+                    SELECT 
+            documents.name, 
+            municipalities.name AS "municipalityName", 
+            organisations.name AS "orgName", 
+            NULL AS "projectName",
+            lower(documents."documentType"::text) AS "documentType", 
+            documents.path::text AS "documentPath"
+          FROM users
+          INNER JOIN organisations ON organisations."municipalityId" = users."municipalityId"
+          INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
+          INNER JOIN documents ON documents."organizationId" = organisations.id
+          WHERE users.id = ${userId}
+        ) AS combined_documents
+        ORDER BY 
+          "municipalityName", 
+          "orgName", 
+          "projectName" ASC NULLS LAST,
+          CASE WHEN "documentType" = 'FOLDER' THEN 0 ELSE 1 END,
+          "documentPath";
+      `;
     }
     case UserType.SUPERUSER_GLOBAL: {
       return await prisma.$queryRaw<Document[]>`
-            SELECT documents.name, municipalities.name as "municipalityName", organisations.name AS "orgName", projects.name AS "projectName",
-              lower(documents."documentType"::text) as "documentType", documents.path::text AS "documentPath"
-            FROM users
-            CROSS JOIN organisations
-            INNER JOIN projects ON organisations.id = projects."organizationId"
-            INNER JOIN documents ON documents."projectId" = projects.id
-            INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
-            WHERE users.id = ${userId}
-            ORDER BY "municipalityName", "orgName", "projectName", CASE WHEN documents."documentType" = 'FOLDER'::"DocumentType" then 0 else 1 end,
-            "documentPath";`;
+        SELECT * FROM (
+          -- Subquery 1: Documents linked to Projects
+          SELECT 
+            documents.name, 
+            municipalities.name AS "municipalityName", 
+            organisations.name AS "orgName", 
+            projects.name AS "projectName",
+            lower(documents."documentType"::text) AS "documentType", 
+            documents.path::text AS "documentPath"
+          FROM users
+          -- Joins and conditions for project-linked documents
+          CROSS JOIN organisations
+          INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
+          LEFT JOIN projects ON organisations.id = projects."organizationId"
+          INNER JOIN documents ON documents."projectId" = projects.id
+          WHERE users.id = ${userId}
+          
+          UNION ALL
+          
+          -- Subquery 2: Documents linked directly to Organizations
+          SELECT 
+            documents.name, 
+            municipalities.name AS "municipalityName", 
+            organisations.name AS "orgName", 
+            NULL AS "projectName",
+            lower(documents."documentType"::text) AS "documentType", 
+            documents.path::text AS "documentPath"
+          FROM users
+          -- Joins and conditions for organization-linked documents
+          CROSS JOIN organisations
+          INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
+          INNER JOIN documents ON documents."organizationId" = organisations.id
+          WHERE users.id = ${userId}
+        ) AS combined_documents
+        ORDER BY 
+          "municipalityName", 
+          "orgName", 
+          "projectName" ASC NULLS LAST,
+          CASE WHEN "documentType" = 'FOLDER' THEN 0 ELSE 1 END,
+          "documentPath";
+    `;
     }
+    default:
+      throw new Error("Unsupported user type");
   }
 }
 
@@ -751,11 +838,14 @@ export async function getContent(
   userId: string,
   municipalityName: string,
   orgName: string,
-  projectName: string,
+  projectName: string | undefined,
   documentPath: string,
 ): Promise<{ content: string }[]> {
   // @ts-ignore
   const user: User | UserDocument = await selectUser(userId);
+  console.log(
+    `Getting content at:\n Municipality: ${municipalityName}\n Org: ${orgName}\n Project: ${projectName}\n Path: ${documentPath}`,
+  );
 
   switch (user.userType) {
     case UserType.DEFAULT: {
@@ -786,16 +876,30 @@ export async function getContent(
             `;
     }
     case UserType.SUPERUSER_GLOBAL: {
-      return await prisma.$queryRaw<{ content: string }[]>`
-            SELECT documents.content
-            FROM documents
-            INNER JOIN projects ON projects.id = documents."projectId"
-            INNER JOIN organisations ON organisations.id = projects."organizationId"
-            INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
-            WHERE municipalities.name = ${municipalityName} AND organisations.name = ${orgName} AND projects.name = ${projectName}
-            AND documents.path = text2ltree(${documentPath}) AND documents."documentType" = 'FILE'::"DocumentType"
-            LIMIT 1
-            `;
+      if (projectName !== "null") {
+        console.log("Getting content for global superuser with project");
+        return await prisma.$queryRaw<{ content: string }[]>`
+        SELECT documents.content
+        FROM documents
+        INNER JOIN projects ON projects.id = documents."projectId"
+        INNER JOIN organisations ON organisations.id = projects."organizationId"
+        INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
+        WHERE municipalities.name = ${municipalityName} AND organisations.name = ${orgName} AND projects.name = ${projectName}
+        AND documents.path = text2ltree(${documentPath}) AND documents."documentType" = 'FILE'::"DocumentType"
+        LIMIT 1
+        `;
+      } else {
+        console.log("Getting content for global superuser without project");
+        return await prisma.$queryRaw<{ content: string }[]>`
+        SELECT documents.content
+        FROM documents
+        INNER JOIN organisations ON organisations.id = documents."organizationId"
+        INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
+        WHERE municipalities.name = ${municipalityName} AND organisations.name = ${orgName}
+        AND documents.path = text2ltree(${documentPath}) AND documents."documentType" = 'FILE'::"DocumentType"
+        LIMIT 1
+        `;
+      }
     }
   }
 }

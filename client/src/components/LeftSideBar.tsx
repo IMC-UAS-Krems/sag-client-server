@@ -151,11 +151,14 @@ export class TreeNode implements GetChildren {
       return this.children.find((child) => child.name() === params.name);
     }
 
-    if ([SagDocumentType.FOLDER, SagDocumentType.PROJECT].includes(this.docType)) {
+    if ([SagDocumentType.FOLDER, SagDocumentType.PROJECT, SagDocumentType.ORG].includes(this.docType)) {
       return this.children.find((child) => params.path.startsWith(child.path() as string)); // all children in a folder or project must have defined paths, otherwise wrong structure
     }
 
     console.error(`Cannot find child with path ${params.path} in ${this}`);
+    console.error(this);
+    console.error(this.children);
+    console.error(this.children.map((child) => child.path()));
   }
 
   icon() {
@@ -163,6 +166,7 @@ export class TreeNode implements GetChildren {
       case SagDocumentType.FILE:
         return "📄";
       case SagDocumentType.FOLDER:
+        if (this.name() === "Templates") return "📚";
         return "📁";
       case SagDocumentType.MUNICIPALITY:
         return "🏠";
@@ -334,21 +338,41 @@ class FileTree implements GetChildren {
   }
 
   addDocument(doc: SagDocument, old_state: expandState) {
+    // We can simply add municipality and org nodes since they are always present (not the case for Projects - Templates)
+    this.addMunicipality(doc.municipalityName, old_state);
+    this.addOrg(doc.orgName, doc.municipalityName, old_state);
+
+    let currentNode: TreeNode | undefined;
+
+    // If there's a project name make currentNode the project node and add project node
+    if (doc.projectName) {
+      this.addProject(doc.projectName, doc.orgName, doc.municipalityName, old_state);
+      currentNode = this.root
+        .findChild({ name: doc.municipalityName })
+        ?.findChild({ name: doc.orgName })
+        ?.findChild({ name: doc.projectName });
+    } else {
+      // If there is no project name, make currentNode the org node
+      currentNode = this.root.findChild({ name: doc.municipalityName })?.findChild({ name: doc.orgName });
+    }
+
+    // If the current node is not found, log an error and return
+    if (!currentNode) {
+      console.error("Parent node not found for document:", doc.name);
+      return;
+    }
+
+    // getting the path
     const pathSplit = doc.documentPath.lastIndexOf(".");
     const path = pathSplit === -1 ? doc.documentPath : doc.documentPath.slice(0, pathSplit);
 
-    this.addMunicipality(doc.municipalityName, old_state);
-    this.addOrg(doc.orgName, doc.municipalityName, old_state);
-    this.addProject(doc.projectName, doc.orgName, doc.municipalityName, old_state);
-
-    let currentNode = this.root
-      .findChild({ name: doc.municipalityName })
-      ?.findChild({ name: doc.orgName })
-      ?.findChild({ name: doc.projectName });
-
+    // Loop through the path and add the document to the correct node
+    // - once we reach the end of the path, add the document (with each iteration move currentNode pointer)
     for (let i = 1; i < doc.documentPath.split(".").length; i++) {
       currentNode = currentNode?.findChild({ path: path });
     }
+    console.log("Adding document to: ", currentNode);
+    console.log("Document to add: ", doc);
     currentNode?.addChild(
       new TreeNode({
         name: doc.name,
