@@ -4,6 +4,7 @@ import { UserRole } from "@utils/roles";
 import { UserDetails, OrganisationDetails, UpdateOrganisationBody } from "@server/types";
 import { Organization, Project, User, Municipality, UserType, DocumentType } from "@prisma/client";
 import { SagError } from "./errors";
+import path from "path";
 
 export type Document = {
   name: string;
@@ -620,6 +621,7 @@ export async function createDocument(
   municipalityName: string,
   path: string,
   documentType: DocumentType,
+  content?: string | null,
 ): Promise<string | null> {
   if (
     path.length > 0 &&
@@ -635,13 +637,15 @@ export async function createDocument(
   // @ts-ignore
   const user: User | UserDocument = await selectUser(authorId);
   let result = 0;
+  content = content ?? "";
+  console.log("Creating document with content:", content);
 
   try {
     switch (user.userType) {
       case UserType.DEFAULT: {
         result = await prisma.$executeRaw`
             INSERT INTO documents (id, name, content, "authorId", "projectId", path, "documentType")
-            VALUES (${createId()}, ${name}, '', ${authorId},
+            VALUES (${createId()}, ${name}, ${content}, ${authorId},
               (SELECT id FROM projects WHERE projects.name = ${projectName}
               AND projects."organizationId" =
                 (SELECT organisations.id FROM organisations
@@ -655,7 +659,7 @@ export async function createDocument(
       case UserType.SUPERUSER_MUNICIPALITY: {
         result = await prisma.$executeRaw`
             INSERT INTO documents (id, name, content, "authorId", "projectId", path, "documentType")
-            VALUES (${createId()}, ${name}, '', ${authorId},
+            VALUES (${createId()}, ${name}, ${content}, ${authorId},
               (SELECT id FROM projects WHERE projects.name = ${projectName}
               AND projects."organizationId" =
                 (SELECT organisations.id FROM organisations
@@ -668,7 +672,7 @@ export async function createDocument(
       case UserType.SUPERUSER_GLOBAL: {
         result = await prisma.$executeRaw`
             INSERT INTO documents (id, name, content, "authorId", "projectId", path, "documentType")
-            VALUES (${createId()}, ${name}, '', ${authorId},
+            VALUES (${createId()}, ${name}, ${content}, ${authorId},
               (SELECT id FROM projects WHERE projects.name = ${projectName}
               AND projects."organizationId" =
                 (SELECT organisations.id FROM organisations
@@ -1065,6 +1069,37 @@ export async function renameDocument(
     return path;
   }
   return null;
+}
+
+export async function saveAsTemplate(userId: string, organizationName: string, name: string, content: string) {
+  const organization = await selectOrganization(organizationName);
+  if (!organization) {
+    throw new SagError(`Organization ${organizationName} does not exist`);
+  }
+
+  // @ts-ignore
+  const user: User | UserDocument | null = await selectUser(userId);
+  if (!user) {
+    throw new SagError(`User ${userId} does not exist`);
+  }
+  console.log("User is trying to author a new template:", user.email);
+
+  const path = joinPath("templates", name)
+
+  const result = await prisma.$executeRaw`
+    INSERT INTO documents (id, name, content, "authorId", "organizationId", path, "documentType", "isTemplate")
+    VALUES (
+      ${createId()},
+      ${name},
+      ${content},
+      ${userId},
+      ${organization.id},
+      text2ltree(${path}),
+      'FILE'::"DocumentType",
+      true
+    );`;
+
+  return result;
 }
 
 async function updateChildPaths(

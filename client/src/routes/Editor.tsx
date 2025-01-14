@@ -337,6 +337,20 @@ function Editor(): JSX.Element {
               >
                 Save File
               </Button.Root>
+              <Button.Root
+                class={"bg-gray-900 hover:bg-black text-white font-bold py-1 px-5 rounded-xl focus:outline-none focus:shadow-outline text-lg w-32".concat(
+                  lastSelectedFile()?.isFile() ? "" : " cursor-not-allowed",
+                )}
+                onClick={async () => {
+                  const node = selectedNode();
+                  if (node !== null) {
+                    node.saveFileAsTemplate(code());
+                    // setSavedContent(code());
+                  }
+                }}
+              >
+                Save File as Template
+              </Button.Root>
             </>
           )}
         </div>

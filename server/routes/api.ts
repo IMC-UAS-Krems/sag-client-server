@@ -189,7 +189,7 @@ export const api = new Elysia({ prefix: "/api" })
     async ({
       log,
       set,
-      body: { name, projectName, organizationName, municipalityName, path, documentType },
+      body: { name, projectName, organizationName, municipalityName, path, documentType, content },
       userId,
     }: AuthContextWithBody<{
       name: string;
@@ -198,6 +198,7 @@ export const api = new Elysia({ prefix: "/api" })
       municipalityName: string;
       path: string;
       documentType: "file" | "folder";
+      content?: string | null;
     }>): Promise<string | { error: string }> => {
       let result: string | null;
       if (!userId) {
@@ -205,6 +206,7 @@ export const api = new Elysia({ prefix: "/api" })
         return { error: "Unauthorized" };
       }
 
+      console.log("Creating document with content: ", content);
       try {
         result = await sql.createDocument(
           name,
@@ -214,6 +216,7 @@ export const api = new Elysia({ prefix: "/api" })
           municipalityName,
           path,
           DocumentType[documentType.toUpperCase() as keyof typeof DocumentType],
+          content,
         );
       } catch (e) {
         if (e instanceof SagError) {
@@ -244,6 +247,7 @@ export const api = new Elysia({ prefix: "/api" })
         municipalityName: t.String(),
         path: t.String(),
         documentType: t.Union([t.Literal("file"), t.Literal("folder")]),
+        content: t.Optional(t.String()),
       }),
       detail: { tags: ["api"], description: "Create a new document" },
     },
@@ -395,6 +399,35 @@ export const api = new Elysia({ prefix: "/api" })
         path: t.String(),
       }),
       detail: { tags: ["api"], description: "Delete document" },
+    },
+  )
+  .post(
+    "/save_as_template",
+    async ({
+      log,
+      set,
+      body: { organizationName, name, content },
+      userId,
+    }: AuthContextWithBody<{ organizationName: string; name: string; content: string }>) => {
+      if (!userId) {
+        set.status = 401;
+        return { error: "Unauthorized" };
+      }
+      const result = await sql.saveAsTemplate(userId, organizationName, name, content);
+      if (result === null) {
+        set.status = 400;
+        return "Could not save as template";
+      }
+      set.status = 200;
+      return "Document saved as template";
+    },
+    {
+      body: t.Object({
+        organizationName: t.String(),
+        name: t.String(),
+        content: t.String(),
+      }),
+      detail: { tags: ["api"], description: "Save document as template" },
     },
   )
   .post(

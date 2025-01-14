@@ -21,6 +21,7 @@ enum MenuOption {
   Delete = "Delete",
   Rename = "Rename",
   AddFile = "Add File",
+  AddFileFromTemplate = "Add File From Template",
   AddFolder = "Add Folder",
 }
 
@@ -186,11 +187,12 @@ export class TreeNode implements GetChildren {
     return this.docType === SagDocumentType.FILE;
   }
 
-  async createDocument(name: string, docType: SagDocumentType, path: string) {
+  async createDocument(name: string, docType: SagDocumentType, path: string, content?: string) {
     if (![SagDocumentType.FILE, SagDocumentType.FOLDER].includes(docType)) {
-      console.error("Cannot create document that is not a folder");
+      console.error("Cannot create document that is not a folder or a file");
       return;
     }
+    console.log("Sending request to create document with content: ", content);
     const resp = await eden.api.document.post({
       name: name,
       documentType: docType.toString().toLowerCase() as "file" | "folder",
@@ -198,6 +200,7 @@ export class TreeNode implements GetChildren {
       projectName: this.projectName as string,
       organizationName: this.orgName as string,
       municipalityName: this.municipalityName as string,
+      ...(content && { content }), // Conditionally include content if it is defined
       $fetch: {
         mode: "cors",
         credentials: "include",
@@ -277,6 +280,26 @@ export class TreeNode implements GetChildren {
     } else {
       Notification.fire({
         title: "File saved",
+        icon: "success",
+      });
+    }
+  }
+
+  async saveFileAsTemplate(content: string) {
+    const resp = await eden.api.save_as_template.post({
+      organizationName: this.orgName as string,
+      name: this.name() as string,
+      content: content,
+      $fetch: {
+        mode: "cors",
+        credentials: "include",
+      },
+    });
+    if (resp.status !== 200) {
+      console.error("Error saving content as template");
+    } else {
+      Notification.fire({
+        title: "File saved as template",
         icon: "success",
       });
     }
@@ -391,7 +414,7 @@ class FileTree implements GetChildren {
           old_state,
           `${doc.municipalityName}.${doc.orgName}.${doc.projectName}.${doc.documentPath}`,
         ),
-        isTemplate: doc.isTemplate
+        isTemplate: doc.isTemplate,
       }),
     );
   }
@@ -442,6 +465,7 @@ class FileTree implements GetChildren {
           municipalityName: orgNode.municipalityName,
           orgName: orgNode.orgName,
           projectName: project,
+          parent: orgNode,
           isExpanded: this.parse_old_state(old_state, `${municipality}.${org}.${project}`),
         }),
       );
@@ -588,6 +612,107 @@ function FileContextMenu(props: { children: JSXElement }) {
 
         break;
       }
+      case MenuOption.AddFileFromTemplate: {
+        // Traverse the tree up to the org level
+        let orgNode = selectedNode();
+        const nodeOrg = node?.orgName;
+        console.log("Node org: ", nodeOrg);
+        while (orgNode?.parent?.docType !== SagDocumentType.ORG) {
+          const nodeParent = node?.parent;
+          console.log("Node parent: ", nodeParent);
+          orgNode = nodeParent;
+        }
+        orgNode = orgNode?.parent;
+
+        // By now we should have the org node -> get the template folder
+        console.log("Org node: ", orgNode);
+        console.log("Org node children: ", orgNode?.children);
+        // Select the child node that has `docType` folder and `isTemplate` true
+        const templateNode = orgNode?.children.find(
+          (child) => child.docType === SagDocumentType.FOLDER && child.isTemplate,
+        );
+        console.log("Template node: ", templateNode);
+
+        // If no template folder is found for the organisation, show an error message
+        if (!templateNode) {
+          Notification.fire({
+            title: "No templates folder found for the organisation",
+            icon: "error",
+          });
+          return;
+        }
+
+        // If there are no templates for the organisation, show an error message
+        const templates = templateNode.children.map((child) => child.name());
+        if (templates.length === 0) {
+          Notification.fire({
+            title: "No templates found for the organisation",
+            icon: "error",
+          });
+          return;
+        }
+
+        // Show a select input with the possible templates of the organisation
+        const { value } = await Swal.fire<string>({
+          title: "Select a Template",
+          input: "select",
+          inputOptions: templates,
+          inputPlaceholder: "Choose a template",
+          showCancelButton: true,
+          confirmButtonText: "Select",
+          inputValidator: (value) => {
+            return new Promise((resolve) => {
+              if (value) {
+                resolve(null);
+              } else {
+                resolve("You need to select a template to proceed");
+              }
+            });
+          },
+        });
+
+        if (value) {
+          console.log("Selected Template:", templates[parseInt(value)]);
+          const selectedTemplateNode = templateNode.children[parseInt(value)];
+          const templateContent = await selectedTemplateNode.getContent();
+          if (!templateContent) {
+            Notification.fire({
+              title: "Error fetching template content",
+              icon: "error",
+            });
+            return;
+          }
+
+          // Create a new file with the selected template's content
+          const filenameSwal = await Prompt.fire<string>({
+            title: "Enter file name",
+            input: "text",
+            preConfirm: async (path) => {
+              const node = selectedNode();
+              if (await node?.checkNewPath(path, true)) {
+                return path;
+              }
+              Swal.showValidationMessage("File or folder with this name already exists");
+            },
+            inputValidator: (input) => {
+              console.log(input);
+              if (!input.match("^[a-zA-Z0-9_ ]+$")) {
+                return "Input must contain only letters, numbers, underscores and spaces";
+              }
+            },
+          });
+          if (filenameSwal.value && filenameSwal.value.length > 0) {
+            const node = selectedNode();
+            node?.createDocument(
+              filenameSwal.value as string,
+              SagDocumentType.FILE,
+              node?.path() as string,
+              templateContent,
+            );
+          }
+        }
+        break;
+      }
       case MenuOption.AddFolder: {
         const { value } = await Prompt.fire<string>({
           title: "Enter folder name",
@@ -694,6 +819,20 @@ function FileContextMenu(props: { children: JSXElement }) {
                   }}
                 >
                   {MenuOption.AddFile}
+                </ContextMenu.Item>
+              </Show>
+              <Show
+                when={[SagDocumentType.FOLDER, SagDocumentType.PROJECT].includes(
+                  selectedNode()?.docType as SagDocumentType,
+                )}
+              >
+                <ContextMenu.Item
+                  class={styles["context-menu-item"]}
+                  onSelect={async () => {
+                    await handleContextMenu(MenuOption.AddFileFromTemplate);
+                  }}
+                >
+                  {MenuOption.AddFileFromTemplate}
                 </ContextMenu.Item>
               </Show>
               <Show
