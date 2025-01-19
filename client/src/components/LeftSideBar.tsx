@@ -208,17 +208,17 @@ export class TreeNode implements GetChildren {
     });
 
     if (resp.status === 200) {
-      this.addChild(
-        new TreeNode({
-          name: name,
-          docType: docType,
-          path: resp.data as string,
-          projectName: this.projectName,
-          orgName: this.orgName,
-          municipalityName: this.municipalityName,
-          isExpanded: true,
-        }),
-      );
+      const newNode = new TreeNode({
+        name: name,
+        docType: docType,
+        path: resp.data as string,
+        projectName: this.projectName,
+        orgName: this.orgName,
+        municipalityName: this.municipalityName,
+        isExpanded: true,
+      });
+      this.addChild(newNode);
+      return newNode;
     }
   }
 
@@ -302,6 +302,7 @@ export class TreeNode implements GetChildren {
         title: "File saved as template",
         icon: "success",
       });
+      // TODO: Set new node as the selected node
     }
   }
 
@@ -582,7 +583,7 @@ function FileNode(props: { node: TreeNode }) {
 }
 
 function FileContextMenu(props: { children: JSXElement }) {
-  const { code, selectedNode } = useContext(EditorContext) as IEditorContext;
+  const { code, selectedNode, navigateToFile } = useContext(EditorContext) as IEditorContext;
 
   async function handleContextMenu(action: MenuOption) {
     const node = selectedNode();
@@ -607,7 +608,10 @@ function FileContextMenu(props: { children: JSXElement }) {
         });
         if (value && value.length > 0) {
           const node = selectedNode();
-          node?.createDocument(value as string, SagDocumentType.FILE, node?.path() as string);
+          const newNode = await node?.createDocument(value as string, SagDocumentType.FILE, node?.path() as string);
+          if (newNode && newNode instanceof TreeNode) {
+            navigateToFile(newNode);
+          }
         }
 
         break;
@@ -703,12 +707,17 @@ function FileContextMenu(props: { children: JSXElement }) {
           });
           if (filenameSwal.value && filenameSwal.value.length > 0) {
             const node = selectedNode();
-            node?.createDocument(
+            const newNode = await node?.createDocument(
               filenameSwal.value as string,
               SagDocumentType.FILE,
               node?.path() as string,
               templateContent,
             );
+            // TODO: Set the new node as the selected node
+            console.log("Navigating to the new node: ", newNode);
+            if (newNode && newNode instanceof TreeNode) {
+              navigateToFile(newNode);
+            }
           }
         }
         break;
