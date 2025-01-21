@@ -286,11 +286,53 @@ export class TreeNode implements GetChildren {
   }
 
   async saveFileAsTemplate(content: string): Promise<TreeNode | null> {
-    // TODO: Here we should fire swal to get the name for the template
-    // TODO: Also should check that the path is possible
+    // Traverse the tree to find the org node
+    // TODO: Traversal like this may lead to infinite loop if the newly added nodes don't have a parent node connected
+    // TODO: Reused logic, extract it into a node function
+    let orgNode = this as TreeNode; // Init the node to the current node
+    while (orgNode?.parent?.docType !== SagDocumentType.ORG) {
+      orgNode = orgNode.parent as TreeNode;
+    }
+    orgNode = orgNode?.parent;
+    // Select the child node that has `docType` folder and `isTemplate` true
+    const templateNode = orgNode?.children.find(
+      (child) => child.docType === SagDocumentType.FOLDER && child.isTemplate,
+    );
+
+    if (!templateNode) {
+      Notification.fire({
+        title: "No templates folder found for the organisation",
+        icon: "error",
+      });
+      return null;
+    }
+
+    // Now we can get the children of the template node and their names
+    const templates = templateNode.children.map((child) => child.name());
+
+    // First get the name for the template via swal prompt
+    const { value } = await Prompt.fire<string>({
+      title: "Enter template name",
+      input: "text",
+      preConfirm: async (name) => {
+        if (templates.includes(name)) {
+          Swal.showValidationMessage("A template with this name already exists");
+          return false; // Prevent the alert from closing
+        }
+      },
+      inputValidator: (input) => {
+        console.log(input);
+        if (!input.match("^[a-zA-Z0-9_ ]+$")) {
+          return "Input must contain only letters, numbers, underscores and spaces";
+        }
+      },
+    });
+
+    if (!value || value.length <= 0) return null;
+
     const resp = await eden.api.save_as_template.post({
       organizationName: this.orgName as string,
-      name: this.name() as string,
+      name: value as string,
       content: content,
       $fetch: {
         mode: "cors",
@@ -311,7 +353,7 @@ export class TreeNode implements GetChildren {
       });
       console.log("Response for creating the new node: ", resp.data);
       const newNode = new TreeNode({
-        name: this.name() as string,
+        name: value as string,
         docType: SagDocumentType.FILE,
         path: resp.data as string,
         projectName: null, // There is no project name on purpose
@@ -321,18 +363,7 @@ export class TreeNode implements GetChildren {
         isTemplate: true,
       });
       console.log("New node created: ", newNode);
-      // Traverse the tree to find the org node
-      // TODO: Traversal like this may lead to infinite loop if the newly added nodes don't have a parent node connected
-      // TODO: Reused logic, extract it into a node function
-      let orgNode = this as TreeNode; // Init the node to the current node
-      while (orgNode?.parent?.docType !== SagDocumentType.ORG) {
-        orgNode = orgNode.parent as TreeNode;
-      }
-      orgNode = orgNode?.parent;
-      // Select the child node that has `docType` folder and `isTemplate` true
-      const templateNode = orgNode?.children.find(
-        (child) => child.docType === SagDocumentType.FOLDER && child.isTemplate,
-      );
+
       templateNode?.addChild(newNode);
       // console.log("New node added to the org node's template folder: ", templateNode);
       // TODO: Now pass down true and navigate based on it
@@ -748,7 +779,6 @@ function FileContextMenu(props: { children: JSXElement }) {
               node?.path() as string,
               templateContent,
             );
-            // TODO: Set the new node as the selected node
             console.log("Navigating to the new node: ", newNode);
             if (newNode && newNode instanceof TreeNode) {
               navigateToFile(newNode);
