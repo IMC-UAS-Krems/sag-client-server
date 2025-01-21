@@ -167,6 +167,28 @@ export class TreeNode implements GetChildren {
     console.error(this.children.map((child) => child.path()));
   }
 
+  getOrganisationNode() {
+    // To battle possible cycles
+    let iterCount = 0;
+    const maxIter = 100;
+    let orgNode = this as TreeNode; // Init the node to the current node
+
+    while (orgNode?.parent?.docType !== SagDocumentType.ORG && iterCount < maxIter) {
+      const nodeParent = orgNode?.parent;
+      if (!(nodeParent instanceof TreeNode)) {
+        console.error("Parent node is not a TreeNode for node: ", node);
+        // Notification.fire({
+        //   title: "Error in finding templates",
+        //   icon: "error",
+        // });
+        return null;
+      }
+      orgNode = nodeParent;
+      iterCount++;
+    }
+    return orgNode?.parent;
+  }
+
   icon() {
     switch (this.docType) {
       case SagDocumentType.FILE:
@@ -216,6 +238,7 @@ export class TreeNode implements GetChildren {
         orgName: this.orgName,
         municipalityName: this.municipalityName,
         isExpanded: true,
+        parent: this,
       });
       this.addChild(newNode);
       return newNode;
@@ -287,13 +310,7 @@ export class TreeNode implements GetChildren {
 
   async saveFileAsTemplate(content: string): Promise<TreeNode | null> {
     // Traverse the tree to find the org node
-    // TODO: Traversal like this may lead to infinite loop if the newly added nodes don't have a parent node connected
-    // TODO: Reused logic, extract it into a node function
-    let orgNode = this as TreeNode; // Init the node to the current node
-    while (orgNode?.parent?.docType !== SagDocumentType.ORG) {
-      orgNode = orgNode.parent as TreeNode;
-    }
-    orgNode = orgNode?.parent;
+    const orgNode = this.getOrganisationNode();
     // Select the child node that has `docType` folder and `isTemplate` true
     const templateNode = orgNode?.children.find(
       (child) => child.docType === SagDocumentType.FOLDER && child.isTemplate,
@@ -361,12 +378,12 @@ export class TreeNode implements GetChildren {
         municipalityName: this.municipalityName,
         isExpanded: true,
         isTemplate: true,
+        parent: templateNode,
       });
       console.log("New node created: ", newNode);
 
       templateNode?.addChild(newNode);
       // console.log("New node added to the org node's template folder: ", templateNode);
-      // TODO: Now pass down true and navigate based on it
       return newNode;
     }
   }
@@ -683,26 +700,21 @@ function FileContextMenu(props: { children: JSXElement }) {
       }
       case MenuOption.AddFileFromTemplate: {
         // Traverse the tree up to the org level
-        // TODO: Traversal like this may lead to infinite loop if the newly added nodes don't have a parent node connected
-        let orgNode = selectedNode(); // Init the node to the current node
-        const nodeOrg = node?.orgName;
-        console.log("Node org: ", nodeOrg);
-        while (orgNode?.parent?.docType !== SagDocumentType.ORG) {
-          const nodeParent = node?.parent;
-          console.log("Node parent: ", nodeParent);
-          orgNode = nodeParent;
+        const orgNode = node?.getOrganisationNode();
+        if (!orgNode) {
+          console.error("Error finding the org node for the current node: ", node);
+          Notification.fire({
+            title: "Couldn't find the templates fo the organisation",
+            icon: "error",
+          });
+          return;
         }
-        orgNode = orgNode?.parent;
 
-        // By now we should have the org node -> get the template folder
-        console.log("Org node: ", orgNode);
-        console.log("Org node children: ", orgNode?.children);
         // Select the child node that has `docType` folder and `isTemplate` true
         const templateNode = orgNode?.children.find(
           (child) => child.docType === SagDocumentType.FOLDER && child.isTemplate,
         );
-        console.log("Template node: ", templateNode);
-
+        // console.log("Template node: ", templateNode);
         // If no template folder is found for the organisation, show an error message
         if (!templateNode) {
           Notification.fire({
