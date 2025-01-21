@@ -192,7 +192,7 @@ export class TreeNode implements GetChildren {
       console.error("Cannot create document that is not a folder or a file");
       return;
     }
-    console.log("Sending request to create document with content: ", content);
+    // console.log("Sending request to create document with content: ", content);
     const resp = await eden.api.document.post({
       name: name,
       documentType: docType.toString().toLowerCase() as "file" | "folder",
@@ -286,6 +286,8 @@ export class TreeNode implements GetChildren {
   }
 
   async saveFileAsTemplate(content: string) {
+    // TODO: Here we should fire swal to get the name for the template
+    // TODO: Also should check that the path is possible
     const resp = await eden.api.save_as_template.post({
       organizationName: this.orgName as string,
       name: this.name() as string,
@@ -295,14 +297,46 @@ export class TreeNode implements GetChildren {
         credentials: "include",
       },
     });
-    if (resp.status !== 200) {
+    if (resp.status !== 201) {
       console.error("Error saving content as template");
+      Notification.fire({
+        title: resp.data as string,
+        icon: "error",
+      });
+      return false;
     } else {
       Notification.fire({
         title: "File saved as template",
         icon: "success",
       });
-      // TODO: Set new node as the selected node
+      console.log("Response for creating the new node: ", resp.data);
+      const newNode = new TreeNode({
+        name: this.name() as string,
+        docType: SagDocumentType.FILE,
+        path: resp.data as string,
+        projectName: null, // There is no project name on purpose
+        orgName: this.orgName,
+        municipalityName: this.municipalityName,
+        isExpanded: true,
+        isTemplate: true,
+      });
+      console.log("New node created: ", newNode);
+      // Traverse the tree to find the org node
+      // TODO: Traversal like this may lead to infinite loop if the newly added nodes don't have a parent node connected
+      // TODO: Reused logic, extract it into a node function
+      let orgNode = this as TreeNode; // Init the node to the current node
+      while (orgNode?.parent?.docType !== SagDocumentType.ORG) {
+        orgNode = orgNode.parent as TreeNode;
+      }
+      orgNode = orgNode?.parent;
+      // Select the child node that has `docType` folder and `isTemplate` true
+      const templateNode = orgNode?.children.find(
+        (child) => child.docType === SagDocumentType.FOLDER && child.isTemplate,
+      );
+      templateNode?.addChild(newNode);
+      // console.log("New node added to the org node's template folder: ", templateNode);
+      // TODO: Now pass down true and navigate based on it
+      return true;
     }
   }
 
@@ -618,7 +652,8 @@ function FileContextMenu(props: { children: JSXElement }) {
       }
       case MenuOption.AddFileFromTemplate: {
         // Traverse the tree up to the org level
-        let orgNode = selectedNode();
+        // TODO: Traversal like this may lead to infinite loop if the newly added nodes don't have a parent node connected
+        let orgNode = selectedNode(); // Init the node to the current node
         const nodeOrg = node?.orgName;
         console.log("Node org: ", nodeOrg);
         while (orgNode?.parent?.docType !== SagDocumentType.ORG) {

@@ -1139,23 +1139,72 @@ export async function saveAsTemplate(userId: string, organizationName: string, n
     throw new SagError(`User ${userId} does not exist`);
   }
   console.log("User is trying to author a new template:", user.email);
+  // TODO: Check if user has permissions to create a template in the organisation
+  // - Just check that user is a member of the organisation - superuserglobal, superusermunicipality, default
+  if (user.userType === UserType.SUPERUSER_MUNICIPALITY) {
+    // TODO: Check that the user's municipality has the organisation as a member
+    const isOrgInUserMunicipality = await prisma.organization.findFirst({
+      where: {
+        id: organization.id,
+        municipalityId: user.municipalityId,
+      },
+    });
 
-  const path = joinPath("templates", name);
+    if (!isOrgInUserMunicipality) {
+      throw new SagError("User does not have permissions to create a template in this organization.");
+    }
+  } else if (user.userType === UserType.DEFAULT) {
+    // Check that the user's organisation is the same as the template's organisation
+    if (user.organizationId !== organization.id) {
+      throw new SagError("User does not have permissions to create a template in this organisation");
+    }
+  } // ELSE: Superuser global can create templates in any organisation
 
-  const result = await prisma.$executeRaw`
-    INSERT INTO documents (id, name, content, "authorId", "organizationId", path, "documentType", "isTemplate")
-    VALUES (
-      ${createId()},
-      ${name},
-      ${content},
-      ${userId},
-      ${organization.id},
-      text2ltree(${path}),
-      'FILE'::"DocumentType",
-      true
-    );`;
+  // Check if a template with the same name already exists in the organisation
+  const templatePath = joinPath("templates", name);
+  const existingTemplate = await prisma.$executeRaw`
+    SELECT * FROM documents
+    WHERE "organizationId" = ${organization.id}
+      AND path = text2ltree(${templatePath})
+      AND name = ${name}
+      AND "isTemplate" = ${true}
+      AND "documentType" = 'FILE'::"DocumentType"
+  `;
+  // console.log("Trying to create a template with path:", templatePath);
+  // console.log("Existing template:", existingTemplate);
+  if (existingTemplate) {
+    throw new SagError(`Template "${name}" already exists in organization "${organizationName}".`);
+  }
 
-  return result;
+  // Create the template
+  try {
+    const result = await prisma.$executeRaw`
+      INSERT INTO documents (id, name, content, "authorId", "organizationId", path, "documentType", "isTemplate")
+      VALUES (
+        ${createId()},
+        ${name},
+        ${content},
+        ${userId},
+        ${organization.id},
+        text2ltree(${templatePath}),
+        'FILE'::"DocumentType",
+        true
+      );`;
+
+    return templatePath;
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError) {
+      switch (e.code) {
+        case "P2002":
+          throw new SagError(`Template with name "${name}" already exists.`);
+        case "P2010":
+          throw new SagError("Can't create template, invalid permissions.");
+        default:
+          throw e; // Re-throw unexpected Prisma errors
+      }
+    }
+    throw e; // Re-throw non-Prisma errors
+  }
 }
 
 async function updateChildPaths(

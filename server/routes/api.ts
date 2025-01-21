@@ -183,7 +183,6 @@ export const api = new Elysia({ prefix: "/api" })
       },
     },
   )
-
   .post(
     "/document",
     async ({
@@ -413,13 +412,24 @@ export const api = new Elysia({ prefix: "/api" })
         set.status = 401;
         return { error: "Unauthorized" };
       }
-      const result = await sql.saveAsTemplate(userId, organizationName, name, content);
-      if (result === null) {
-        set.status = 400;
-        return "Could not save as template";
+      try {
+        const result = await sql.saveAsTemplate(userId, organizationName, name, content);
+        if (result === null) {
+          set.status = 400;
+          return "Could not save document as template";
+        }
+        set.status = 201;
+        return result;
+      } catch (e) {
+        if (e instanceof SagError) {
+          console.log(e.message);
+          set.status = 400;
+          return e.message;
+        } else {
+          set.status = 500;
+          return "An error occurred";
+        }
       }
-      set.status = 200;
-      return "Document saved as template";
     },
     {
       body: t.Object({

@@ -344,12 +344,42 @@ function Editor(): JSX.Element {
                 onClick={async () => {
                   const node = selectedNode();
                   if (node !== null) {
-                    node.saveFileAsTemplate(code());
-                    // setSavedContent(code());
+                    const result = await node.saveFileAsTemplate(code());
+                    // Result: true for success, false for failure
+                    if (result) {
+                      console.log("File saved as template");
+                      // Create the new node in leftsidebar
+                      // const newNode = await node?.createDocument(
+                      //   filenameSwal.value as string,
+                      //   DocumentType.FILE,
+                      //   node?.path() as string,
+                      //   code(),
+                      // );
+                      // Navigate to the new node
+                    }
                   }
                 }}
               >
                 Save File as Template
+              </Button.Root>
+            </>
+          )}
+          {isTemplate() && (
+            <>
+              <Button.Root
+                class={`bg-gray-900 hover:bg-black text-white font-bold py-1 px-5 rounded-xl focus:outline-none focus:shadow-outline text-lg w-32${
+                  lastSelectedFile()?.isFile() && hasUnsavedChanges() ? "" : " cursor-not-allowed"
+                }`}
+                disabled={!(lastSelectedFile()?.isFile() && hasUnsavedChanges())}
+                onClick={async () => {
+                  const node = selectedNode();
+                  if (node !== null) {
+                    node.saveContent(code());
+                    setSavedContent(code());
+                  }
+                }}
+              >
+                Save File
               </Button.Root>
             </>
           )}
