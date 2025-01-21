@@ -285,7 +285,7 @@ export class TreeNode implements GetChildren {
     }
   }
 
-  async saveFileAsTemplate(content: string) {
+  async saveFileAsTemplate(content: string): Promise<TreeNode | null> {
     // TODO: Here we should fire swal to get the name for the template
     // TODO: Also should check that the path is possible
     const resp = await eden.api.save_as_template.post({
@@ -303,7 +303,7 @@ export class TreeNode implements GetChildren {
         title: resp.data as string,
         icon: "error",
       });
-      return false;
+      return null;
     } else {
       Notification.fire({
         title: "File saved as template",
@@ -336,7 +336,7 @@ export class TreeNode implements GetChildren {
       templateNode?.addChild(newNode);
       // console.log("New node added to the org node's template folder: ", templateNode);
       // TODO: Now pass down true and navigate based on it
-      return true;
+      return newNode;
     }
   }
 

@@ -129,7 +129,7 @@ const checkErrors = () => {
 };
 
 function Editor(): JSX.Element {
-  const { editorView, editorRef, createExtension, code, selectedNode } = useContext(EditorContext) as IEditorContext;
+  const { editorView, editorRef, createExtension, code, selectedNode, navigateToFile } = useContext(EditorContext) as IEditorContext;
 
   const [lastSelectedFile, setLastSelectedFile] = createSignal<TreeNode | null>(null);
 
@@ -345,17 +345,10 @@ function Editor(): JSX.Element {
                   const node = selectedNode();
                   if (node !== null) {
                     const result = await node.saveFileAsTemplate(code());
-                    // Result: true for success, false for failure
-                    if (result) {
+                    // Result: if successful returns the `newNode` else returns `null` and fires swal error
+                    if (result instanceof TreeNode) {
                       console.log("File saved as template");
-                      // Create the new node in leftsidebar
-                      // const newNode = await node?.createDocument(
-                      //   filenameSwal.value as string,
-                      //   DocumentType.FILE,
-                      //   node?.path() as string,
-                      //   code(),
-                      // );
-                      // Navigate to the new node
+                      navigateToFile(result);
                     }
                   }
                 }}
