@@ -58,7 +58,8 @@ export async function createOrganization(
   if ((await selectMunicipality(municipalityName)) === null) {
     throw new SagError(`Municipality ${municipalityName} does not exist`);
   }
-  return await prisma.organization.create({
+  // Create org
+  const organization = await prisma.organization.create({
     data: {
       name: name,
       description: description,
@@ -68,6 +69,55 @@ export async function createOrganization(
       verified: verified ?? false,
     },
   });
+
+  // Add templates folder - NOTE: We can not use prisma.document.create() here because it does not support ltree type
+  // TODO: The owner / author of this folder is the default user. Is this correct?
+  await prisma.$executeRaw`
+    INSERT INTO documents (id, name, content, "authorId", "organizationId", path, "documentType", "isTemplate")
+    VALUES (
+      ${createId()},
+      'Templates',
+      'This is the template folder for the organization: ${organization.name}',
+      (SELECT id FROM users WHERE users.name = 'default'),
+      (SELECT id FROM organisations WHERE organisations.name = ${organization.name}),
+      text2ltree('templates'),
+      'FOLDER'::"DocumentType",
+      true
+    );
+  `;
+
+  // Add example templates to the templates folder
+  const exampleTemplates = [
+    {
+      templateTitle: "Example template 1",
+      templateContent:
+        "Welcome to the templates feature!\n\nHere you can see all of your organization's templates and edit, delete them as needed.\n\nTo create a new template you can simply save file as template when creating it regularly.\n\nYou can also create new files from templates when creating a new file, to do this you have select one of your organisation's templates like this one.",
+    },
+    {
+      templateTitle: "Example template 2",
+      templateContent:
+        "service:\n    title is Dash dashboard\n    version is 1.0.0\n    scope is Environment\n\ndata:\n    sources -> first\n\nfirst:\n    type is SmartMeter\n    provider is Fiware\n    uri is http://localhost:1026/v2/entities\n    query is AirQualityObserved\n    config:\n        measurements:\n            450 is temperature\n            330 is humidity\n        token is 1234567890\n        company is 23\n\napplication:\n    type is Web\n    dashboard is Dash\n    layout is SinglePage\n    roles -> User, SuperUser, Admin\n    panels -> Map, Pie, XY, TS, Bar\n\nMap:\n    label is map\n    type is geomap\n    source is first\n    area is Madrid\n    data -> location, stationName, O3, NO2, SO2, address\n\nPie:\n    label is pie\n    type is pie_chart\n    source is first\n    traces -> NOx, O3, NO2, SO2, id\n    pie_chart_type is pie\n\nXY:\n    label is xy\n    type is xy_chart\n    source is first\n    traces -> dateObserved, NOx, O3, NO2, SO2, id\n\nTS:\n    label is ts\n    type is timeseries\n    source is first\n    traces -> dateObserved, NOx, O3, NO2, SO2, id\n\nBar:\n    label is bar\n    type is bar_chart\n    source is first\n    traces -> dateObserved, NOx, O3, NO2, SO2, id\n\ndeployment:\n    environments -> <local | azure>\n\n<local:>\n    <uri is https://localhost.org:3000/test>\n    <port is 50055>\n    <type is Docker>",
+    },
+  ];
+
+  // TODO: The owner / author of these files is the default user. Is this correct?
+  for (const template of exampleTemplates) {
+    await prisma.$executeRaw`
+        INSERT INTO documents (id, name, content, "authorId", "organizationId", path, "documentType", "isTemplate")
+        VALUES (
+          ${createId()},
+          ${template.templateTitle},
+          ${template.templateContent},
+          (SELECT id FROM users WHERE users.name = 'default'),
+          (SELECT id FROM organisations WHERE organisations.name = ${organization.name}),
+          text2ltree(${joinPath("templates", template.templateTitle)}),
+          'FILE'::"DocumentType",
+          true
+        );
+      `;
+  }
+
+  return organization;
 }
 
 export async function selectOrganization(name: string): Promise<Organization | null> {
