@@ -194,7 +194,7 @@ export class TreeNode implements GetChildren {
       case SagDocumentType.FILE:
         return "📄";
       case SagDocumentType.FOLDER:
-        if (this.name() === "Templates") return "📚";
+        if (this.isTemplate) return "📚";
         return "📁";
       case SagDocumentType.MUNICIPALITY:
         return "🏠";
@@ -693,6 +693,7 @@ function FileContextMenu(props: { children: JSXElement }) {
           const newNode = await node?.createDocument(value as string, SagDocumentType.FILE, node?.path() as string);
           if (newNode && newNode instanceof TreeNode) {
             navigateToFile(newNode);
+            node?.setIsExpanded(true);
           }
         }
 
@@ -793,7 +794,8 @@ function FileContextMenu(props: { children: JSXElement }) {
             );
             console.log("Navigating to the new node: ", newNode);
             if (newNode && newNode instanceof TreeNode) {
-              navigateToFile(newNode);
+              navigateToFile(newNode); // Navigate context to the file
+              node?.setIsExpanded(true); // Expand the folder above it (it should be enough as to create the file you need access to the folder)
             }
           }
         }
@@ -820,6 +822,7 @@ function FileContextMenu(props: { children: JSXElement }) {
         if (value && value.length > 0) {
           const node = selectedNode();
           node?.createDocument(value as string, SagDocumentType.FOLDER, node?.path() as string);
+          node?.setIsExpanded(true);
         }
 
         break;
