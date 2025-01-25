@@ -3,6 +3,7 @@ import { createEditorControlledValue } from "solid-codemirror";
 import { linter, Diagnostic, lintGutter } from "@codemirror/lint";
 import { EditorView, lineNumbers, keymap } from "@codemirror/view";
 import { Button } from "@kobalte/core";
+import { DropdownMenu } from "@kobalte/core/dropdown-menu";
 
 import { eden } from "@client/api";
 import styles from "@client/styles/Editor.module.css";
@@ -136,6 +137,7 @@ function Editor(): JSX.Element {
   // track the saved content
   const [savedContent, setSavedContent] = createSignal<string | null>(null);
   const hasUnsavedChanges = () => savedContent() !== code();
+  const [saveMethod, setSaveMethod] = createSignal<"file" | "template">("file");
 
   // track selected node attributes
   const isTemplate = () => lastSelectedFile()?.isTemplate || false;
@@ -322,58 +324,57 @@ function Editor(): JSX.Element {
               >
                 Open Dashboard
               </Button.Root>
-              <Button.Root
-                class={`bg-gray-900 hover:bg-black text-white font-bold py-1 px-5 rounded-xl focus:outline-none focus:shadow-outline text-lg w-32${
-                  lastSelectedFile()?.isFile() && hasUnsavedChanges() ? "" : " cursor-not-allowed"
-                }`}
-                disabled={!(lastSelectedFile()?.isFile() && hasUnsavedChanges())}
-                onClick={async () => {
-                  const node = selectedNode();
-                  if (node !== null) {
-                    node.saveContent(code());
-                    setSavedContent(code());
-                  }
-                }}
-              >
-                Save File
-              </Button.Root>
-              <Button.Root
-                class={"bg-gray-900 hover:bg-black text-white font-bold py-1 px-5 rounded-xl focus:outline-none focus:shadow-outline text-lg w-32".concat(
-                  lastSelectedFile()?.isFile() ? "" : " cursor-not-allowed",
-                )}
-                onClick={async () => {
-                  const node = selectedNode();
-                  if (node !== null) {
-                    const result = await node.saveFileAsTemplate(code());
-                    // Result: if successful returns the `newNode` else returns `null` and fires swal error
-                    if (result instanceof TreeNode) {
-                      console.log("File saved as template");
-                      navigateToFile(result);
-                    }
-                  }
-                }}
-              >
-                Save File as Template
-              </Button.Root>
-            </>
-          )}
-          {isTemplate() && (
-            <>
-              <Button.Root
-                class={`bg-gray-900 hover:bg-black text-white font-bold py-1 px-5 rounded-xl focus:outline-none focus:shadow-outline text-lg w-32${
-                  lastSelectedFile()?.isFile() && hasUnsavedChanges() ? "" : " cursor-not-allowed"
-                }`}
-                disabled={!(lastSelectedFile()?.isFile() && hasUnsavedChanges())}
-                onClick={async () => {
-                  const node = selectedNode();
-                  if (node !== null) {
-                    node.saveContent(code());
-                    setSavedContent(code());
-                  }
-                }}
-              >
-                Save File
-              </Button.Root>
+              <DropdownMenu>
+                <DropdownMenu.Trigger class={styles["dropdown-menu__trigger"]}>
+                  <span>Save as</span>
+                </DropdownMenu.Trigger>
+                <DropdownMenu.Portal>
+                  <DropdownMenu.Content class={styles["dropdown-menu__content"]}>
+                    <DropdownMenu.RadioGroup
+                      value={saveMethod()}
+                      onChange={setSaveMethod}
+                    >
+                      <DropdownMenu.RadioItem
+                        class={`${styles["dropdown-menu__radio-item"]} ${!(lastSelectedFile()?.isFile() && hasUnsavedChanges())
+                            ? styles["dropdown-menu__radio-item--disabled"]
+                            : ''
+                          }`}
+                        value="file"
+                        disabled={!(lastSelectedFile()?.isFile() && hasUnsavedChanges())}
+                        onSelect={async () => {
+                          const node = selectedNode();
+                          if (node !== null) {
+                            node.saveContent(code());
+                            setSavedContent(code());
+                          }
+                        }}
+                      >
+                        <DropdownMenu.ItemIndicator class={styles["dropdown-menu__item-indicator"]}>
+                        </DropdownMenu.ItemIndicator>
+                        Save as File
+                      </DropdownMenu.RadioItem>
+                      <DropdownMenu.RadioItem
+                        class={styles["dropdown-menu__radio-item"]}
+                        value="template"
+                        onSelect={async () => {
+                          const node = selectedNode();
+                          if (node !== null) {
+                            const result = await node.saveFileAsTemplate(code());
+                            if (result instanceof TreeNode) {
+                              navigateToFile(result);
+                            }
+                          }
+                        }}
+                      >
+                        <DropdownMenu.ItemIndicator class={styles["dropdown-menu__item-indicator"]}>
+                        </DropdownMenu.ItemIndicator>
+                        Save as Template
+                      </DropdownMenu.RadioItem>
+                    </DropdownMenu.RadioGroup>
+                    <DropdownMenu.Arrow />
+                  </DropdownMenu.Content>
+                </DropdownMenu.Portal>
+              </DropdownMenu>
             </>
           )}
         </div>
