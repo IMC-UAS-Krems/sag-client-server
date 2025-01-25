@@ -163,7 +163,7 @@ export class TreeNode implements GetChildren {
       case SagDocumentType.FILE:
         return "📄";
       case SagDocumentType.FOLDER:
-        return "📁";
+        return `${this.isExpanded() ? "v" : ">"} ${this.isExpanded() ? "📂" : "📁"}`;
       case SagDocumentType.MUNICIPALITY:
         return "🏠";
       case SagDocumentType.ORG:
