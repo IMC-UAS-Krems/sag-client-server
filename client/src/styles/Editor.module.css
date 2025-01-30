@@ -49,6 +49,16 @@
   text-decoration-color: red;
 }
 
+
+/* Editor custom plugin placeholder highligh depends on this */
+.placeholder-highlight {
+  color: #ff8c00;
+  font-weight: bold;
+  border-radius: 3px;
+  padding: 0 2px;
+}
+/*-----------------------------------------------------------*/
+
 .button-row {
   display: flex;
   flex-direction: row;
@@ -120,4 +130,5 @@
 
 .btn-disabled {
   cursor: not-allowed;
+
 }
