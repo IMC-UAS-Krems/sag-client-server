@@ -488,9 +488,7 @@ function FileNode(props: { node: TreeNode }) {
           <button
             class={`${styles["file-node-btn"]} ${isSelected() ? styles["file-node-btn-selected"] : ""}`}
             onClick={async () => {
-              if (
-                [SagDocumentType.FOLDER, SagDocumentType.FILE, SagDocumentType.PROJECT].includes(props.node.docType)
-              ) {
+              if (props.node.docType === SagDocumentType.FILE) {
                 navigateToFile(props.node);
               } else {
                 toggleExpanded();
