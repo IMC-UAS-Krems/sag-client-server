@@ -195,7 +195,7 @@ export class TreeNode implements GetChildren {
         return "📄";
       case SagDocumentType.FOLDER:
         if (this.isTemplate) return "📚";
-        return "📁";
+        return `${this.isExpanded() ? "v" : ">"} ${this.isExpanded() ? "📂" : "📁"}`;
       case SagDocumentType.MUNICIPALITY:
         return "🏠";
       case SagDocumentType.ORG:
@@ -625,10 +625,7 @@ function FileNode(props: { node: TreeNode }) {
           <button
             class={`${styles["file-node-btn"]} ${isSelected() ? styles["file-node-btn-selected"] : ""}`}
             onClick={async () => {
-              if (
-                // [SagDocumentType.FOLDER, SagDocumentType.FILE, SagDocumentType.PROJECT].includes(props.node.docType)
-                props.node.docType === SagDocumentType.FILE
-              ) {
+              if (props.node.docType === SagDocumentType.FILE) {
                 navigateToFile(props.node);
               } else {
                 toggleExpanded();
