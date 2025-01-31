@@ -177,10 +177,11 @@ function Editor(): JSX.Element {
     const node = selectedNode();
     if (node !== null) {
       setLastSelectedFile(node);
-      node.getContent().then((content) => setSavedContent(content));
-
-      setIsCompiled(false);
-      setDashboardUrl(null);
+      if (node.isFile()) {
+        node.getContent().then((content) => setSavedContent(content));
+        setIsCompiled(false);
+        setDashboardUrl(null);
+      }
     }
   });
 
@@ -376,8 +377,10 @@ function Editor(): JSX.Element {
                         onSelect={async () => {
                           const node = selectedNode();
                           if (node !== null) {
-                            node.saveContent(code());
-                            setSavedContent(code());
+                            const success = await node.saveContent(code());
+                            if (success) {
+                              setSavedContent(code());
+                            }
                           }
                         }}
                       >

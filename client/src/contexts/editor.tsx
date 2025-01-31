@@ -42,36 +42,41 @@ export function EditorProvider(props: { children: JSX.Element }): JSX.Element {
     }
 
     const currentContent = code();
-    const savedContent = (await selectedNode()?.getContent()) ?? "";
 
-    if (!isEditorInitialized()) {
-      setIsEditorInitialized(true);
-    } else if (currentContent.trim() === "" || currentContent !== savedContent || savedContent === "") {
-      try {
-        const result = await Swal.fire({
-          title: "Unsaved Changes",
-          text: "The current file has unsaved changes. Save it before leaving?",
-          icon: "warning",
-          showCancelButton: true,
-          confirmButtonText: "Yes",
-          cancelButtonText: "No",
-        });
+    if (selectedNode()?.isFile()) {
+      console.log("Getting content for selected node in editor.tsx - navigateToFile");
+      const savedContent = (await selectedNode()?.getContent()) ?? "";
+      if (!isEditorInitialized()) {
+        setIsEditorInitialized(true);
+      } else if (currentContent.trim() === "" || currentContent !== savedContent || savedContent === "") {
+        try {
+          const result = await Swal.fire({
+            title: "Unsaved Changes",
+            text: "The current file has unsaved changes. Save it before leaving?",
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonText: "Yes",
+            cancelButtonText: "No",
+          });
 
-        if (result.isConfirmed) {
-          try {
-            await selectedNode()?.saveContent(currentContent);
-          } catch (error) {
-            console.error("Failed to save content:", error);
+          if (result.isConfirmed) {
+            try {
+              await selectedNode()?.saveContent(currentContent);
+            } catch (error) {
+              console.error("Failed to save content:", error);
+            }
           }
+        } catch (error) {
+          console.error("Swal prompt failed:", error);
         }
-      } catch (error) {
-        console.error("Swal prompt failed:", error);
       }
     }
 
     try {
-      const newContent = await newNode.getContent();
-      handleFileClick(newContent);
+      if (newNode.isFile()) {
+        const newContent = await newNode.getContent();
+        handleFileClick(newContent);
+      }
       setSelectedNode(newNode);
     } catch (error) {
       console.error("Failed to navigate to file:", newNode.name(), error);

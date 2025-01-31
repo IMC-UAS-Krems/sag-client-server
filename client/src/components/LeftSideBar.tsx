@@ -782,7 +782,6 @@ function FileContextMenu(props: { children: JSXElement }) {
         });
 
         if (value) {
-          console.log("Selected Template:", templates[parseInt(value)]);
           const selectedTemplateNode = templateNode.children[parseInt(value)];
           const templateContent = await selectedTemplateNode.getContent();
           if (!templateContent) {
@@ -896,9 +895,10 @@ function FileContextMenu(props: { children: JSXElement }) {
           <Suspense>
             <ul class={styles["context-menu-ul"]}>
               <Show
-                when={[SagDocumentType.FOLDER, SagDocumentType.FILE].includes(
-                  selectedNode()?.docType as SagDocumentType,
-                )}
+                when={
+                  [SagDocumentType.FOLDER, SagDocumentType.FILE].includes(selectedNode()?.docType as SagDocumentType) &&
+                  !(selectedNode()?.isTemplate && selectedNode()?.docType === SagDocumentType.FOLDER)
+                }
               >
                 <ContextMenu.Item
                   class={styles["context-menu-item"]}
