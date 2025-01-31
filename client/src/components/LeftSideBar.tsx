@@ -189,6 +189,27 @@ export class TreeNode implements GetChildren {
     return orgNode?.parent;
   }
 
+  getPathList() {
+    console.log("Getting path list for node: ", this);
+    const path = [];
+
+    // To battle possible cycles
+    let iterCount = 0;
+    const maxIter = 100;
+    let currentNode = this as TreeNode;
+
+    while (currentNode.parent instanceof TreeNode && iterCount < maxIter) {
+      path.unshift(currentNode.name());
+      console.log("Parent is: ", currentNode.parent);
+      currentNode = currentNode.parent;
+      iterCount++;
+    }
+    path.unshift(currentNode.name());
+    path.unshift(currentNode.municipalityName);
+
+    return path;
+  }
+
   icon() {
     switch (this.docType) {
       case SagDocumentType.FILE:
@@ -287,12 +308,15 @@ export class TreeNode implements GetChildren {
   }
 
   async saveContent(content: string) {
-    const resp = await eden.api.document_content.put({
-      content: content,
-      projectName: this.projectName as string,
+    const requestBody = {
       organizationName: this.orgName as string,
       municipalityName: this.municipalityName as string,
       path: this.path() as string,
+      content: content,
+      ...(this.projectName ? { projectName: this.projectName as string } : {}),
+    };
+    const resp = await eden.api.document_content.put({
+      ...requestBody,
       $fetch: {
         mode: "cors",
         credentials: "include",
@@ -300,11 +324,17 @@ export class TreeNode implements GetChildren {
     });
     if (resp.status !== 200) {
       console.error("Error saving content");
+      Notification.fire({
+        title: "Error saving content",
+        icon: "error",
+      });
+      return false;
     } else {
       Notification.fire({
         title: "File saved",
         icon: "success",
       });
+      return true;
     }
   }
 
@@ -482,8 +512,8 @@ class FileTree implements GetChildren {
     for (let i = 1; i < doc.documentPath.split(".").length; i++) {
       currentNode = currentNode?.findChild({ path: path });
     }
-    console.log("Adding document to: ", currentNode);
-    console.log("Document to add: ", doc);
+    // console.log("Adding document to: ", currentNode);
+    // console.log("Document to add: ", doc);
     currentNode?.addChild(
       new TreeNode({
         name: doc.name,

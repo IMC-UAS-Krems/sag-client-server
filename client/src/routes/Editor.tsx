@@ -4,6 +4,7 @@ import { linter, Diagnostic, lintGutter } from "@codemirror/lint";
 import { EditorView, lineNumbers, keymap } from "@codemirror/view";
 import { Button } from "@kobalte/core";
 import { DropdownMenu } from "@kobalte/core/dropdown-menu";
+import { Breadcrumbs } from "@kobalte/core/breadcrumbs";
 
 import { eden } from "@client/api";
 import styles from "@client/styles/Editor.module.css";
@@ -129,8 +130,38 @@ const checkErrors = () => {
   return errorMap;
 };
 
+function FileTreeBreadcrumb(lastSelectedNode: TreeNode | null): JSX.Element {
+  console.log("Rerendering FileTreeBreadcrumb with node:", lastSelectedNode);
+  if (!lastSelectedNode) {
+    return <></>;
+  }
+
+  const pathList = lastSelectedNode.getPathList();
+
+  return (
+    <Breadcrumbs class="mx-2 overflow-x-scroll">
+      <ol class={styles["breadcrumbs__list"]}>
+        {pathList.map((name, index) => (
+          <li class={styles["breadcrumbs__item"]}>
+            <Breadcrumbs.Link
+              // href="/"
+              class={styles["breadcrumbs__link"]}
+              {...(index === pathList.length - 1 ? { current: true } : {})}
+            >
+              {name}
+            </Breadcrumbs.Link>
+            {index < pathList.length - 1 && <Breadcrumbs.Separator class={styles["breadcrumbs__separator"]} />}
+          </li>
+        ))}
+      </ol>
+    </Breadcrumbs>
+  );
+}
+
 function Editor(): JSX.Element {
-  const { editorView, editorRef, createExtension, code, selectedNode, navigateToFile } = useContext(EditorContext) as IEditorContext;
+  const { editorView, editorRef, createExtension, code, selectedNode, navigateToFile } = useContext(
+    EditorContext,
+  ) as IEditorContext;
 
   const [lastSelectedFile, setLastSelectedFile] = createSignal<TreeNode | null>(null);
 
@@ -286,12 +317,15 @@ function Editor(): JSX.Element {
 
   createExtension(customKeyBehaviour);
 
+  // console.log("Selected node in the editor:", selectedNode());
+
   return (
     <Header>
       <main>
-        <div class="flex flex-row justify-end mx-1 space-x-2">
+        <div class="flex flex-row mx-1 justify-between items-center">
+          {FileTreeBreadcrumb(lastSelectedFile())}
           {!isTemplate() && (
-            <>
+            <div class="space-x-2 ml-auto">
               {" "}
               <Button.Root
                 class={"bg-gray-900 hover:bg-black text-white font-bold py-1 px-5 rounded-xl focus:outline-none focus:shadow-outline text-lg w-32".concat(
@@ -330,15 +364,13 @@ function Editor(): JSX.Element {
                 </DropdownMenu.Trigger>
                 <DropdownMenu.Portal>
                   <DropdownMenu.Content class={styles["dropdown-menu__content"]}>
-                    <DropdownMenu.RadioGroup
-                      value={saveMethod()}
-                      onChange={setSaveMethod}
-                    >
+                    <DropdownMenu.RadioGroup value={saveMethod()} onChange={setSaveMethod}>
                       <DropdownMenu.RadioItem
-                        class={`${styles["dropdown-menu__radio-item"]} ${!(lastSelectedFile()?.isFile() && hasUnsavedChanges())
+                        class={`${styles["dropdown-menu__radio-item"]} ${
+                          !(lastSelectedFile()?.isFile() && hasUnsavedChanges())
                             ? styles["dropdown-menu__radio-item--disabled"]
-                            : ''
-                          }`}
+                            : ""
+                        }`}
                         value="file"
                         disabled={!(lastSelectedFile()?.isFile() && hasUnsavedChanges())}
                         onSelect={async () => {
@@ -349,8 +381,9 @@ function Editor(): JSX.Element {
                           }
                         }}
                       >
-                        <DropdownMenu.ItemIndicator class={styles["dropdown-menu__item-indicator"]}>
-                        </DropdownMenu.ItemIndicator>
+                        <DropdownMenu.ItemIndicator
+                          class={styles["dropdown-menu__item-indicator"]}
+                        ></DropdownMenu.ItemIndicator>
                         Save as File
                       </DropdownMenu.RadioItem>
                       <DropdownMenu.RadioItem
@@ -366,8 +399,9 @@ function Editor(): JSX.Element {
                           }
                         }}
                       >
-                        <DropdownMenu.ItemIndicator class={styles["dropdown-menu__item-indicator"]}>
-                        </DropdownMenu.ItemIndicator>
+                        <DropdownMenu.ItemIndicator
+                          class={styles["dropdown-menu__item-indicator"]}
+                        ></DropdownMenu.ItemIndicator>
                         Save as Template
                       </DropdownMenu.RadioItem>
                     </DropdownMenu.RadioGroup>
@@ -375,7 +409,28 @@ function Editor(): JSX.Element {
                   </DropdownMenu.Content>
                 </DropdownMenu.Portal>
               </DropdownMenu>
-            </>
+            </div>
+          )}
+          {isTemplate() && (
+            <div class="space-x-2 ml-auto">
+              <Button.Root
+                class={`border-2 bg-white text-black hover:bg-black hover:text-white font-bold py-1 px-5 rounded-xl focus:outline-none focus:shadow-outline text-lg ${lastSelectedFile()?.isFile() && hasUnsavedChanges() ? "" : " cursor-not-allowed"}`}
+                disabled={!(lastSelectedFile()?.isFile() && hasUnsavedChanges())}
+                // TODO: Implement save template logic
+                onClick={async () => {
+                  const node = selectedNode();
+                  console.log("Calling save on template node:", node);
+                  if (node !== null) {
+                    const success = await node.saveContent(code());
+                    if (success) {
+                      setSavedContent(code());
+                    }
+                  }
+                }}
+              >
+                Update template
+              </Button.Root>
+            </div>
           )}
         </div>
         <div class={styles["editor-container"]}>
