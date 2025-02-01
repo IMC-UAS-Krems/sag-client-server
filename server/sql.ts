@@ -913,7 +913,7 @@ export async function getContent(
 
   switch (user.userType) {
     case UserType.DEFAULT: {
-      if (projectName !== "null") {
+      if (projectName) {
         // Query when projectName is provided
         return await prisma.$queryRaw<{ content: string }[]>`
           SELECT documents.content
@@ -949,7 +949,7 @@ export async function getContent(
       }
     }
     case UserType.SUPERUSER_MUNICIPALITY: {
-      if (projectName !== "null") {
+      if (projectName) {
         // Query when projectName is provided
         return await prisma.$queryRaw<{ content: string }[]>`
           SELECT documents.content
@@ -983,7 +983,7 @@ export async function getContent(
       }
     }
     case UserType.SUPERUSER_GLOBAL: {
-      if (projectName !== "null") {
+      if (projectName) {
         // console.log("Getting content for global superuser with project");
         return await prisma.$queryRaw<{ content: string }[]>`
         SELECT documents.content

@@ -288,13 +288,14 @@ export class TreeNode implements GetChildren {
   }
 
   async getContent(): Promise<string> {
+    const queryBody = {
+      organizationName: this.orgName as string,
+      municipalityName: this.municipalityName as string,
+      path: this.path() as string,
+      ...(this.projectName ? { projectName: this.projectName as string } : {}),
+    }
     const resp = await eden.api.document_content.get({
-      $query: {
-        projectName: this.projectName as string,
-        organizationName: this.orgName as string,
-        municipalityName: this.municipalityName as string,
-        path: this.path() as string,
-      },
+      $query: queryBody,
       $fetch: {
         mode: "cors",
         credentials: "include",
