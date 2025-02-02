@@ -64,6 +64,7 @@ export class TreeNode implements GetChildren {
   orgName: string | undefined;
   parent: TreeNode | undefined;
   isTemplate: boolean | undefined;
+  editorContext?: IEditorContext; // Injected editor context
 
   /**
    * @param params.name - name of the document that will be displayed
@@ -76,17 +77,20 @@ export class TreeNode implements GetChildren {
    * @param params.parent - parent of the document
    * @param params.isTemplate - whether the document is a template or not
    */
-  constructor(params: {
-    name: string;
-    docType: SagDocumentType;
-    isExpanded?: boolean;
-    path?: string;
-    projectName?: string;
-    orgName?: string;
-    municipalityName: string;
-    parent?: TreeNode;
-    isTemplate?: boolean;
-  }) {
+  constructor(
+    params: {
+      name: string;
+      docType: SagDocumentType;
+      isExpanded?: boolean;
+      path?: string;
+      projectName?: string;
+      orgName?: string;
+      municipalityName: string;
+      parent?: TreeNode;
+      isTemplate?: boolean;
+    },
+    editorContext?: IEditorContext,
+  ) {
     [this.name, this.setName] = createSignal(params.name);
     this.docType = params.docType;
     [this.path, this.setPath] = createSignal(params.path);
@@ -97,6 +101,7 @@ export class TreeNode implements GetChildren {
     this.children = createMutable([]);
     this.parent = params.parent;
     this.isTemplate = params.isTemplate;
+    this.editorContext = editorContext;
 
     if (this.isExpanded()) this.saveExpandedState(this.isExpanded());
   }
@@ -267,8 +272,6 @@ export class TreeNode implements GetChildren {
   }
 
   async deleteDocument() {
-    // const { setSelectedNode, setCode } = useContext(EditorContext) as IEditorContext;
-
     if (![SagDocumentType.FILE, SagDocumentType.FOLDER].includes(this.docType)) {
       console.error("Cannot delete document that is not a folder or a file");
       return;
@@ -294,10 +297,10 @@ export class TreeNode implements GetChildren {
       if (index !== undefined) {
         this.parent?.children.splice(index, 1);
       }
-      // if (this.parent instanceof TreeNode) {
-      //   setSelectedNode(this.parent);
-      //   setCode("");
-      // }
+      if (this.parent instanceof TreeNode && this.editorContext) {
+        this.editorContext.setSelectedNode(this.parent); // This could also be set to `null`, but needs extra care with the breadcrumbs
+        this.editorContext.setCode("");
+      }
 
       Notification.fire({
         title: "File deleted successfully",
@@ -424,17 +427,20 @@ export class TreeNode implements GetChildren {
         icon: "success",
       });
       console.log("Response for creating the new node: ", resp.data);
-      const newNode = new TreeNode({
-        name: value as string,
-        docType: SagDocumentType.FILE,
-        path: resp.data as string,
-        projectName: undefined, // There is no project name on purpose
-        orgName: this.orgName,
-        municipalityName: this.municipalityName,
-        isExpanded: true,
-        isTemplate: true,
-        parent: templateNode,
-      });
+      const newNode = new TreeNode(
+        {
+          name: value as string,
+          docType: SagDocumentType.FILE,
+          path: resp.data as string,
+          projectName: undefined, // There is no project name on purpose
+          orgName: this.orgName,
+          municipalityName: this.municipalityName,
+          isExpanded: true,
+          isTemplate: true,
+          parent: templateNode,
+        },
+        this.editorContext,
+      );
       console.log("New node created: ", newNode);
 
       templateNode?.addChild(newNode);
@@ -497,10 +503,12 @@ export class TreeNode implements GetChildren {
 
 class FileTree implements GetChildren {
   root: TreeNode;
+  editorContext: IEditorContext;
 
-  constructor() {
+  constructor(editorContext: IEditorContext) {
     // @ts-expect-error: this is a special node that does not renderen thus can have many undefined properties
     this.root = createMutable(new TreeNode({ name: "root", docType: SagDocumentType.FOLDER }));
+    this.editorContext = editorContext;
   }
 
   addDocument(doc: SagDocument, old_state: expandState) {
@@ -553,7 +561,7 @@ class FileTree implements GetChildren {
           `${doc.municipalityName}.${doc.orgName}.${doc.projectName}.${doc.documentPath}`,
         ),
         isTemplate: doc.isTemplate,
-      }),
+      }, this.editorContext),
     );
   }
 
@@ -572,7 +580,7 @@ class FileTree implements GetChildren {
           docType: SagDocumentType.MUNICIPALITY,
           municipalityName: municipality,
           isExpanded: this.parse_old_state(old_state, municipality),
-        }),
+        }, this.editorContext),
       );
     }
   }
@@ -587,7 +595,7 @@ class FileTree implements GetChildren {
           municipalityName: municipalityNode.municipalityName,
           orgName: org,
           isExpanded: this.parse_old_state(old_state, `${municipality}.${org}`),
-        }),
+        }, this.editorContext),
       );
     }
   }
@@ -605,7 +613,7 @@ class FileTree implements GetChildren {
           projectName: project,
           parent: orgNode,
           isExpanded: this.parse_old_state(old_state, `${municipality}.${org}.${project}`),
-        }),
+        }, this.editorContext),
       );
     }
   }
@@ -1007,7 +1015,8 @@ function FileContextMenu(props: { children: JSXElement }) {
 }
 
 export function LeftSideBar() {
-  const tree = new FileTree();
+  const editorContext = useContext(EditorContext) as IEditorContext;
+  const tree = new FileTree(editorContext);
 
   onMount(() => {
     eden.api.documents
