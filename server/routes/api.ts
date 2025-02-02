@@ -372,7 +372,7 @@ export const api = new Elysia({ prefix: "/api" })
       body: { projectName, organizationName, municipalityName, path },
       userId,
     }: AuthContextWithBody<{
-      projectName: string;
+      projectName: string | undefined;
       organizationName: string;
       municipalityName: string;
       path: string;
@@ -391,7 +391,7 @@ export const api = new Elysia({ prefix: "/api" })
     },
     {
       body: t.Object({
-        projectName: t.String(),
+        projectName: t.Optional(t.String()),
         organizationName: t.String(),
         municipalityName: t.String(),
         path: t.String(),

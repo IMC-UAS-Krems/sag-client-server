@@ -176,7 +176,7 @@ export class TreeNode implements GetChildren {
     while (orgNode?.parent?.docType !== SagDocumentType.ORG && iterCount < maxIter) {
       const nodeParent = orgNode?.parent;
       if (!(nodeParent instanceof TreeNode)) {
-        console.error("Parent node is not a TreeNode for node: ", node);
+        console.error("Parent node is not a TreeNode for node: ", nodeParent);
         // Notification.fire({
         //   title: "Error in finding templates",
         //   icon: "error",
@@ -267,11 +267,21 @@ export class TreeNode implements GetChildren {
   }
 
   async deleteDocument() {
-    const resp = await eden.api.document.delete({
-      path: this.path() as string,
-      projectName: this.projectName as string,
+    // const { setSelectedNode, setCode } = useContext(EditorContext) as IEditorContext;
+
+    if (![SagDocumentType.FILE, SagDocumentType.FOLDER].includes(this.docType)) {
+      console.error("Cannot delete document that is not a folder or a file");
+      return;
+    }
+
+    const requestBody = {
       organizationName: this.orgName as string,
       municipalityName: this.municipalityName as string,
+      path: this.path() as string,
+      ...(this.projectName ? { projectName: this.projectName as string } : {}),
+    };
+    const resp = await eden.api.document.delete({
+      ...requestBody,
       $fetch: {
         mode: "cors",
         credentials: "include",
@@ -284,6 +294,20 @@ export class TreeNode implements GetChildren {
       if (index !== undefined) {
         this.parent?.children.splice(index, 1);
       }
+      // if (this.parent instanceof TreeNode) {
+      //   setSelectedNode(this.parent);
+      //   setCode("");
+      // }
+
+      Notification.fire({
+        title: "File deleted successfully",
+        icon: "success",
+      });
+    } else {
+      Notification.fire({
+        title: "Error deleting file",
+        icon: "error",
+      });
     }
   }
 
@@ -293,7 +317,7 @@ export class TreeNode implements GetChildren {
       municipalityName: this.municipalityName as string,
       path: this.path() as string,
       ...(this.projectName ? { projectName: this.projectName as string } : {}),
-    }
+    };
     const resp = await eden.api.document_content.get({
       $query: queryBody,
       $fetch: {
@@ -404,7 +428,7 @@ export class TreeNode implements GetChildren {
         name: value as string,
         docType: SagDocumentType.FILE,
         path: resp.data as string,
-        projectName: null, // There is no project name on purpose
+        projectName: undefined, // There is no project name on purpose
         orgName: this.orgName,
         municipalityName: this.municipalityName,
         isExpanded: true,
@@ -911,9 +935,10 @@ function FileContextMenu(props: { children: JSXElement }) {
                 </ContextMenu.Item>
               </Show>
               <Show
-                when={[SagDocumentType.FOLDER, SagDocumentType.FILE].includes(
-                  selectedNode()?.docType as SagDocumentType,
-                )}
+                when={
+                  [SagDocumentType.FOLDER, SagDocumentType.FILE].includes(selectedNode()?.docType as SagDocumentType) &&
+                  !(selectedNode()?.isTemplate && selectedNode()?.docType === SagDocumentType.FOLDER)
+                }
               >
                 <ContextMenu.Item
                   class={styles["context-menu-item"]}
@@ -925,9 +950,11 @@ function FileContextMenu(props: { children: JSXElement }) {
                 </ContextMenu.Item>
               </Show>
               <Show
-                when={[SagDocumentType.FOLDER, SagDocumentType.PROJECT].includes(
-                  selectedNode()?.docType as SagDocumentType,
-                )}
+                when={
+                  [SagDocumentType.FOLDER, SagDocumentType.PROJECT].includes(
+                    selectedNode()?.docType as SagDocumentType,
+                  ) && !(selectedNode()?.isTemplate && selectedNode()?.docType === SagDocumentType.FOLDER)
+                }
               >
                 <ContextMenu.Item
                   class={styles["context-menu-item"]}
@@ -939,9 +966,11 @@ function FileContextMenu(props: { children: JSXElement }) {
                 </ContextMenu.Item>
               </Show>
               <Show
-                when={[SagDocumentType.FOLDER, SagDocumentType.PROJECT].includes(
-                  selectedNode()?.docType as SagDocumentType,
-                )}
+                when={
+                  [SagDocumentType.FOLDER, SagDocumentType.PROJECT].includes(
+                    selectedNode()?.docType as SagDocumentType,
+                  ) && !(selectedNode()?.isTemplate && selectedNode()?.docType === SagDocumentType.FOLDER)
+                }
               >
                 <ContextMenu.Item
                   class={styles["context-menu-item"]}
@@ -953,9 +982,11 @@ function FileContextMenu(props: { children: JSXElement }) {
                 </ContextMenu.Item>
               </Show>
               <Show
-                when={[SagDocumentType.FOLDER, SagDocumentType.PROJECT].includes(
-                  selectedNode()?.docType as SagDocumentType,
-                )}
+                when={
+                  [SagDocumentType.FOLDER, SagDocumentType.PROJECT].includes(
+                    selectedNode()?.docType as SagDocumentType,
+                  ) && !(selectedNode()?.isTemplate && selectedNode()?.docType === SagDocumentType.FOLDER)
+                }
               >
                 <ContextMenu.Item
                   class={styles["context-menu-item"]}

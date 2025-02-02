@@ -1131,45 +1131,101 @@ export async function deleteDocument(
   userId: string,
   municipalityName: string,
   orgName: string,
-  projectName: string,
+  projectName: string | undefined,
   documentPath: string,
 ) {
   // @ts-ignore
   const user: User | UserDocument = await selectUser(userId);
+  // TODO: Don't allow the deletion of folders with isTemplate tag and projects
+  // if (projectName) {
+  //   const document = await prisma.$queryRaw`
+  //     SELECT * FROM documents
+  //     INNER JOIN organisations ON organisations.id =
+  //     WHERE documents.path = text2ltree(${documentPath})
+  //     `;
+  // }
 
   switch (user.userType) {
     case UserType.DEFAULT: {
-      return await prisma.$executeRaw`
-            DELETE FROM documents
-            USING projects
-            INNER JOIN organisations ON organisations.id = projects."organizationId"
-            INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
-            WHERE municipalities.name = ${municipalityName} AND municipalities.id = (SELECT "municipalityId" FROM users WHERE id = ${userId})
-            AND organisations.name = ${orgName} AND organisations.id = (SELECT "organizationId" FROM users WHERE id = ${userId})
+      if (projectName) {
+        return await prisma.$executeRaw`
+          DELETE FROM documents
+          USING projects
+          INNER JOIN organisations ON organisations.id = projects."organizationId"
+          INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
+          WHERE municipalities.name = ${municipalityName} 
+            AND municipalities.id = (SELECT "municipalityId" FROM users WHERE id = ${userId})
+            AND organisations.name = ${orgName} 
+            AND organisations.id = (SELECT "organizationId" FROM users WHERE id = ${userId})
             AND projects.name = ${projectName}
-            AND text2ltree(${documentPath}) @> documents.path AND documents."projectId" = projects.id
-            `;
+            AND text2ltree(${documentPath}) @> documents.path 
+            AND documents."projectId" = projects.id
+          `;
+      } else {
+        return await prisma.$executeRaw`
+          DELETE FROM documents
+          USING organisations
+          INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
+          WHERE municipalities.name = ${municipalityName} 
+            AND municipalities.id = (SELECT "municipalityId" FROM users WHERE id = ${userId})
+            AND organisations.name = ${orgName} 
+            AND organisations.id = (SELECT "organizationId" FROM users WHERE id = ${userId})
+            AND text2ltree(${documentPath}) @> documents.path 
+            AND documents."organizationId" = organisations.id
+          `;
+      }
     }
     case UserType.SUPERUSER_MUNICIPALITY: {
-      return await prisma.$executeRaw`
-            DELETE FROM documents
-            USING projects
-            INNER JOIN organisations ON organisations.id = projects."organizationId"
-            INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
-            WHERE municipalities.name = ${municipalityName} AND municipalities.id = (SELECT "municipalityId" FROM users WHERE id = ${userId})
-            AND organisations.name = ${orgName} AND projects.name = ${projectName}
-            AND text2ltree(${documentPath}) @> documents.path AND documents."projectId" = projects.id
-            `;
+      if (projectName) {
+        return await prisma.$executeRaw`
+          DELETE FROM documents
+          USING projects
+          INNER JOIN organisations ON organisations.id = projects."organizationId"
+          INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
+          WHERE municipalities.name = ${municipalityName} 
+            AND municipalities.id = (SELECT "municipalityId" FROM users WHERE id = ${userId})
+            AND organisations.name = ${orgName} 
+            AND projects.name = ${projectName}
+            AND text2ltree(${documentPath}) @> documents.path 
+            AND documents."projectId" = projects.id
+          `;
+      } else {
+        return await prisma.$executeRaw`
+          DELETE FROM documents
+          USING organisations
+          INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
+          WHERE municipalities.name = ${municipalityName} 
+            AND municipalities.id = (SELECT "municipalityId" FROM users WHERE id = ${userId})
+            AND organisations.name = ${orgName} 
+            AND text2ltree(${documentPath}) @> documents.path 
+            AND documents."organizationId" = organisations.id
+          `;
+      }
     }
     case UserType.SUPERUSER_GLOBAL: {
-      return await prisma.$executeRaw`
-            DELETE  FROM documents
-            USING projects
-            INNER JOIN organisations ON organisations.id = projects."organizationId"
-            INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
-            WHERE municipalities.name = ${municipalityName} AND organisations.name = ${orgName} AND projects.name = ${projectName}
-            AND text2ltree(${documentPath}) @> documents.path AND documents."projectId" = projects.id
-            `;
+      if (projectName) {
+        return await prisma.$executeRaw`
+          DELETE FROM documents
+          USING projects
+          INNER JOIN organisations ON organisations.id = projects."organizationId"
+          INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
+          WHERE municipalities.name = ${municipalityName} 
+            AND organisations.name = ${orgName} 
+            AND projects.name = ${projectName}
+            AND text2ltree(${documentPath}) @> documents.path 
+            AND documents."projectId" = projects.id
+          `;
+      } else {
+        return await prisma.$executeRaw`
+          DELETE FROM documents
+          USING organisations
+          INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
+          WHERE municipalities.name = ${municipalityName} 
+            AND organisations.name = ${orgName} 
+            AND text2ltree(${documentPath}) @> documents.path 
+            AND documents."organizationId" = organisations.id
+          `;
+      }
     }
   }
 }
