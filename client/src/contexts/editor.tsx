@@ -36,9 +36,39 @@ export function EditorProvider(props: { children: JSX.Element }): JSX.Element {
     });
   };
 
+  const isSameNode = (node1: TreeNode, node2: TreeNode) => {
+    const path1 = node1.path();
+    const path2 = node2.path();
+
+    // 1. If path names don't match return false
+    if (path1 !== path2) {
+      return false;
+    }
+
+    const pathList1 = node1.getPathList();
+    const pathList2 = node2.getPathList();
+
+    // 2. If path lists don't match return false
+    if (pathList1.length !== pathList2.length) {
+      return false;
+    }
+
+    for (let i = 0; i < pathList1.length; i++) {
+      if (pathList1[i] !== pathList2[i]) {
+        return false;
+      }
+    }
+
+    // 3. If both path names and path lists match return true
+    return true;
+  };
+
   const navigateToFile = async (newNode: TreeNode) => {
-    if (selectedNode()?.path() === newNode.path()) {
-      return;
+    // If user pressed on the currently selected node, do nothing - if no node is selected, skip check
+    if (selectedNode() instanceof TreeNode) {
+      if (isSameNode(newNode, selectedNode() as TreeNode)) {
+        return;
+      }
     }
 
     const currentContent = code();
