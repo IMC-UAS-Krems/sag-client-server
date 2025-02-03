@@ -656,7 +656,7 @@ class FileTree implements GetChildren {
 function FileNode(props: { node: TreeNode }) {
   let expandDiv: HTMLDivElement;
 
-  const { handleFileClick, setSelectedNode, selectedNode, navigateToFile } = useContext(
+  const { selectedNode, navigateToFile } = useContext(
     EditorContext,
   ) as IEditorContext;
 
@@ -712,7 +712,8 @@ function FileNode(props: { node: TreeNode }) {
       <Suspense>
         <ContextMenu.Trigger
           disabled={
-            ![SagDocumentType.FOLDER, SagDocumentType.FILE, SagDocumentType.PROJECT].includes(props.node.docType)
+            ![SagDocumentType.FOLDER, SagDocumentType.FILE, SagDocumentType.PROJECT].includes(props.node.docType) ||
+            (props.node.isTemplate && props.node.docType === SagDocumentType.FOLDER)
           }
         >
           <button
@@ -728,7 +729,8 @@ function FileNode(props: { node: TreeNode }) {
               if (
                 [SagDocumentType.FOLDER, SagDocumentType.FILE, SagDocumentType.PROJECT].includes(props.node.docType)
               ) {
-                setSelectedNode(props.node);
+                // setSelectedNode(props.node);
+                navigateToFile(props.node);
               }
             }}
           >
@@ -925,7 +927,6 @@ function FileContextMenu(props: { children: JSXElement }) {
         break;
       }
       case MenuOption.Rename: {
-        // TODO: check if the name is valid and it doesn't exist
         const { value } = await Prompt.fire<string>({
           title: "Enter new name",
           input: "text",
