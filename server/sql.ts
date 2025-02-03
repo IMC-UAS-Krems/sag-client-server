@@ -944,6 +944,7 @@ export async function getContent(
             AND organisations.id = (SELECT "organizationId" FROM users WHERE id = ${userId})
             AND documents.path = text2ltree(${documentPath})
             AND documents."documentType" = 'FILE'::"DocumentType"
+            AND documents."projectId" IS NULL
           LIMIT 1
         `;
       }
@@ -978,6 +979,7 @@ export async function getContent(
             AND organisations.name = ${orgName} 
             AND documents.path = text2ltree(${documentPath}) 
             AND documents."documentType" = 'FILE'::"DocumentType"
+            AND documents."projectId" IS NULL
           LIMIT 1;
         `;
       }
@@ -1009,6 +1011,7 @@ export async function getContent(
           AND organisations.name = ${orgName}
           AND documents.path = text2ltree(${documentPath})
           AND documents."documentType" = 'FILE'::"DocumentType"
+          AND documents."projectId" IS NULL
         LIMIT 1
         `;
       }
@@ -1061,6 +1064,7 @@ export async function updateContent(
             AND documents.path = text2ltree(${documentPath}) 
             AND documents."organizationId" = organisations.id
             AND documents."documentType" = 'FILE'::"DocumentType"
+            AND documents."projectId" IS NULL
           `;
       }
     }
@@ -1092,6 +1096,7 @@ export async function updateContent(
             AND documents.path = text2ltree(${documentPath})
             AND documents."organizationId" = organisations.id 
             AND documents."documentType" = 'FILE'::"DocumentType"
+            AND documents."projectId" IS NULL
           `;
       }
     }
@@ -1121,6 +1126,7 @@ export async function updateContent(
             AND documents.path = text2ltree(${documentPath}) 
             AND documents."organizationId" = organisations.id
             AND documents."documentType" = 'FILE'::"DocumentType"
+            AND documents."projectId" IS NULL
           `;
       }
     }
@@ -1136,15 +1142,6 @@ export async function deleteDocument(
 ) {
   // @ts-ignore
   const user: User | UserDocument = await selectUser(userId);
-  // TODO: Don't allow the deletion of folders with isTemplate tag and projects
-  // if (projectName) {
-  //   const document = await prisma.$queryRaw`
-  //     SELECT * FROM documents
-  //     INNER JOIN organisations ON organisations.id =
-  //     WHERE documents.path = text2ltree(${documentPath})
-  //     `;
-  // }
-
   switch (user.userType) {
     case UserType.DEFAULT: {
       if (projectName) {
@@ -1160,11 +1157,13 @@ export async function deleteDocument(
             AND projects.name = ${projectName}
             AND text2ltree(${documentPath}) @> documents.path 
             AND documents."projectId" = projects.id
+            -- Check that the document is not a folder with isTemplate tag
+            AND NOT (documents."documentType" = 'FOLDER'::"DocumentType" AND documents."isTemplate" = true)
           `;
       } else {
         return await prisma.$executeRaw`
           DELETE FROM documents
-          USING organisations
+          INNER JOIN organisations ON organisations.id = documents."organizationId"
           INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
           WHERE municipalities.name = ${municipalityName} 
             AND municipalities.id = (SELECT "municipalityId" FROM users WHERE id = ${userId})
@@ -1172,6 +1171,9 @@ export async function deleteDocument(
             AND organisations.id = (SELECT "organizationId" FROM users WHERE id = ${userId})
             AND text2ltree(${documentPath}) @> documents.path 
             AND documents."organizationId" = organisations.id
+            AND documents."projectId" IS NULL
+            -- Check that the document is not a folder with isTemplate tag
+            AND NOT (documents."documentType" = 'FOLDER'::"DocumentType" AND documents."isTemplate" = true)
           `;
       }
     }
@@ -1188,17 +1190,22 @@ export async function deleteDocument(
             AND projects.name = ${projectName}
             AND text2ltree(${documentPath}) @> documents.path 
             AND documents."projectId" = projects.id
+            -- Check that the document is not a folder with isTemplate tag
+            AND NOT (documents."documentType" = 'FOLDER'::"DocumentType" AND documents."isTemplate" = true)
           `;
       } else {
         return await prisma.$executeRaw`
           DELETE FROM documents
-          USING organisations
+          INNER JOIN organisations ON organisations.id = documents."organizationId"
           INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
           WHERE municipalities.name = ${municipalityName} 
             AND municipalities.id = (SELECT "municipalityId" FROM users WHERE id = ${userId})
             AND organisations.name = ${orgName} 
             AND text2ltree(${documentPath}) @> documents.path 
             AND documents."organizationId" = organisations.id
+            AND documents."projectId" IS NULL
+            -- Check that the document is not a folder with isTemplate tag
+            AND NOT (documents."documentType" = 'FOLDER'::"DocumentType" AND documents."isTemplate" = true)
           `;
       }
     }
@@ -1214,8 +1221,24 @@ export async function deleteDocument(
             AND projects.name = ${projectName}
             AND text2ltree(${documentPath}) @> documents.path 
             AND documents."projectId" = projects.id
+            -- Check that the document is not a folder with isTemplate tag
+            AND NOT (documents."documentType" = 'FOLDER'::"DocumentType" AND documents."isTemplate" = true)
           `;
       } else {
+        // Validate that it is not the templates folder
+        const target = await prisma.$queryRaw<{ documentType: DocumentType; isTemplate: boolean }[]>`
+          SELECT documents.id, documents."documentType", documents."isTemplate"
+          FROM documents
+          WHERE documents.path = text2ltree(${documentPath})
+            AND documents."organizationId" = (
+              SELECT organisations.id FROM organisations WHERE organisations.name = ${orgName}
+            )
+            AND documents."projectId" IS NULL
+        `;
+        if (target && target[0] && target[0].documentType === "FOLDER" && target[0].isTemplate === true) {
+          throw new SagError("Cannot delete templates folder.");
+        }
+
         return await prisma.$executeRaw`
           DELETE FROM documents
           USING organisations
@@ -1224,6 +1247,9 @@ export async function deleteDocument(
             AND organisations.name = ${orgName} 
             AND text2ltree(${documentPath}) @> documents.path 
             AND documents."organizationId" = organisations.id
+            AND documents."projectId" IS NULL
+            -- Check that the document is not a folder with isTemplate tag
+            AND NOT (documents."documentType" = 'FOLDER'::"DocumentType" AND documents."isTemplate" = true)
           `;
       }
     }
@@ -1234,7 +1260,7 @@ export async function renameDocument(
   userId: string,
   municipalityName: string,
   orgName: string,
-  projectName: string,
+  projectName: string | undefined,
   documentPath: string,
   newName: string,
 ): Promise<string | null> {
@@ -1247,40 +1273,100 @@ export async function renameDocument(
 
   switch (user.userType) {
     case UserType.DEFAULT: {
-      result = await prisma.$executeRaw`
-            UPDATE documents
-            SET name = ${newName}, path = text2ltree(${path})
-            FROM projects
-            INNER JOIN organisations ON organisations.id = projects."organizationId"
-            INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
-            WHERE municipalities.name = ${municipalityName} AND municipalities.id = (SELECT "municipalityId" FROM users WHERE id = ${userId})
-            AND organisations.name = ${orgName} AND organisations.id = (SELECT "organizationId" FROM users WHERE id = ${userId})
+      if (projectName) {
+        result = await prisma.$executeRaw`
+          UPDATE documents
+          SET name = ${newName}, path = text2ltree(${path})
+          FROM projects
+          INNER JOIN organisations ON organisations.id = projects."organizationId"
+          INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
+          WHERE municipalities.name = ${municipalityName} 
+            AND municipalities.id = (SELECT "municipalityId" FROM users WHERE id = ${userId})
+            AND organisations.name = ${orgName} 
+            AND organisations.id = (SELECT "organizationId" FROM users WHERE id = ${userId})
             AND projects.name = ${projectName}
-            AND documents.path = text2ltree(${documentPath}) AND documents."projectId" = projects.id
-            `;
+            AND documents.path = text2ltree(${documentPath}) 
+            AND documents."projectId" = projects.id
+          `;
+      } else {
+        result = await prisma.$executeRaw`
+          UPDATE documents
+          SET name = ${newName}, path = text2ltree(${path})
+          FROM organisations
+          INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
+          WHERE municipalities.name = ${municipalityName} 
+            AND municipalities.id = (SELECT "municipalityId" FROM users WHERE id = ${userId})
+            AND organisations.name = ${orgName} 
+            AND organisations.id = (SELECT "organizationId" FROM users WHERE id = ${userId})
+            AND documents.path = text2ltree(${documentPath}) 
+            AND documents."organizationId" = organisations.id
+            AND documents."projectId" IS NULL
+            -- Check that the document is not a folder with isTemplate tag
+            AND NOT (documents."documentType" = 'FOLDER'::"DocumentType" AND documents."isTemplate" = true)
+          `;
+      }
     }
     case UserType.SUPERUSER_MUNICIPALITY: {
-      result = await prisma.$executeRaw`
-            UPDATE documents
-            SET name = ${newName}, path = text2ltree(${path})
-            FROM projects
-            INNER JOIN organisations ON organisations.id = projects."organizationId"
-            INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
-            WHERE municipalities.name = ${municipalityName} AND municipalities.id = (SELECT "municipalityId" FROM users WHERE id = ${userId})
-            AND organisations.name = ${orgName} AND projects.name = ${projectName}
-            AND documents.path = text2ltree(${documentPath}) AND documents."projectId" = projects.id
-            `;
+      if (projectName) {
+        result = await prisma.$executeRaw`
+          UPDATE documents
+          SET name = ${newName}, path = text2ltree(${path})
+          FROM projects
+          INNER JOIN organisations ON organisations.id = projects."organizationId"
+          INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
+          WHERE municipalities.name = ${municipalityName} 
+            AND municipalities.id = (SELECT "municipalityId" FROM users WHERE id = ${userId})
+            AND organisations.name = ${orgName} 
+            AND projects.name = ${projectName}
+            AND documents.path = text2ltree(${documentPath}) 
+            AND documents."projectId" = projects.id
+          `;
+      } else {
+        result = await prisma.$executeRaw`
+          UPDATE documents
+          SET name = ${newName}, path = text2ltree(${path})
+          FROM organisations
+          INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
+          WHERE municipalities.name = ${municipalityName} 
+            AND municipalities.id = (SELECT "municipalityId" FROM users WHERE id = ${userId})
+            AND organisations.name = ${orgName} 
+            AND documents.path = text2ltree(${documentPath}) 
+            AND documents."organizationId" = organisations.id
+            AND documents."projectId" IS NULL
+            -- Check that the document is not a folder with isTemplate tag
+            AND NOT (documents."documentType" = 'FOLDER'::"DocumentType" AND documents."isTemplate" = true)
+          `;
+      }
     }
     case UserType.SUPERUSER_GLOBAL: {
-      result = await prisma.$executeRaw`
-            UPDATE documents
-            SET name = ${newName}, path = text2ltree(${path})
-            FROM projects
-            INNER JOIN organisations ON organisations.id = projects."organizationId"
-            INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
-            WHERE municipalities.name = ${municipalityName} AND organisations.name = ${orgName} AND projects.name = ${projectName}
-            AND documents.path = text2ltree(${documentPath}) AND documents."projectId" = projects.id
-            `;
+      if (projectName) {
+        result = await prisma.$executeRaw`
+          UPDATE documents
+          SET name = ${newName}, path = text2ltree(${path})
+          FROM projects
+          INNER JOIN organisations ON organisations.id = projects."organizationId"
+          INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
+          WHERE municipalities.name = ${municipalityName} 
+            AND organisations.name = ${orgName} 
+            AND projects.name = ${projectName}
+            AND documents.path = text2ltree(${documentPath}) 
+            AND documents."projectId" = projects.id
+          `;
+      } else {
+        result = await prisma.$executeRaw`
+          UPDATE documents
+          SET name = ${newName}, path = text2ltree(${path})
+          FROM organisations
+          INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
+          WHERE municipalities.name = ${municipalityName} 
+            AND organisations.name = ${orgName} 
+            AND documents.path = text2ltree(${documentPath}) 
+            AND documents."organizationId" = organisations.id
+            AND documents."projectId" IS NULL
+            -- Check that the document is not a folder with isTemplate tag
+            AND NOT (documents."documentType" = 'FOLDER'::"DocumentType" AND documents."isTemplate" = true)
+          `;
+      }
     }
   }
   if (result === 1) {
@@ -1373,19 +1459,37 @@ export async function saveAsTemplate(userId: string, organizationName: string, n
 async function updateChildPaths(
   municipalityName: string,
   orgName: string,
-  projectName: string,
+  projectName: string | undefined,
   documentPath: string,
   newPath: string,
 ) {
-  const children = await prisma.$queryRaw<{ id: string; path: string }[]>`
-    SELECT documents.id as "id", path::text
-    FROM documents
-    INNER JOIN projects ON projects.id = documents."projectId"
-    INNER JOIN organisations ON organisations.id = projects."organizationId"
-    INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
-    WHERE projects.name = ${projectName} AND organisations.name = ${orgName} AND municipalities.name = ${municipalityName}
-    AND text2ltree(${documentPath}) @> documents.path AND documents.path != text2ltree(${documentPath})
-    `;
+  let children: { id: string; path: string }[] = [];
+  if (projectName) {
+    children = await prisma.$queryRaw<{ id: string; path: string }[]>`
+      SELECT documents.id as "id", path::text
+      FROM documents
+      INNER JOIN projects ON projects.id = documents."projectId"
+      INNER JOIN organisations ON organisations.id = projects."organizationId"
+      INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
+      WHERE projects.name = ${projectName} 
+        AND organisations.name = ${orgName} 
+        AND municipalities.name = ${municipalityName}
+        AND text2ltree(${documentPath}) @> documents.path 
+        AND documents.path != text2ltree(${documentPath})
+      `;
+  } else {
+    children = await prisma.$queryRaw<{ id: string; path: string }[]>`
+      SELECT documents.id as "id", path::text
+      FROM documents
+      INNER JOIN organisations ON organisations.id = documents."organizationId"
+      INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
+      WHERE organisations.name = ${orgName} 
+        AND municipalities.name = ${municipalityName}
+        AND text2ltree(${documentPath}) @> documents.path 
+        AND documents.path != text2ltree(${documentPath})
+        AND documents."projectId" IS NULL
+      `;
+  }
   for (const child of children) {
     const newPathChild = child.path.replace(documentPath, newPath);
     await prisma.$executeRaw`
@@ -1404,7 +1508,7 @@ export async function checkPathExists(
   possibleName: string,
   municipalityName: string,
   orgName: string,
-  projectName: string,
+  projectName: string | undefined,
   path: string,
   isNew: boolean,
 ): Promise<boolean> {
@@ -1414,15 +1518,33 @@ export async function checkPathExists(
     const splitIndex = (path as string).lastIndexOf(".");
     path = splitIndex === -1 ? joinPath("", possibleName) : joinPath(path.substring(0, splitIndex), possibleName);
   }
-  const result = await prisma.$queryRaw<{ path: string }[]>`
-    SELECT path::text
-    FROM documents
-    INNER JOIN projects ON projects.id = documents."projectId"
-    INNER JOIN organisations ON organisations.id = projects."organizationId"
-    INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
-    WHERE projects.name = ${projectName} AND organisations.name = ${orgName} AND municipalities.name = ${municipalityName}
-    AND documents.path = text2ltree(${path}) AND documents.name = ${possibleName}
-    `;
+  let result: { path: string }[] = [];
+  if (projectName) {
+    result = await prisma.$queryRaw<{ path: string }[]>`
+      SELECT path::text
+      FROM documents
+      INNER JOIN projects ON projects.id = documents."projectId"
+      INNER JOIN organisations ON organisations.id = projects."organizationId"
+      INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
+      WHERE projects.name = ${projectName} 
+        AND organisations.name = ${orgName} 
+        AND municipalities.name = ${municipalityName}
+        AND documents.path = text2ltree(${path}) 
+        AND documents.name = ${possibleName}
+      `;
+  } else {
+    result = await prisma.$queryRaw<{ path: string }[]>`
+      SELECT path::text
+      FROM documents
+      INNER JOIN organisations ON organisations.id = documents."organizationId"
+      INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
+      WHERE organisations.name = ${orgName} 
+        AND municipalities.name = ${municipalityName}
+        AND documents.path = text2ltree(${path}) 
+        AND documents.name = ${possibleName}
+        AND documents."projectId" IS NULL
+      `;
+  }
   return result.length > 0;
 }
 

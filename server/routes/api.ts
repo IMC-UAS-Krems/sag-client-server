@@ -259,7 +259,7 @@ export const api = new Elysia({ prefix: "/api" })
       body: { projectName, organizationName, municipalityName, path, newName },
       userId,
     }: AuthContextWithBody<{
-      projectName: string;
+      projectName: string | undefined;
       organizationName: string;
       municipalityName: string;
       path: string;
@@ -282,7 +282,7 @@ export const api = new Elysia({ prefix: "/api" })
     },
     {
       body: t.Object({
-        projectName: t.String(),
+        projectName: t.Optional(t.String()),
         organizationName: t.String(),
         municipalityName: t.String(),
         path: t.String(),
@@ -381,13 +381,24 @@ export const api = new Elysia({ prefix: "/api" })
         set.status = 401;
         return { error: "Unauthorized" };
       }
-      const result = await sql.deleteDocument(userId, municipalityName, organizationName, projectName, path);
-      if (result === null || result < 1) {
-        set.status = 400;
-        return "Could not delete document";
+      console.log("Deleting document with projectName: ", projectName);
+      try {
+        const result = await sql.deleteDocument(userId, municipalityName, organizationName, projectName, path);
+        if (result === null || result < 1) {
+          set.status = 400;
+          return "Could not delete document";
+        }
+        set.status = 200;
+        return "Document deleted";
+      } catch (error) {
+        if (error instanceof SagError) {
+          set.status = 400;
+          return error.message;
+        } else {
+          set.status = 500;
+          return "An error occurred";
+        }
       }
-      set.status = 200;
-      return "Document deleted";
     },
     {
       body: t.Object({
@@ -447,7 +458,7 @@ export const api = new Elysia({ prefix: "/api" })
       body: { projectName, organizationName, municipalityName, path, possibleName, isNew },
       userId,
     }: AuthContextWithBody<{
-      projectName: string;
+      projectName: string | undefined;
       organizationName: string;
       municipalityName: string;
       path: string;
@@ -471,7 +482,7 @@ export const api = new Elysia({ prefix: "/api" })
     },
     {
       body: t.Object({
-        projectName: t.String(),
+        projectName: t.Optional(t.String()),
         organizationName: t.String(),
         municipalityName: t.String(),
         path: t.String(),

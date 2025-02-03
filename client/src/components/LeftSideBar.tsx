@@ -277,12 +277,15 @@ export class TreeNode implements GetChildren {
       return;
     }
 
+    console.log("Trying to delete document: ", this);
+
     const requestBody = {
       organizationName: this.orgName as string,
       municipalityName: this.municipalityName as string,
       path: this.path() as string,
       ...(this.projectName ? { projectName: this.projectName as string } : {}),
     };
+    console.log("Making call to delete with: ", requestBody);
     const resp = await eden.api.document.delete({
       ...requestBody,
       $fetch: {
@@ -290,9 +293,9 @@ export class TreeNode implements GetChildren {
         credentials: "include",
       },
     });
-    this.collapse();
 
     if (resp.status === 200) {
+      this.collapse();
       const index = this.parent?.children.findIndex((child) => child.name() === this.name());
       if (index !== undefined) {
         this.parent?.children.splice(index, 1);
@@ -451,12 +454,15 @@ export class TreeNode implements GetChildren {
 
   async renameDocument(newName: string) {
     if (newName) {
-      const resp = await eden.api.document.put({
+      const requestBody = {
         newName: newName,
-        projectName: this.projectName as string,
         organizationName: this.orgName as string,
         municipalityName: this.municipalityName as string,
         path: this.path() as string,
+        ...(this.projectName ? { projectName: this.projectName as string } : {}),
+      };
+      const resp = await eden.api.document.put({
+        ...requestBody,
         $fetch: {
           mode: "cors",
           credentials: "include",
@@ -466,6 +472,15 @@ export class TreeNode implements GetChildren {
       if (resp.status === 200) {
         this.setName(newName);
         this.updatePath(resp.data as string);
+        Notification.fire({
+          title: "File renamed successfully",
+          icon: "success",
+        });
+      } else {
+        Notification.fire({
+          title: "Error renaming file",
+          icon: "error",
+        });
       }
     }
   }
@@ -482,13 +497,16 @@ export class TreeNode implements GetChildren {
   }
 
   async checkNewPath(name: string, isNew: boolean): Promise<boolean> {
-    const response = await eden.api.check_path.post({
-      projectName: this.projectName as string,
+    const requestBody = {
       organizationName: this.orgName as string,
       municipalityName: this.municipalityName as string,
       path: (this.path() as string) || "", // path can be empty resulting in nil or null
       possibleName: name,
       isNew: isNew,
+      ...(this.projectName ? { projectName: this.projectName as string } : {}),
+    };
+    const response = await eden.api.check_path.post({
+      ...requestBody,
       $fetch: {
         mode: "cors",
         credentials: "include",
@@ -548,20 +566,23 @@ class FileTree implements GetChildren {
     // console.log("Adding document to: ", currentNode);
     // console.log("Document to add: ", doc);
     currentNode?.addChild(
-      new TreeNode({
-        name: doc.name,
-        docType: SagDocumentType[doc.documentType.toUpperCase() as keyof typeof SagDocumentType],
-        path: doc.documentPath,
-        projectName: doc.projectName,
-        orgName: doc.orgName,
-        municipalityName: doc.municipalityName,
-        parent: currentNode,
-        isExpanded: this.parse_old_state(
-          old_state,
-          `${doc.municipalityName}.${doc.orgName}.${doc.projectName}.${doc.documentPath}`,
-        ),
-        isTemplate: doc.isTemplate,
-      }, this.editorContext),
+      new TreeNode(
+        {
+          name: doc.name,
+          docType: SagDocumentType[doc.documentType.toUpperCase() as keyof typeof SagDocumentType],
+          path: doc.documentPath,
+          projectName: doc.projectName,
+          orgName: doc.orgName,
+          municipalityName: doc.municipalityName,
+          parent: currentNode,
+          isExpanded: this.parse_old_state(
+            old_state,
+            `${doc.municipalityName}.${doc.orgName}.${doc.projectName}.${doc.documentPath}`,
+          ),
+          isTemplate: doc.isTemplate,
+        },
+        this.editorContext,
+      ),
     );
   }
 
@@ -575,12 +596,15 @@ class FileTree implements GetChildren {
   addMunicipality(municipality: string, old_state: expandState) {
     if (this.root.findChild({ name: municipality }) == null) {
       this.root.addChild(
-        new TreeNode({
-          name: municipality,
-          docType: SagDocumentType.MUNICIPALITY,
-          municipalityName: municipality,
-          isExpanded: this.parse_old_state(old_state, municipality),
-        }, this.editorContext),
+        new TreeNode(
+          {
+            name: municipality,
+            docType: SagDocumentType.MUNICIPALITY,
+            municipalityName: municipality,
+            isExpanded: this.parse_old_state(old_state, municipality),
+          },
+          this.editorContext,
+        ),
       );
     }
   }
@@ -589,13 +613,16 @@ class FileTree implements GetChildren {
     const municipalityNode = this.root.findChild({ name: municipality });
     if (municipalityNode?.findChild({ name: org }) == null) {
       municipalityNode?.addChild(
-        new TreeNode({
-          name: org,
-          docType: SagDocumentType.ORG,
-          municipalityName: municipalityNode.municipalityName,
-          orgName: org,
-          isExpanded: this.parse_old_state(old_state, `${municipality}.${org}`),
-        }, this.editorContext),
+        new TreeNode(
+          {
+            name: org,
+            docType: SagDocumentType.ORG,
+            municipalityName: municipalityNode.municipalityName,
+            orgName: org,
+            isExpanded: this.parse_old_state(old_state, `${municipality}.${org}`),
+          },
+          this.editorContext,
+        ),
       );
     }
   }
@@ -605,15 +632,18 @@ class FileTree implements GetChildren {
     const orgNode = municipalityNode?.findChild({ name: org });
     if (orgNode?.findChild({ name: project }) == null) {
       orgNode?.addChild(
-        new TreeNode({
-          name: project,
-          docType: SagDocumentType.PROJECT,
-          municipalityName: orgNode.municipalityName,
-          orgName: orgNode.orgName,
-          projectName: project,
-          parent: orgNode,
-          isExpanded: this.parse_old_state(old_state, `${municipality}.${org}.${project}`),
-        }, this.editorContext),
+        new TreeNode(
+          {
+            name: project,
+            docType: SagDocumentType.PROJECT,
+            municipalityName: orgNode.municipalityName,
+            orgName: orgNode.orgName,
+            projectName: project,
+            parent: orgNode,
+            isExpanded: this.parse_old_state(old_state, `${municipality}.${org}.${project}`),
+          },
+          this.editorContext,
+        ),
       );
     }
   }
