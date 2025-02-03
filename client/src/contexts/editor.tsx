@@ -113,6 +113,16 @@ export function EditorProvider(props: { children: JSX.Element }): JSX.Element {
     }
   };
 
+  const debouncedCheck = (() => {
+    let checkTimer: ReturnType<typeof setTimeout>;
+    return (value: string) => {
+      clearTimeout(checkTimer);
+      checkTimer = setTimeout(() => {
+        check(value);
+      }, 500);
+    };
+  })();
+
   const {
     editorView,
     ref: editorRef,
@@ -121,7 +131,7 @@ export function EditorProvider(props: { children: JSX.Element }): JSX.Element {
     value: code(),
     onValueChange: (value) => {
       setCode(value);
-      check(value);
+      debouncedCheck(value);
     },
   });
 

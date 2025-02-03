@@ -28,7 +28,6 @@ export const api = new Elysia({ prefix: "/api" })
       },
     },
   )
-
   .get(
     "/organizations",
     async ({ log, set }: AuthContext) => {
@@ -47,7 +46,6 @@ export const api = new Elysia({ prefix: "/api" })
       },
     },
   )
-
   .post(
     "/organizationsByMunicipality",
     async ({ set, body: { municipalityName } }: AuthContextWithBody<{ municipalityName: string }>) => {
@@ -76,7 +74,6 @@ export const api = new Elysia({ prefix: "/api" })
       }),
     },
   )
-
   .onBeforeHandle(async (context) => {
     return await authMiddleware(
       {
@@ -86,7 +83,6 @@ export const api = new Elysia({ prefix: "/api" })
       { requireAdmin: false },
     );
   })
-
   .post(
     "/compile",
     async ({ log, set, body: { code }, userId }) => {
@@ -124,7 +120,6 @@ export const api = new Elysia({ prefix: "/api" })
       detail: { tags: ["api"] },
     },
   )
-
   .post(
     "/check",
     async ({ log, set, userId, body: { code } }) => {
@@ -164,7 +159,6 @@ export const api = new Elysia({ prefix: "/api" })
       detail: { tags: ["api"] },
     },
   )
-
   .get(
     "/documents",
     async ({ log, set, userId }: AuthContext): Promise<Document[] | { error: string }> => {
