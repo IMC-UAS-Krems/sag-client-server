@@ -7,6 +7,7 @@ import { ContextMenu } from "@kobalte/core/context-menu";
 import Swal from "sweetalert2";
 import { Notification, Prompt } from "@client/common";
 import styles from "@styles/LeftSideBar.module.css";
+import { RiArrowsArrowRightSLine, RiArrowsArrowDownSLine } from 'solid-icons/ri';
 
 enum SagDocumentType {
   FILE = "FILE",
@@ -163,13 +164,33 @@ export class TreeNode implements GetChildren {
       case SagDocumentType.FILE:
         return "📄";
       case SagDocumentType.FOLDER:
-        return `${this.isExpanded() ? "v" : ">"} ${this.isExpanded() ? "📂" : "📁"}`;
+        return (
+          <div class={styles["file-tree-icon-container"]}>
+            {this.isExpanded() ? <RiArrowsArrowDownSLine /> : <RiArrowsArrowRightSLine />}{" "}
+            {this.isExpanded() ? "📂" : "📁"}
+          </div>
+        );
       case SagDocumentType.MUNICIPALITY:
-        return "🏠";
+        return(
+          <div class={styles["file-tree-icon-container"]}>
+            {this.isExpanded() ? <RiArrowsArrowDownSLine /> : <RiArrowsArrowRightSLine />}{" "}
+            🏠
+          </div>
+        )
       case SagDocumentType.ORG:
-        return "🏢";
+        return(
+          <div class={styles["file-tree-icon-container"]}>
+            {this.isExpanded() ? <RiArrowsArrowDownSLine /> : <RiArrowsArrowRightSLine />}{" "}
+            🏢
+          </div>
+        )
       case SagDocumentType.PROJECT:
-        return "🏗️";
+        return(
+          <div class={styles["file-tree-icon-container"]}>
+            {this.isExpanded() ? <RiArrowsArrowDownSLine /> : <RiArrowsArrowRightSLine />}{" "}
+            🏗️
+          </div>
+        )
     }
   }
 

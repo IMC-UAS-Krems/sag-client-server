@@ -71,3 +71,9 @@
 .file-tree-item {
   margin-left: 1rem;
 }
+
+.file-tree-icon-container {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
