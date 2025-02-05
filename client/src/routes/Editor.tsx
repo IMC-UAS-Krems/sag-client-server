@@ -326,7 +326,7 @@ function Editor(): JSX.Element {
               </Button.Root>
               <DropdownMenu>
                 <DropdownMenu.Trigger class={styles["dropdown-menu__trigger"]}>
-                  <span>Save as</span>
+                  <span class={styles["dropdown-menu__trigger_text"]}>Save as</span>
                 </DropdownMenu.Trigger>
                 <DropdownMenu.Portal>
                   <DropdownMenu.Content class={styles["dropdown-menu__content"]}>
