@@ -1,7 +1,11 @@
 import safeql from "@ts-safeql/eslint-plugin/config";
 import tseslint from "typescript-eslint";
 import eslint from "@eslint/js";
+import { expand } from "dotenv-expand";
 import { config } from "dotenv";
+
+expand(config());
+console.log(process.env);
 
 export default tseslint.config(
   eslint.configs.recommended,
