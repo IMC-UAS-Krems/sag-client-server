@@ -88,7 +88,7 @@ export const api = new Elysia({ prefix: "/api" })
 
   .post(
     "/compile",
-    async ({ log, set, body: { code }, userId }) => {
+    async ({ log, set, body: { code, metadata }, userId }) => {
       const compiled = await fetch(`${COMPILER_URL}/compile`, {
         method: "POST",
         headers: {
@@ -97,6 +97,7 @@ export const api = new Elysia({ prefix: "/api" })
         body: JSON.stringify({
           source: code,
           user_id: userId,
+          metadata: metadata,
         }),
       });
 
@@ -114,6 +115,13 @@ export const api = new Elysia({ prefix: "/api" })
     {
       body: t.Object({
         code: t.String(),
+        metadata: t.Object({
+          municipalityName: t.String(),
+          orgName: t.String(),
+          projectName: t.String(),
+          path: t.String(),
+          filename: t.String(),
+        }),
       }),
       response: t.Union([
         t.Object({ status: t.Literal("ok"), url: t.String() }),
@@ -282,6 +290,10 @@ export const api = new Elysia({ prefix: "/api" })
   .get(
     "/document_content",
     async ({ log, set, query: { projectName, organizationName, municipalityName, path }, userId }) => {
+      // NOTE: because of encoding problems between rust which uses `+` and TS which expects "%20"
+      // I hope this is temporary, and we will manage to find a workaround
+      // TODO: find a workaround
+      projectName = projectName.replace("+", " ");
       const document = await sql.getContent(userId, municipalityName, organizationName, projectName, path);
       if (document === null || document.length < 1) {
         set.status = 400;
@@ -354,6 +366,29 @@ export const api = new Elysia({ prefix: "/api" })
         path: t.String(),
         possibleName: t.String(),
         isNew: t.Boolean(),
+      }),
+      detail: { tags: ["api"] },
+    },
+  )
+  .post(
+    "/resolve_templates",
+    async ({
+      log,
+      set,
+      body: { user_id, paths },
+    }: AuthContextWithBody<{
+      user_id: string;
+      paths: string[];
+    }>) => {
+      log.info(`user_id: ${user_id}`);
+      log.info(`paths: ${paths}`);
+      set.status = 200;
+      return { response: "Not implemented" };
+    },
+    {
+      body: t.Object({
+        user_id: t.String(),
+        paths: t.Array(t.String()),
       }),
       detail: { tags: ["api"] },
     },

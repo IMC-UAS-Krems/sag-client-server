@@ -23,7 +23,32 @@ type CompileResult = {
 const [isCompiled, setIsCompiled] = createSignal(false);
 const [dashboardUrl, setDashboardUrl] = createSignal<string | null>(null);
 
-async function compile(code: string): Promise<CompileResult | undefined> {
+async function compile(code: string, currentFile: TreeNode | null): Promise<CompileResult | undefined> {
+  interface FileMetadata {
+    municipalityName: string;
+    orgName: string;
+    projectName: string;
+    path: string;
+    filename: string;
+  }
+  if (currentFile === null) {
+    Notification.fire({
+      icon: "error",
+      title: "Compilation Error",
+      titleText: "File is not selected ",
+      timer: 5000,
+    });
+    return;
+  }
+
+  const metadata: FileMetadata = {
+    municipalityName: currentFile.municipalityName,
+    orgName: currentFile.orgName as string,
+    projectName: currentFile.projectName as string,
+    path: currentFile.path() as string,
+    filename: currentFile.name() as string,
+  };
+
   // Perform the compilation logic here
   try {
     Notification.fire({
@@ -34,6 +59,7 @@ async function compile(code: string): Promise<CompileResult | undefined> {
     Notification.stopTimer();
     const compileResult = await eden.api.compile.post({
       code,
+      metadata,
       $fetch: {
         mode: "cors",
         credentials: "include",
@@ -297,7 +323,7 @@ function Editor(): JSX.Element {
             class={[styles.btn, lastSelectedFile()?.isFile() ? "" : styles["btn-disabled"]].join(" ")}
             {...(lastSelectedFile()?.isFile() ? {} : { disabled: true })}
             onClick={async () => {
-              await compile(code());
+              await compile(code(), selectedNode());
             }}
           >
             Compile
