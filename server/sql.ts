@@ -1209,8 +1209,8 @@ export async function deleteDocument(
             AND projects.name = ${projectName}
             AND text2ltree(${documentPath}) @> documents.path 
             AND documents."projectId" = projects.id
-            -- Check that the document is not a folder with isTemplate tag
-            AND NOT (documents."documentType" = 'FOLDER'::"DocumentType" AND documents."isTemplate" = true)
+            -- Check that the document is not the org level templates folder
+            AND NOT (documents."documentType" = 'FOLDER'::"DocumentType" AND documents."isTemplate" = true AND documents.path = 'templates')
           `;
       } else {
         return await prisma.$executeRaw`
@@ -1224,8 +1224,8 @@ export async function deleteDocument(
             AND text2ltree(${documentPath}) @> documents.path 
             AND documents."organizationId" = organisations.id
             AND documents."projectId" IS NULL
-            -- Check that the document is not a folder with isTemplate tag
-            AND NOT (documents."documentType" = 'FOLDER'::"DocumentType" AND documents."isTemplate" = true)
+            -- Check that the document is not the org level templates folder
+            AND NOT (documents."documentType" = 'FOLDER'::"DocumentType" AND documents."isTemplate" = true AND documents.path = 'templates')
           `;
       }
     }
@@ -1242,8 +1242,8 @@ export async function deleteDocument(
             AND projects.name = ${projectName}
             AND text2ltree(${documentPath}) @> documents.path 
             AND documents."projectId" = projects.id
-            -- Check that the document is not a folder with isTemplate tag
-            AND NOT (documents."documentType" = 'FOLDER'::"DocumentType" AND documents."isTemplate" = true)
+            -- Check that the document is not the org level templates folder
+            AND NOT (documents."documentType" = 'FOLDER'::"DocumentType" AND documents."isTemplate" = true AND documents.path = 'templates')
           `;
       } else {
         return await prisma.$executeRaw`
@@ -1256,8 +1256,8 @@ export async function deleteDocument(
             AND text2ltree(${documentPath}) @> documents.path 
             AND documents."organizationId" = organisations.id
             AND documents."projectId" IS NULL
-            -- Check that the document is not a folder with isTemplate tag
-            AND NOT (documents."documentType" = 'FOLDER'::"DocumentType" AND documents."isTemplate" = true)
+            -- Check that the document is not the org level templates folder
+            AND NOT (documents."documentType" = 'FOLDER'::"DocumentType" AND documents."isTemplate" = true AND documents.path = 'templates')
           `;
       }
     }
@@ -1273,8 +1273,8 @@ export async function deleteDocument(
             AND projects.name = ${projectName}
             AND text2ltree(${documentPath}) @> documents.path 
             AND documents."projectId" = projects.id
-            -- Check that the document is not a folder with isTemplate tag
-            AND NOT (documents."documentType" = 'FOLDER'::"DocumentType" AND documents."isTemplate" = true)
+            -- Check that the document is not the org level templates folder
+            AND NOT (documents."documentType" = 'FOLDER'::"DocumentType" AND documents."isTemplate" = true AND documents.path = 'templates')
           `;
       } else {
         // Validate that it is not the templates folder
@@ -1307,8 +1307,8 @@ export async function deleteDocument(
             AND text2ltree(${documentPath}) @> documents.path 
             AND documents."organizationId" = organisations.id
             AND documents."projectId" IS NULL
-            -- Check that the document is not a folder with isTemplate tag
-            AND NOT (documents."documentType" = 'FOLDER'::"DocumentType" AND documents."isTemplate" = true)
+            -- Check that the document is not the org level templates folder
+            AND NOT (documents."documentType" = 'FOLDER'::"DocumentType" AND documents."isTemplate" = true AND documents.path = 'templates')
           `;
       }
     }
@@ -1360,8 +1360,8 @@ export async function renameDocument(
             AND documents.path = text2ltree(${documentPath}) 
             AND documents."organizationId" = organisations.id
             AND documents."projectId" IS NULL
-            -- Check that the document is not a folder with isTemplate tag
-            AND NOT (documents."documentType" = 'FOLDER'::"DocumentType" AND documents."isTemplate" = true)
+            -- Check that the document is not the org level templates folder
+            AND NOT (documents."documentType" = 'FOLDER'::"DocumentType" AND documents."isTemplate" = true AND documents.path = 'templates')
           `;
       }
     }
@@ -1392,8 +1392,8 @@ export async function renameDocument(
             AND documents.path = text2ltree(${documentPath}) 
             AND documents."organizationId" = organisations.id
             AND documents."projectId" IS NULL
-            -- Check that the document is not a folder with isTemplate tag
-            AND NOT (documents."documentType" = 'FOLDER'::"DocumentType" AND documents."isTemplate" = true)
+            -- Check that the document is not the org level templates folder
+            AND NOT (documents."documentType" = 'FOLDER'::"DocumentType" AND documents."isTemplate" = true AND documents.path = 'templates')
           `;
       }
     }
@@ -1422,8 +1422,8 @@ export async function renameDocument(
             AND documents.path = text2ltree(${documentPath}) 
             AND documents."organizationId" = organisations.id
             AND documents."projectId" IS NULL
-            -- Check that the document is not a folder with isTemplate tag
-            AND NOT (documents."documentType" = 'FOLDER'::"DocumentType" AND documents."isTemplate" = true)
+            -- Check that the document is not the org level templates folder
+            AND NOT (documents."documentType" = 'FOLDER'::"DocumentType" AND documents."isTemplate" = true AND documents.path = 'templates')
           `;
       }
     }

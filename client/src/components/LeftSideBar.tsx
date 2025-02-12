@@ -220,7 +220,7 @@ export class TreeNode implements GetChildren {
       case SagDocumentType.FILE:
         return "📄";
       case SagDocumentType.FOLDER:
-        if (this.isTemplate) return "📚";
+        if (this.isTemplate && this.path() === "templates") return "📚";
         return `${this.isExpanded() ? "v" : ">"} ${this.isExpanded() ? "📂" : "📁"}`;
       case SagDocumentType.MUNICIPALITY:
         return "🏠";
@@ -975,9 +975,14 @@ function FileContextMenu(props: { children: JSXElement }) {
                 </ContextMenu.Item>
               </Show>
               <Show
-                when={[SagDocumentType.FOLDER, SagDocumentType.FILE].includes(
-                  selectedNode()?.docType as SagDocumentType,
-                )}
+                when={
+                  [SagDocumentType.FOLDER, SagDocumentType.FILE].includes(selectedNode()?.docType as SagDocumentType) &&
+                  !(
+                    selectedNode()?.isTemplate &&
+                    selectedNode()?.docType === SagDocumentType.FOLDER &&
+                    selectedNode()?.path() === "templates"
+                  )
+                }
               >
                 <ContextMenu.Item
                   class={styles["context-menu-item"]}
