@@ -106,7 +106,7 @@ const Home: Component = () => {
         </section>
 
         <section class={styles["map-section-container"]}>
-          <h1>Navigate the map</h1>
+          <h1 class={styles["map-section-title"]}>Navigate the map</h1>
           <div class={styles["map-container"]}>
             <MapGL
               // style={{ border: '3px solid red', position: 'absolute', inset: 0, "z-index": -1, "border-radius": "8px" }}
