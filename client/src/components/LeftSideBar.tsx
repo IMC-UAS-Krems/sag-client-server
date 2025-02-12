@@ -962,7 +962,11 @@ function FileContextMenu(props: { children: JSXElement }) {
               <Show
                 when={
                   [SagDocumentType.FOLDER, SagDocumentType.FILE].includes(selectedNode()?.docType as SagDocumentType) &&
-                  !(selectedNode()?.isTemplate && selectedNode()?.docType === SagDocumentType.FOLDER)
+                  !(
+                    selectedNode()?.isTemplate &&
+                    selectedNode()?.docType === SagDocumentType.FOLDER &&
+                    selectedNode()?.path() === "templates"
+                  )
                 }
               >
                 <ContextMenu.Item

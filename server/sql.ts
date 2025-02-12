@@ -1589,7 +1589,6 @@ export async function checkPathExists(
         AND organisations.name = ${orgName} 
         AND municipalities.name = ${municipalityName}
         AND documents.path = text2ltree(${path}) 
-        AND documents.name = ${possibleName}
       `;
   } else {
     result = await prisma.$queryRaw<{ path: string }[]>`
@@ -1600,7 +1599,6 @@ export async function checkPathExists(
       WHERE organisations.name = ${orgName} 
         AND municipalities.name = ${municipalityName}
         AND documents.path = text2ltree(${path}) 
-        AND documents.name = ${possibleName}
         AND documents."projectId" IS NULL
       `;
   }
