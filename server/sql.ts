@@ -639,18 +639,33 @@ export async function deleteUser(userId: string): Promise<void> {
 
 export async function getDocumentFolderPath(
   path: string,
-  projectName: string,
+  projectName: string | undefined,
   organizationName: string,
   municipalityName: string,
 ): Promise<{ path: string }[]> {
-  return await prisma.$queryRaw<{ path: string }[]>`
+  if (projectName) {
+    return await prisma.$queryRaw<{ path: string }[]>`
     SELECT ltree2text(path) as path FROM documents
     INNER JOIN projects ON projects.id = documents."projectId"
     INNER JOIN organisations ON organisations.id = projects."organizationId"
     INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
-    WHERE projects.name = ${projectName} AND organisations.name = ${organizationName} AND municipalities.name = ${municipalityName}
-    AND documents.path = text2ltree(${path}) AND documents."documentType" = 'FOLDER'::"DocumentType"
+    WHERE projects.name = ${projectName} 
+      AND organisations.name = ${organizationName} 
+      AND municipalities.name = ${municipalityName}
+      AND documents.path = text2ltree(${path}) 
+      AND documents."documentType" = 'FOLDER'::"DocumentType"
     `;
+  } else {
+    return await prisma.$queryRaw<{ path: string }[]>`
+    SELECT ltree2text(path) as path FROM documents
+    INNER JOIN organisations ON organisations.id = documents."organizationId"
+    INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
+    WHERE organisations.name = ${organizationName} 
+      AND municipalities.name = ${municipalityName}
+      AND documents.path = text2ltree(${path}) 
+      AND documents."documentType" = 'FOLDER'::"DocumentType"
+    `;
+  }
 }
 
 function joinPath(path: string, name: string): string {
@@ -666,19 +681,20 @@ function joinPath(path: string, name: string): string {
 export async function createDocument(
   name: string,
   authorId: string,
-  projectName: string,
+  projectName: string | undefined,
   organizationName: string,
   municipalityName: string,
   path: string,
   documentType: DocumentType,
   content?: string | null,
+  isTemplate: boolean = false,
 ): Promise<string | null> {
   if (
     path.length > 0 &&
     (await getDocumentFolderPath(path, projectName, organizationName, municipalityName)).length < 1
   ) {
     throw new SagError(
-      `${path} does not exist in ${municipalityName}.${organizationName}.${projectName} or it's not a folder`,
+      `${path} does not exist in ${municipalityName}.${organizationName}${projectName && "." + projectName} or it's not a folder`,
     );
   }
 
@@ -689,11 +705,14 @@ export async function createDocument(
   let result = 0;
   content = content ?? "";
   console.log("Creating document with content:", content);
+  console.log("New document projectName:", projectName);
+  console.log("New document is teplate:", isTemplate);
 
   try {
     switch (user.userType) {
       case UserType.DEFAULT: {
-        result = await prisma.$executeRaw`
+        if (projectName) {
+          result = await prisma.$executeRaw`
             INSERT INTO documents (id, name, content, "authorId", "projectId", path, "documentType")
             VALUES (${createId()}, ${name}, ${content}, ${authorId},
               (SELECT id FROM projects WHERE projects.name = ${projectName}
@@ -701,13 +720,26 @@ export async function createDocument(
                 (SELECT organisations.id FROM organisations
                   INNER JOIN users ON users."organizationId" = organisations.id
                   INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
-                  WHERE organisations.name = ${organizationName} AND organisations.id = (SELECT "organizationId" FROM users WHERE id = ${authorId})
-                  AND municipalities.name = ${municipalityName} AND municipalities.id = (SELECT "municipalityId" FROM users WHERE id = ${authorId}))),
+                  WHERE organisations.name = ${organizationName} 
+                    AND organisations.id = (SELECT "organizationId" FROM users WHERE id = ${authorId})
+                    AND municipalities.name = ${municipalityName} 
+                    AND municipalities.id = (SELECT "municipalityId" FROM users WHERE id = ${authorId}))),
               text2ltree(${path}), ${documentType}::"DocumentType")
             `;
+        } else {
+          result = await prisma.$executeRaw`
+            INSERT INTO documents (id, name, content, "authorId", "organizationId", path, "documentType", "isTemplate")
+            VALUES (${createId()}, ${name}, ${content}, ${authorId},
+              (SELECT id FROM organisations WHERE organisations.name = ${organizationName}
+              AND organisations.id =
+                (SELECT "organizationId" FROM users WHERE id = ${authorId})),
+              text2ltree(${path}), ${documentType}::"DocumentType", ${isTemplate})
+            `;
+        }
       }
       case UserType.SUPERUSER_MUNICIPALITY: {
-        result = await prisma.$executeRaw`
+        if (projectName) {
+          result = await prisma.$executeRaw`
             INSERT INTO documents (id, name, content, "authorId", "projectId", path, "documentType")
             VALUES (${createId()}, ${name}, ${content}, ${authorId},
               (SELECT id FROM projects WHERE projects.name = ${projectName}
@@ -715,12 +747,24 @@ export async function createDocument(
                 (SELECT organisations.id FROM organisations
                   INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
                   WHERE organisations.name = ${organizationName}
-                  AND municipalities.name = ${municipalityName} AND municipalities.id = (SELECT "municipalityId" FROM users WHERE id = ${authorId}))),
+                    AND municipalities.name = ${municipalityName} 
+                    AND municipalities.id = (SELECT "municipalityId" FROM users WHERE id = ${authorId}))),
               text2ltree(${path}), ${documentType}::"DocumentType")
             `;
+        } else {
+          result = await prisma.$executeRaw`
+            INSERT INTO documents (id, name, content, "authorId", "organizationId", path, "documentType", "isTemplate")
+            VALUES (${createId()}, ${name}, ${content}, ${authorId},
+              (SELECT id FROM organisations WHERE organisations.name = ${organizationName}
+              AND organisations."municipalityId" =
+                (SELECT "municipalityId" FROM users WHERE id = ${authorId})),
+              text2ltree(${path}), ${documentType}::"DocumentType", ${isTemplate})
+            `;
+        }
       }
       case UserType.SUPERUSER_GLOBAL: {
-        result = await prisma.$executeRaw`
+        if (projectName) {
+          result = await prisma.$executeRaw`
             INSERT INTO documents (id, name, content, "authorId", "projectId", path, "documentType")
             VALUES (${createId()}, ${name}, ${content}, ${authorId},
               (SELECT id FROM projects WHERE projects.name = ${projectName}
@@ -730,6 +774,17 @@ export async function createDocument(
                   WHERE organisations.name = ${organizationName} AND municipalities.name = ${municipalityName})),
               text2ltree(${path}), ${documentType}::"DocumentType")
             `;
+        } else {
+          console.log("Creating document that isTemplate:", isTemplate);
+          result = await prisma.$executeRaw`
+            INSERT INTO documents (id, name, content, "authorId", "organizationId", path, "documentType", "isTemplate")
+            VALUES (${createId()}, ${name}, ${content}, ${authorId},
+              (SELECT id FROM organisations WHERE organisations.name = ${organizationName}
+              AND organisations."municipalityId" =
+                (SELECT municipalities.id FROM municipalities WHERE municipalities.name = ${municipalityName})),
+              text2ltree(${path}), ${documentType}::"DocumentType", ${isTemplate})
+            `;
+        }
       }
     }
     if (result === 1) {
@@ -1032,9 +1087,6 @@ export async function updateContent(
 
   switch (user.userType) {
     case UserType.DEFAULT: {
-      // NOTE: This is because currently no matter what the string representation of projectName is passed
-      // projectName: this.projectName as string
-      // TODO: Actually make this endpoint flexible to accept null as projectName
       if (projectName) {
         return await prisma.$executeRaw`
           UPDATE documents
@@ -1226,8 +1278,8 @@ export async function deleteDocument(
           `;
       } else {
         // Validate that it is not the templates folder
-        const target = await prisma.$queryRaw<{ documentType: DocumentType; isTemplate: boolean }[]>`
-          SELECT documents.id, documents."documentType", documents."isTemplate"
+        const target = await prisma.$queryRaw<{ documentType: DocumentType; isTemplate: boolean; path: string }[]>`
+          SELECT documents.id, documents."documentType", documents."isTemplate", documents.path
           FROM documents
           WHERE documents.path = text2ltree(${documentPath})
             AND documents."organizationId" = (
@@ -1235,8 +1287,15 @@ export async function deleteDocument(
             )
             AND documents."projectId" IS NULL
         `;
-        if (target && target[0] && target[0].documentType === "FOLDER" && target[0].isTemplate === true) {
-          throw new SagError("Cannot delete templates folder.");
+        // TODO: Deletion of main Template folder should be reworked
+        if (
+          target &&
+          target[0] &&
+          target[0].documentType === "FOLDER" &&
+          target[0].isTemplate === true &&
+          target[0].path === "templates"
+        ) {
+          throw new SagError("Cannot delete the org level templates folder.");
         }
 
         return await prisma.$executeRaw`

@@ -245,10 +245,11 @@ export class TreeNode implements GetChildren {
       name: name,
       documentType: docType.toString().toLowerCase() as "file" | "folder",
       path: path || "", // path can be empty resulting in nil or null
-      projectName: this.projectName as string,
       organizationName: this.orgName as string,
       municipalityName: this.municipalityName as string,
       ...(content && { content }), // Conditionally include content if it is defined
+      ...(this.projectName && { projectName: this.projectName as string }),
+      isTemplate: this.isTemplate, // If the parent node is template, then child shall be template as well
       $fetch: {
         mode: "cors",
         credentials: "include",
@@ -265,6 +266,7 @@ export class TreeNode implements GetChildren {
         municipalityName: this.municipalityName,
         isExpanded: true,
         parent: this,
+        isTemplate: this.isTemplate,
       });
       this.addChild(newNode);
       return newNode;
@@ -554,6 +556,9 @@ class FileTree implements GetChildren {
       return;
     }
 
+    // console.log("Adding document to: ", currentNode);
+    // console.log("Document to add: ", doc);
+    // console.log("Document path:", doc.documentPath);
     // getting the path
     const pathSplit = doc.documentPath.lastIndexOf(".");
     const path = pathSplit === -1 ? doc.documentPath : doc.documentPath.slice(0, pathSplit);
@@ -563,8 +568,7 @@ class FileTree implements GetChildren {
     for (let i = 1; i < doc.documentPath.split(".").length; i++) {
       currentNode = currentNode?.findChild({ path: path });
     }
-    // console.log("Adding document to: ", currentNode);
-    // console.log("Document to add: ", doc);
+
     currentNode?.addChild(
       new TreeNode(
         {
@@ -656,9 +660,7 @@ class FileTree implements GetChildren {
 function FileNode(props: { node: TreeNode }) {
   let expandDiv: HTMLDivElement;
 
-  const { selectedNode, navigateToFile } = useContext(
-    EditorContext,
-  ) as IEditorContext;
+  const { selectedNode, navigateToFile } = useContext(EditorContext) as IEditorContext;
 
   function toggleExpanded() {
     if (!props.node.isExpanded()) {
@@ -712,8 +714,7 @@ function FileNode(props: { node: TreeNode }) {
       <Suspense>
         <ContextMenu.Trigger
           disabled={
-            ![SagDocumentType.FOLDER, SagDocumentType.FILE, SagDocumentType.PROJECT].includes(props.node.docType) ||
-            (props.node.isTemplate && props.node.docType === SagDocumentType.FOLDER)
+            ![SagDocumentType.FOLDER, SagDocumentType.FILE, SagDocumentType.PROJECT].includes(props.node.docType)
           }
         >
           <button
@@ -974,10 +975,9 @@ function FileContextMenu(props: { children: JSXElement }) {
                 </ContextMenu.Item>
               </Show>
               <Show
-                when={
-                  [SagDocumentType.FOLDER, SagDocumentType.FILE].includes(selectedNode()?.docType as SagDocumentType) &&
-                  !(selectedNode()?.isTemplate && selectedNode()?.docType === SagDocumentType.FOLDER)
-                }
+                when={[SagDocumentType.FOLDER, SagDocumentType.FILE].includes(
+                  selectedNode()?.docType as SagDocumentType,
+                )}
               >
                 <ContextMenu.Item
                   class={styles["context-menu-item"]}
@@ -989,11 +989,9 @@ function FileContextMenu(props: { children: JSXElement }) {
                 </ContextMenu.Item>
               </Show>
               <Show
-                when={
-                  [SagDocumentType.FOLDER, SagDocumentType.PROJECT].includes(
-                    selectedNode()?.docType as SagDocumentType,
-                  ) && !(selectedNode()?.isTemplate && selectedNode()?.docType === SagDocumentType.FOLDER)
-                }
+                when={[SagDocumentType.FOLDER, SagDocumentType.PROJECT].includes(
+                  selectedNode()?.docType as SagDocumentType,
+                )}
               >
                 <ContextMenu.Item
                   class={styles["context-menu-item"]}
@@ -1021,11 +1019,9 @@ function FileContextMenu(props: { children: JSXElement }) {
                 </ContextMenu.Item>
               </Show>
               <Show
-                when={
-                  [SagDocumentType.FOLDER, SagDocumentType.PROJECT].includes(
-                    selectedNode()?.docType as SagDocumentType,
-                  ) && !(selectedNode()?.isTemplate && selectedNode()?.docType === SagDocumentType.FOLDER)
-                }
+                when={[SagDocumentType.FOLDER, SagDocumentType.PROJECT].includes(
+                  selectedNode()?.docType as SagDocumentType,
+                )}
               >
                 <ContextMenu.Item
                   class={styles["context-menu-item"]}

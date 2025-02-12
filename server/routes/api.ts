@@ -182,16 +182,17 @@ export const api = new Elysia({ prefix: "/api" })
     async ({
       log,
       set,
-      body: { name, projectName, organizationName, municipalityName, path, documentType, content },
+      body: { name, projectName, organizationName, municipalityName, path, documentType, content, isTemplate },
       userId,
     }: AuthContextWithBody<{
       name: string;
-      projectName: string;
+      projectName: string | undefined;
       organizationName: string;
       municipalityName: string;
       path: string;
       documentType: "file" | "folder";
       content?: string | null;
+      isTemplate?: boolean | undefined;
     }>): Promise<string | { error: string }> => {
       let result: string | null;
       if (!userId) {
@@ -210,6 +211,7 @@ export const api = new Elysia({ prefix: "/api" })
           path,
           DocumentType[documentType.toUpperCase() as keyof typeof DocumentType],
           content,
+          isTemplate,
         );
       } catch (e) {
         if (e instanceof SagError) {
@@ -235,12 +237,13 @@ export const api = new Elysia({ prefix: "/api" })
     {
       body: t.Object({
         name: t.String(),
-        projectName: t.String(),
+        projectName: t.Optional(t.String()),
         organizationName: t.String(),
         municipalityName: t.String(),
         path: t.String(),
         documentType: t.Union([t.Literal("file"), t.Literal("folder")]),
         content: t.Optional(t.String()),
+        isTemplate: t.Optional(t.Boolean()),
       }),
       detail: { tags: ["api"], description: "Create a new document" },
     },
