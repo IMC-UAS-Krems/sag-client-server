@@ -290,10 +290,6 @@ export const api = new Elysia({ prefix: "/api" })
   .get(
     "/document_content",
     async ({ log, set, query: { projectName, organizationName, municipalityName, path }, userId }) => {
-      // NOTE: because of encoding problems between rust which uses `+` and TS which expects "%20"
-      // I hope this is temporary, and we will manage to find a workaround
-      // TODO: find a workaround
-      projectName = projectName.replace("+", " ");
       const document = await sql.getContent(userId, municipalityName, organizationName, projectName, path);
       if (document === null || document.length < 1) {
         set.status = 400;
@@ -303,12 +299,14 @@ export const api = new Elysia({ prefix: "/api" })
       return document[0].content;
     },
     {
-      query: t.Object({
-        projectName: t.String(),
-        organizationName: t.String(),
-        municipalityName: t.String(),
-        path: t.String(),
-      }),
+      // NOTE: t.Object sets body type to `json`, which conflicts with the compiler => wrong query parsing
+      // query: t.Object({
+      //   projectName: t.String(),
+      //   organizationName: t.String(),
+      //   municipalityName: t.String(),
+      //   path: t.String(),
+      // }),
+      type: "application/x-www-form-urlencoded",
       beforeHandle: authMiddleware,
       detail: { tags: ["api"], description: "Get document's content" },
     },
