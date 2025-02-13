@@ -523,7 +523,12 @@ function FileNode(props: { node: TreeNode }) {
               }
             }}
           >
-            <span class={styles["file-node-btn-icon"]}>{props.node.icon()}</span>
+            <span
+              class={styles["file-node-btn-icon"]}
+              style={{ "padding-left": props.node.isFile() ? "1.5rem" : "0" }}
+            >
+              {props.node.icon()}
+            </span>
             <span>{props.node.name()}</span>
           </button>
         </ContextMenu.Trigger>
