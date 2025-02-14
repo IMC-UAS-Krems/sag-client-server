@@ -7,6 +7,7 @@ import { ContextMenu } from "@kobalte/core/context-menu";
 import Swal from "sweetalert2";
 import { Notification, Prompt } from "@client/common";
 import styles from "@styles/LeftSideBar.module.css";
+import { RiArrowsArrowRightSLine, RiArrowsArrowDownSLine } from "solid-icons/ri";
 
 enum SagDocumentType {
   FILE = "FILE",
@@ -220,14 +221,30 @@ export class TreeNode implements GetChildren {
       case SagDocumentType.FILE:
         return "📄";
       case SagDocumentType.FOLDER:
-        if (this.isTemplate && this.path() === "templates") return "📚";
-        return `${this.isExpanded() ? "v" : ">"} ${this.isExpanded() ? "📂" : "📁"}`;
+        return (
+          <div class={styles["file-tree-icon-container"]}>
+            {this.isExpanded() ? <RiArrowsArrowDownSLine /> : <RiArrowsArrowRightSLine />}{" "}
+            {this.isTemplate && this.path() === "templates" ? "📚" : this.isExpanded() ? "📂" : "📁"}
+          </div>
+        );
       case SagDocumentType.MUNICIPALITY:
-        return "🏠";
+        return (
+          <div class={styles["file-tree-icon-container"]}>
+            {this.isExpanded() ? <RiArrowsArrowDownSLine /> : <RiArrowsArrowRightSLine />} 🏠
+          </div>
+        );
       case SagDocumentType.ORG:
-        return "🏢";
+        return (
+          <div class={styles["file-tree-icon-container"]}>
+            {this.isExpanded() ? <RiArrowsArrowDownSLine /> : <RiArrowsArrowRightSLine />} 🏢
+          </div>
+        );
       case SagDocumentType.PROJECT:
-        return "🏗️";
+        return (
+          <div class={styles["file-tree-icon-container"]}>
+            {this.isExpanded() ? <RiArrowsArrowDownSLine /> : <RiArrowsArrowRightSLine />} 🏗️
+          </div>
+        );
     }
   }
 
@@ -739,7 +756,9 @@ function FileNode(props: { node: TreeNode }) {
               }
             }}
           >
-            <span class={styles["file-node-btn-icon"]}>{props.node.icon()}</span>
+            <span class={styles["file-node-btn-icon"]} style={{ "padding-left": props.node.isFile() ? "1.5rem" : "0" }}>
+              {props.node.icon()}
+            </span>
             <span>{props.node.name()}</span>
           </button>
         </ContextMenu.Trigger>
