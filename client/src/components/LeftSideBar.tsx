@@ -577,9 +577,6 @@ class FileTree implements GetChildren {
       return;
     }
 
-    // console.log("Adding document to: ", currentNode);
-    // console.log("Document to add: ", doc);
-    // console.log("Document path:", doc.documentPath);
     // getting the path
     const pathSplit = doc.documentPath.lastIndexOf(".");
     const path = pathSplit === -1 ? doc.documentPath : doc.documentPath.slice(0, pathSplit);
@@ -821,7 +818,7 @@ function FileContextMenu(props: { children: JSXElement }) {
         if (!orgNode) {
           console.error("Error finding the org node for the current node: ", node);
           Notification.fire({
-            title: "Couldn't find the templates fo the organisation",
+            title: "Couldn't find the templates of the organisation",
             icon: "error",
           });
           return;
@@ -841,9 +838,25 @@ function FileContextMenu(props: { children: JSXElement }) {
           return;
         }
 
+        // Recursively get all the templates in the templates folder
+        interface Templates {
+          [key: string]: string;
+        }
+        const getTemplates = (node: TreeNode, acc: Templates): Templates => {
+          node.children.forEach((child) => {
+            if (child.docType === SagDocumentType.FILE) {
+              acc[child.path() as string] = child.name() as string;
+            } else if (child.docType === SagDocumentType.FOLDER) {
+              // Recursively call getTemplates for folder nodes
+              getTemplates(child, acc);
+            }
+          });
+          return acc;
+        };
+        const templates: Templates = getTemplates(templateNode, {});
+
         // If there are no templates for the organisation, show an error message
-        const templates = templateNode.children.map((child) => child.name());
-        if (templates.length === 0) {
+        if (Object.keys(templates).length === 0) {
           Notification.fire({
             title: "No templates found for the organisation",
             icon: "error",
@@ -871,7 +884,12 @@ function FileContextMenu(props: { children: JSXElement }) {
         });
 
         if (value) {
-          const selectedTemplateNode = templateNode.children[parseInt(value)];
+          // Get the selected template based on the path and then its content
+          let selectedTemplateNode = templateNode;
+          for (let i = 1; i < value.split(".").length; i++) {
+            console.log("Selected template node: ", selectedTemplateNode.path());
+            selectedTemplateNode = selectedTemplateNode.findChild({ path: value }) as TreeNode;
+          }
           const templateContent = await selectedTemplateNode.getContent();
           if (!templateContent) {
             Notification.fire({

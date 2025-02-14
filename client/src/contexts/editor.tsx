@@ -78,7 +78,8 @@ export function EditorProvider(props: { children: JSX.Element }): JSX.Element {
       const savedContent = (await selectedNode()?.getContent()) ?? "";
       if (!isEditorInitialized()) {
         setIsEditorInitialized(true);
-      } else if (currentContent.trim() === "" || currentContent !== savedContent || savedContent === "") {
+        // } else if (currentContent.trim() === "" || currentContent !== savedContent || savedContent === "") {
+      } else if (currentContent !== savedContent) {
         try {
           const result = await Swal.fire({
             title: "Unsaved Changes",
