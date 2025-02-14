@@ -417,9 +417,8 @@ function Editor(): JSX.Element {
           {isTemplate() && (
             <div class="space-x-2 ml-auto">
               <Button.Root
-                class={`border-2 bg-white text-black hover:bg-black hover:text-white font-bold py-1 px-5 rounded-xl focus:outline-none focus:shadow-outline text-lg ${lastSelectedFile()?.isFile() && hasUnsavedChanges() ? "" : " cursor-not-allowed"}`}
+                class={`border-2 font-bold py-1 px-5 rounded-xl focus:outline-none focus:shadow-outline text-lg ${lastSelectedFile()?.isFile() && hasUnsavedChanges() ? "bg-black text-white hover:bg-white hover:text-black" : " cursor-not-allowed bg-white text-black hover:bg-black hover:text-white"}`}
                 disabled={!(lastSelectedFile()?.isFile() && hasUnsavedChanges())}
-                // TODO: Implement save template logic
                 onClick={async () => {
                   const node = selectedNode();
                   console.log("Calling save on template node:", node);

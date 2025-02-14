@@ -341,6 +341,10 @@ export class TreeNode implements GetChildren {
   }
 
   async saveContent(content: string) {
+    if (this.docType !== SagDocumentType.FILE) {
+      console.error("Cannot save content for a document that is not a file");
+      return false;
+    }
     const requestBody = {
       organizationName: this.orgName as string,
       municipalityName: this.municipalityName as string,
