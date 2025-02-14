@@ -390,8 +390,11 @@ function Editor(): JSX.Element {
                         Save as File
                       </DropdownMenu.RadioItem>
                       <DropdownMenu.RadioItem
-                        class={styles["dropdown-menu__radio-item"]}
+                        class={`${styles["dropdown-menu__radio-item"]} ${
+                          !lastSelectedFile()?.isFile() ? styles["dropdown-menu__radio-item--disabled"] : ""
+                        }`}
                         value="template"
+                        disabled={!lastSelectedFile()?.isFile()}
                         onSelect={async () => {
                           const node = selectedNode();
                           if (node !== null) {
