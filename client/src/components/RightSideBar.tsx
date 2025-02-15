@@ -1,33 +1,34 @@
 import { For } from "solid-js";
 import { errors } from "@store/index";
-import styles from "@client/styles/Editor.module.css";
+import editorStyles from "@client/styles/Editor.module.css";
+import styles from "@client/styles/RightSideBar.module.css";
 
 export function RightSideBar() {
   return (
-    <div class={styles["right-column"]} style={{ overflow: "auto" }}>
+    <div class={editorStyles["right-column"]} style={{ overflow: "auto" }}>
       {errors().length > 0 ? (
-        <table style={{ width: "100%" }} class="border-solid border-2 border-black">
-          <thead class="">
+        <table style={{ width: "100%" }} class={styles["table"]}>
+          <thead>
             <tr>
-              <th class="text-left text-lg border-solid border-2 border-black">Line</th>
-              <th class="text-left text-lg border-solid border-2 border-black">Column</th>
-              <th class="text-left text-lg border-solid border-2 border-black">Error</th>
+              <th class={styles["table-header"]}>Line</th>
+              <th class={styles["table-header"]}>Column</th>
+              <th class={styles["table-header"]}>Error</th>
             </tr>
           </thead>
           <tbody>
             <For each={errors()}>
               {(error, index) => (
                 <tr>
-                  <td class="text-center border-solid border-2 border-black">{error.line_start}</td>
-                  <td class="text-center border-solid border-2 border-black">{error.column_start}</td>
-                  <td class="border-spacing-2 border-solid border-2 border-black">{error.error}</td>
+                  <td class={styles["table-row"]}>{error.line_start}</td>
+                  <td class={styles["table-row"]}>{error.column_start}</td>
+                  <td class={styles["table-row-error"]}>{error.error}</td>
                 </tr>
               )}
             </For>
           </tbody>
         </table>
       ) : (
-        <p class="text-center">No errors found!</p>
+        <p class={styles["no-errors"]}>No errors found!</p>
       )}
     </div>
   );

@@ -196,7 +196,6 @@ export class TreeNode implements GetChildren {
   }
 
   getPathList() {
-    console.log("Getting path list for node: ", this);
     const path = [];
 
     // To battle possible cycles
@@ -206,7 +205,7 @@ export class TreeNode implements GetChildren {
 
     while (currentNode.parent instanceof TreeNode && iterCount < maxIter) {
       path.unshift(currentNode.name());
-      console.log("Parent is: ", currentNode.parent);
+      // console.log("Parent is: ", currentNode.parent);
       currentNode = currentNode.parent;
       iterCount++;
     }
@@ -721,9 +720,7 @@ function FileNode(props: { node: TreeNode }) {
       selectedContext.path === nodeContext.path &&
       selectedContext.municipality === nodeContext.municipality &&
       selectedContext.organization === nodeContext.organization &&
-      selectedContext.project === nodeContext.project &&
-      selectedContext.file_type === SagDocumentType.FILE &&
-      nodeContext.file_type === SagDocumentType.FILE
+      selectedContext.project === nodeContext.project
     );
   };
 

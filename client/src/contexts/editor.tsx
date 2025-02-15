@@ -74,7 +74,6 @@ export function EditorProvider(props: { children: JSX.Element }): JSX.Element {
     const currentContent = code();
 
     if (selectedNode()?.isFile()) {
-      console.log("Getting content for selected node in editor.tsx - navigateToFile");
       const savedContent = (await selectedNode()?.getContent()) ?? "";
       if (!isEditorInitialized()) {
         setIsEditorInitialized(true);
@@ -102,11 +101,14 @@ export function EditorProvider(props: { children: JSX.Element }): JSX.Element {
         }
       }
     }
-
     try {
       if (newNode.isFile()) {
         const newContent = await newNode.getContent();
         handleFileClick(newContent);
+      } else {
+        // If the node is a directory, clear the editor
+        setCode("");
+        handleFileClick("");
       }
       setSelectedNode(newNode);
     } catch (error) {

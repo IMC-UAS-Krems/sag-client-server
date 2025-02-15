@@ -8,8 +8,10 @@ import { Breadcrumbs } from "@kobalte/core/breadcrumbs";
 
 import { eden } from "@client/api";
 import styles from "@client/styles/Editor.module.css";
+import commonStyles from "@client/styles/Common.module.css";
 import { errors, setErrors, Error } from "@store/index";
 import { RightSideBar } from "../components/RightSideBar";
+import placeholderHighlightPlugin from "@client/editor_plugins/PlaceHolderHighlight";
 import Header from "@client/components/Header";
 import { LeftSideBar, TreeNode } from "@client/components/LeftSideBar";
 import { EditorContext, IEditorContext } from "@client/contexts/editor";
@@ -71,7 +73,11 @@ async function compile(code: string): Promise<CompileResult | undefined> {
     Notification.update({
       title: `<span>Dash deployed successfully to Azure<br>`,
       titleText: undefined,
-      html: `<a href="${url}" class="text-gray-500 decoration-dotted underline" target="_blank">Click here to access</a><span>`,
+      html: (
+        <a href={url} class={commonStyles["notification-deploy-link"]} target="_blank">
+          Click here to access
+        </a>
+      ),
       icon: "success",
     });
 
@@ -131,7 +137,6 @@ const checkErrors = () => {
 };
 
 function FileTreeBreadcrumb(lastSelectedNode: TreeNode | null): JSX.Element {
-  console.log("Rerendering FileTreeBreadcrumb with node:", lastSelectedNode);
   if (!lastSelectedNode) {
     return <></>;
   }
@@ -139,7 +144,7 @@ function FileTreeBreadcrumb(lastSelectedNode: TreeNode | null): JSX.Element {
   const pathList = lastSelectedNode.getPathList();
 
   return (
-    <Breadcrumbs class="mx-2 overflow-x-scroll">
+    <Breadcrumbs class={styles.breadcrumbs}>
       <ol class={styles["breadcrumbs__list"]}>
         {pathList.map((name, index) => (
           <li class={styles["breadcrumbs__item"]}>
@@ -198,6 +203,7 @@ function Editor(): JSX.Element {
     createExtension(syntaxHighlighting(styles));*/
 
   createExtension(lineNumbers);
+  createExtension(placeholderHighlightPlugin);
 
   const lint = linter((view: EditorView) => {
     const diagnostics: Diagnostic[] = [];
@@ -323,120 +329,121 @@ function Editor(): JSX.Element {
   return (
     <Header>
       <main>
-        <div class="flex flex-row mx-1 justify-between items-center">
+        <div class={styles["context-row"]}>
           {FileTreeBreadcrumb(lastSelectedFile())}
-          {!isTemplate() && (
-            <div class="space-x-2 ml-auto">
-              {" "}
-              <Button.Root
-                class={"bg-gray-900 hover:bg-black text-white font-bold py-1 px-5 rounded-xl focus:outline-none focus:shadow-outline text-lg w-32".concat(
-                  lastSelectedFile()?.isFile() ? "" : " cursor-not-allowed",
-                )}
-                {...(lastSelectedFile()?.isFile() ? {} : { disabled: true })}
-                onClick={async () => {
-                  await compile(code());
-                }}
-              >
-                Compile
-              </Button.Root>
-              <Button.Root
-                class={"border-2 bg-white text-black hover:bg-black hover:text-white font-bold py-1 px-5 rounded-xl focus:outline-none focus:shadow-outline text-lg".concat(
-                  isCompiled() ? "" : " cursor-not-allowed",
-                )}
-                onClick={() => {
-                  const url = dashboardUrl();
-                  if (url) {
-                    handleOpenWindow(url);
-                  } else {
-                    Notification.fire({
-                      icon: "error",
-                      titleText: "Dashboard not deployed yet",
-                      timer: 5000,
-                    });
-                  }
-                }}
-                disabled={!isCompiled()}
-              >
-                Open Dashboard
-              </Button.Root>
-              <DropdownMenu>
-                <DropdownMenu.Trigger class={styles["dropdown-menu__trigger"]}>
-                  <span class={styles["dropdown-menu__trigger_text"]}>Save as</span>
-                </DropdownMenu.Trigger>
-                <DropdownMenu.Portal>
-                  <DropdownMenu.Content class={styles["dropdown-menu__content"]}>
-                    <DropdownMenu.RadioGroup value={saveMethod()} onChange={setSaveMethod}>
-                      <DropdownMenu.RadioItem
-                        class={`${styles["dropdown-menu__radio-item"]} ${
-                          !(lastSelectedFile()?.isFile() && hasUnsavedChanges())
-                            ? styles["dropdown-menu__radio-item--disabled"]
-                            : ""
-                        }`}
-                        value="file"
-                        disabled={!(lastSelectedFile()?.isFile() && hasUnsavedChanges())}
-                        onSelect={async () => {
-                          const node = selectedNode();
-                          if (node !== null) {
-                            const success = await node.saveContent(code());
-                            if (success) {
-                              setSavedContent(code());
-                            }
-                          }
-                        }}
-                      >
-                        <DropdownMenu.ItemIndicator
-                          class={styles["dropdown-menu__item-indicator"]}
-                        ></DropdownMenu.ItemIndicator>
-                        Save as File
-                      </DropdownMenu.RadioItem>
-                      <DropdownMenu.RadioItem
-                        class={`${styles["dropdown-menu__radio-item"]} ${
-                          !lastSelectedFile()?.isFile() ? styles["dropdown-menu__radio-item--disabled"] : ""
-                        }`}
-                        value="template"
-                        disabled={!lastSelectedFile()?.isFile()}
-                        onSelect={async () => {
-                          const node = selectedNode();
-                          if (node !== null) {
-                            const result = await node.saveFileAsTemplate(code());
-                            if (result instanceof TreeNode) {
-                              navigateToFile(result);
-                            }
-                          }
-                        }}
-                      >
-                        <DropdownMenu.ItemIndicator
-                          class={styles["dropdown-menu__item-indicator"]}
-                        ></DropdownMenu.ItemIndicator>
-                        Save as Template
-                      </DropdownMenu.RadioItem>
-                    </DropdownMenu.RadioGroup>
-                    <DropdownMenu.Arrow />
-                  </DropdownMenu.Content>
-                </DropdownMenu.Portal>
-              </DropdownMenu>
-            </div>
-          )}
-          {isTemplate() && (
-            <div class="space-x-2 ml-auto">
-              <Button.Root
-                class={`border-2 font-bold py-1 px-5 rounded-xl focus:outline-none focus:shadow-outline text-lg ${lastSelectedFile()?.isFile() && hasUnsavedChanges() ? "bg-black text-white hover:bg-white hover:text-black" : " cursor-not-allowed bg-white text-black hover:bg-black hover:text-white"}`}
-                disabled={!(lastSelectedFile()?.isFile() && hasUnsavedChanges())}
-                onClick={async () => {
-                  const node = selectedNode();
-                  console.log("Calling save on template node:", node);
-                  if (node !== null) {
-                    const success = await node.saveContent(code());
-                    if (success) {
-                      setSavedContent(code());
+
+          <div class={styles["context-row-actions"]}>
+            {!isTemplate() && (
+              <>
+                <Button.Root
+                  class={styles.btn}
+                  {...(lastSelectedFile()?.isFile() ? {} : { disabled: true })}
+                  onClick={async () => {
+                    await compile(code());
+                  }}
+                >
+                  Compile
+                </Button.Root>
+                <Button.Root
+                  class={styles.btn}
+                  onClick={() => {
+                    const url = dashboardUrl();
+                    if (url) {
+                      handleOpenWindow(url);
+                    } else {
+                      Notification.fire({
+                        icon: "error",
+                        titleText: "Dashboard not deployed yet",
+                        timer: 5000,
+                      });
                     }
-                  }
-                }}
-              >
-                Update template
-              </Button.Root>
-            </div>
-          )}
+                  }}
+                  disabled={!isCompiled()}
+                >
+                  Open Dashboard
+                </Button.Root>
+                <DropdownMenu>
+                  <DropdownMenu.Trigger
+                    class={styles.btn}
+                    disabled={!(lastSelectedFile()?.isFile() && hasUnsavedChanges()) && !lastSelectedFile()?.isFile()}
+                  >
+                    <span>Save as</span>
+                  </DropdownMenu.Trigger>
+                  <DropdownMenu.Portal>
+                    <DropdownMenu.Content class={styles["dropdown-menu__content"]}>
+                      <DropdownMenu.RadioGroup value={saveMethod()} onChange={setSaveMethod}>
+                        <DropdownMenu.RadioItem
+                          class={`${styles["dropdown-menu__radio-item"]} ${
+                            !(lastSelectedFile()?.isFile() && hasUnsavedChanges())
+                              ? styles["dropdown-menu__radio-item--disabled"]
+                              : ""
+                          }`}
+                          value="file"
+                          disabled={!(lastSelectedFile()?.isFile() && hasUnsavedChanges())}
+                          onSelect={async () => {
+                            const node = selectedNode();
+                            if (node !== null) {
+                              const success = await node.saveContent(code());
+                              if (success) {
+                                setSavedContent(code());
+                              }
+                            }
+                          }}
+                        >
+                          <DropdownMenu.ItemIndicator
+                            class={styles["dropdown-menu__item-indicator"]}
+                          ></DropdownMenu.ItemIndicator>
+                          Save as File
+                        </DropdownMenu.RadioItem>
+                        <DropdownMenu.RadioItem
+                          class={`${styles["dropdown-menu__radio-item"]} ${
+                            !lastSelectedFile()?.isFile() ? styles["dropdown-menu__radio-item--disabled"] : ""
+                          }`}
+                          value="template"
+                          disabled={!lastSelectedFile()?.isFile()}
+                          onSelect={async () => {
+                            const node = selectedNode();
+                            if (node !== null) {
+                              const result = await node.saveFileAsTemplate(code());
+                              if (result instanceof TreeNode) {
+                                navigateToFile(result);
+                              }
+                            }
+                          }}
+                        >
+                          <DropdownMenu.ItemIndicator
+                            class={styles["dropdown-menu__item-indicator"]}
+                          ></DropdownMenu.ItemIndicator>
+                          Save as Template
+                        </DropdownMenu.RadioItem>
+                      </DropdownMenu.RadioGroup>
+                      <DropdownMenu.Arrow />
+                    </DropdownMenu.Content>
+                  </DropdownMenu.Portal>
+                </DropdownMenu>
+              </>
+            )}
+            {isTemplate() && (
+              <>
+                <Button.Root
+                  class={styles.btn}
+                  disabled={!(lastSelectedFile()?.isFile() && hasUnsavedChanges())}
+                  onClick={async () => {
+                    const node = selectedNode();
+                    console.log("Calling save on template node:", node);
+                    if (node !== null) {
+                      const success = await node.saveContent(code());
+                      if (success) {
+                        setSavedContent(code());
+                      }
+                    }
+                  }}
+                >
+                  Update template
+                </Button.Root>
+              </>
+            )}
+          </div>
         </div>
         <div class={styles["editor-container"]}>
           <LeftSideBar />
