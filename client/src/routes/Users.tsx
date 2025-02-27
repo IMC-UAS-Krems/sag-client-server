@@ -26,15 +26,15 @@ import {
 } from "@tanstack/solid-table";
 import Swal from "sweetalert2";
 
-import { eden } from "@client/api";
-import { handleUnauthorized } from "@client/utils/authUtils";
-import Header from "@client/components/Header";
+import { eden } from "@client/api/index.ts";
+import { handleUnauthorized } from "@client/utils/authUtils.ts";
+import Header from "@client/components/Header.tsx";
 // import authStore from "@store/authStore"; // Not used anymore but could be used for highlighting the current user
 import styles from "@styles/Users.module.css";
 import menu_styles from "@styles/ContextMenu.module.css";
-import { UserDetails } from "@server/types";
-import { panic } from "@utils/panic";
-import { Notification } from "@client/common";
+import { UserDetails } from "@server/types.ts";
+import { panic } from "@utils/panic.ts";
+import { Notification } from "@client/common.ts";
 
 interface UsersResponse {
   data: UserDetails[] | { error: string } | null;

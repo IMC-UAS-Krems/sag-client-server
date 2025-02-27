@@ -5,13 +5,13 @@ import { useNavigate } from "@solidjs/router";
 import { Button } from "@kobalte/core";
 import Swal from "sweetalert2";
 
-import { eden } from "@client/api";
-import { handleUnauthorized } from "@client/utils/authUtils";
-import { UserRole } from "@utils/roles";
-import Header from "@client/components/Header";
-import FormField from "@client/components/FormField";
+import { eden } from "@client/api/index.ts";
+import { handleUnauthorized } from "@client/utils/authUtils.ts";
+import { UserRole } from "@utils/roles.ts";
+import Header from "@client/components/Header.tsx";
+import FormField from "@client/components/FormField.tsx";
 import styles from "@styles/Signin.module.css";
-import { Notification } from "@client/common";
+import { Notification } from "@client/common.ts";
 
 const UsersCreate: Component = () => {
   const navigate = useNavigate();

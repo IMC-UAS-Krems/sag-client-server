@@ -2,8 +2,8 @@ import { Component, createSignal, For } from "solid-js";
 
 import MapGL, { Viewport, Marker } from "solid-map-gl";
 
-import Header from "@client/components/Header";
-import { theme } from "@client/store";
+import Header from "@client/components/Header.tsx";
+import { theme } from "@client/store/index.ts";
 import styles from "@styles/Home.module.css";
 import "mapbox-gl/dist/mapbox-gl.css";
 

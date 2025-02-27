@@ -30,13 +30,13 @@ import {
 } from "@tanstack/solid-table";
 import Swal from "sweetalert2";
 
-import { eden } from "@client/api";
-import { handleUnauthorized } from "@client/utils/authUtils";
+import { eden } from "@client/api/index.ts";
+import { handleUnauthorized } from "@client/utils/authUtils.ts";
 import styles from "@styles/Organisations.module.css";
 import menu_styles from "@styles/ContextMenu.module.css";
-import { OrganisationDetails } from "@server/types";
-import { theme } from "@client/store";
-import Header from "@client/components/Header";
+import { OrganisationDetails } from "@server/types.ts";
+import { theme } from "@client/store/index.ts";
+import Header from "@client/components/Header.tsx";
 
 const Organisations: Component = () => {
   const navigate = useNavigate();

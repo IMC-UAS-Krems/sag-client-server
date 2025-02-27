@@ -28,6 +28,7 @@
     "@prisma/client": "5.17.0",
     "@solid-primitives/i18n": "^2.1.1",
     "@solidjs/router": "^0.14.1",
+    "@tailwindcss/vite": "^4.0.9",
     "@tanstack/solid-table": "^8.20.5",
     "@types/nodemailer": "^6.4.16",
     "elysia": "1.1.4",
@@ -44,6 +45,7 @@
     "solid-map-gl": "^1.11.3",
     "solid-meta": "^0.28.1",
     "sweetalert2": "^11.12.3",
+    "tailwindcss": "^4.0.9",
     "vite": "^5.3.5",
     "vite-plugin-solid": "^2.10.2",
     "vite-tsconfig-paths": "^4.3.2"

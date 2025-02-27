@@ -1,4 +1,4 @@
-import type { Router } from "@server/index";
+import type { Router } from "@server/index.ts";
 import { edenTreaty } from "@elysiajs/eden";
 
 // export const eden = edenTreaty<Router>("http://localhost:9512");

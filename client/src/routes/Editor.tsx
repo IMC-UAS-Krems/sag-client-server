@@ -6,16 +6,16 @@ import { Button } from "@kobalte/core";
 import { DropdownMenu } from "@kobalte/core/dropdown-menu";
 import { Breadcrumbs } from "@kobalte/core/breadcrumbs";
 
-import { eden } from "@client/api";
+import { eden } from "@client/api/index.ts";
 import styles from "@client/styles/Editor.module.css";
 import commonStyles from "@client/styles/Common.module.css";
-import { errors, setErrors, Error } from "@store/index";
-import { RightSideBar } from "../components/RightSideBar";
-import placeholderHighlightPlugin from "@client/editor_plugins/PlaceHolderHighlight";
-import Header from "@client/components/Header";
-import { LeftSideBar, TreeNode } from "@client/components/LeftSideBar";
-import { EditorContext, IEditorContext } from "@client/contexts/editor";
-import { Notification } from "@client/common";
+import { errors, setErrors, Error } from "@store/index.ts";
+import { RightSideBar } from "../components/RightSideBar.tsx";
+import placeholderHighlightPlugin from "@client/editor_plugins/PlaceHolderHighlight.ts";
+import Header from "@client/components/Header.tsx";
+import { LeftSideBar, TreeNode } from "@client/components/LeftSideBar.tsx";
+import { EditorContext, IEditorContext } from "@client/contexts/editor.tsx";
+import { Notification } from "@client/common.ts";
 
 type CompileResult = {
   error: string | undefined;

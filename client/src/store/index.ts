@@ -1,6 +1,6 @@
 import { User } from "@prisma/client";
 import { createSignal } from "solid-js";
-import { createStoredSignal } from "@utils/storageSignal";
+import { createStoredSignal } from "@utils/storageSignal.ts";
 
 export type UserState = {
   user: User | null;

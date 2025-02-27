@@ -3,9 +3,9 @@ import { useNavigate } from "@solidjs/router";
 
 import Swal from "sweetalert2";
 
-import { eden } from "@client/api";
-import Header from "@client/components/Header";
-import authStore from "@store/authStore";
+import { eden } from "@client/api/index.ts";
+import Header from "@client/components/Header.tsx";
+import authStore from "@store/authStore.ts";
 import styles from "@styles/Unauthorized.module.css";
 
 const Verify: Component = () => {

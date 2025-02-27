@@ -1,9 +1,9 @@
 import { Component, onMount, createSignal } from "solid-js";
 import { useNavigate, useParams } from "@solidjs/router";
 
-import { eden } from "@client/api";
-import authStore from "@client/store/authStore";
-import Header from "@client/components/Header";
+import { eden } from "@client/api/index.ts";
+import authStore from "@client/store/authStore.ts";
+import Header from "@client/components/Header.tsx";
 import styles from "@styles/Unauthorized.module.css";
 
 const VerifyToken: Component = () => {

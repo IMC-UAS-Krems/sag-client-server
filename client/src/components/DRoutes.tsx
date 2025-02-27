@@ -1,21 +1,21 @@
 import { onMount, type Component } from "solid-js";
 import { Router, Route, Navigate } from "@solidjs/router";
 
-import Home from "@client/routes/Home";
-import About from "@client/routes/About";
-import Editor from "@client/routes/Editor";
-import SignIn from "@client/routes/SignIn";
-import Users from "@client/routes/Users";
-import UsersCreate from "@client/routes/UsersCreate";
-import UsersEdit from "@client/routes/UsersEdit";
-import Unauthorized from "@client/routes/Unauthorized";
-import AuthGuard from "@client/guard/authGuard";
-import authStore from "@client/store/authStore";
-import Verify from "@client/routes/Verify";
-import VerifyToken from "@client/routes/VerifyToken";
-import Organisations from "@client/routes/Organisations";
-import OrganisationsCreate from "@client/routes/OrganisationsCreate";
-import OrganisationsEdit from "@client/routes/OrganisationsEdit";
+import Home from "@client/routes/Home.tsx";
+import About from "@client/routes/About.tsx";
+import Editor from "@client/routes/Editor.tsx";
+import SignIn from "@client/routes/SignIn.tsx";
+import Users from "@client/routes/Users.tsx";
+import UsersCreate from "@client/routes/UsersCreate.tsx";
+import UsersEdit from "@client/routes/UsersEdit.tsx";
+import Unauthorized from "@client/routes/Unauthorized.tsx";
+import AuthGuard from "@client/guard/authGuard.tsx";
+import authStore from "@client/store/authStore.ts";
+import Verify from "@client/routes/Verify.tsx";
+import VerifyToken from "@client/routes/VerifyToken.tsx";
+import Organisations from "@client/routes/Organisations.tsx";
+import OrganisationsCreate from "@client/routes/OrganisationsCreate.tsx";
+import OrganisationsEdit from "@client/routes/OrganisationsEdit.tsx";
 
 const DRoutes: Component = () => {
   // Initialize auth store on app mount

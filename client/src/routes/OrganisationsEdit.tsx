@@ -2,14 +2,14 @@ import { createSignal, createEffect } from "solid-js";
 import type { Component } from "solid-js";
 
 import { useNavigate, useParams } from "@solidjs/router";
-import { handleUnauthorized } from "@client/utils/authUtils";
-import { UpdateOrganisationBody } from "@server/types";
+import { handleUnauthorized } from "@client/utils/authUtils.ts";
+import { UpdateOrganisationBody } from "@server/types.ts";
 
 import { Button } from "@kobalte/core";
 import Swal from "sweetalert2";
-import { eden } from "@client/api";
-import Header from "@client/components/Header";
-import FormField from "@client/components/FormField";
+import { eden } from "@client/api/index.ts";
+import Header from "@client/components/Header.tsx";
+import FormField from "@client/components/FormField.tsx";
 import styles from "@styles/Signin.module.css";
 
 const OrganisationsEdit: Component = () => {

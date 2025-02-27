@@ -5,12 +5,12 @@ import { useNavigate } from "@solidjs/router";
 import { Button } from "@kobalte/core";
 import Swal from "sweetalert2";
 
-import { eden } from "@client/api";
-import authStore from "@store/authStore";
-import Header from "@client/components/Header";
-import FormField from "@client/components/FormField";
+import { eden } from "@client/api/index.ts";
+import authStore from "@store/authStore.ts";
+import Header from "@client/components/Header.tsx";
+import FormField from "@client/components/FormField.tsx";
 import styles from "@styles/Signin.module.css";
-import { Notification } from "@client/common";
+import { Notification } from "@client/common.ts";
 
 interface NavigateProps {
   navigate: ReturnType<typeof useNavigate>;
