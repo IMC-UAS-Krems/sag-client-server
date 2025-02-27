@@ -24,6 +24,6 @@ export type JWTState = {
 
 export const [jwt, setJWT] = createSignal<JWTState>({ token: null });
 
-const [theme, setTheme] = createStoredSignal<string>("theme", "light");
+const [theme, setTheme] = createStoredSignal<string>("theme", "system");
 
 export { theme, setTheme };
