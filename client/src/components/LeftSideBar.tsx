@@ -1,11 +1,11 @@
 import { For, onMount, batch, createSignal, useContext, Show, Accessor, Suspense, Setter, JSXElement } from "solid-js";
-import { eden } from "@client/api";
+import { eden } from "@client/api/index.ts";
 import { createMutable } from "solid-js/store";
-import { EditorContext } from "@client/contexts/editor";
-import { IEditorContext } from "@client/contexts/editor";
+import { EditorContext } from "@client/contexts/editor.tsx";
+import { IEditorContext } from "@client/contexts/editor.tsx";
 import { ContextMenu } from "@kobalte/core/context-menu";
 import Swal from "sweetalert2";
-import { Notification, Prompt } from "@client/common";
+import { Notification, Prompt } from "@client/common.ts";
 import styles from "@styles/LeftSideBar.module.css";
 import { RiArrowsArrowRightSLine, RiArrowsArrowDownSLine } from "solid-icons/ri";
 

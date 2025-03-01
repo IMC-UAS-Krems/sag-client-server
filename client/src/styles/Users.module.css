@@ -39,8 +39,7 @@ td {
   padding: 15px;
 }
 
-input {
-  /* padding: 5px; */
+/* input {
   background: none;
   color: var(--primary-text);
   border: 0;
@@ -59,7 +58,7 @@ input:active {
   border: 2px solid var(--primary-text);
   box-shadow: none;
   border-radius: 5px;
-}
+} */
 
 select {
   background: none;

@@ -1,5 +1,5 @@
 import { For } from "solid-js";
-import { errors } from "@store/index";
+import { errors } from "@store/index.ts";
 import editorStyles from "@client/styles/Editor.module.css";
 import styles from "@client/styles/RightSideBar.module.css";
 

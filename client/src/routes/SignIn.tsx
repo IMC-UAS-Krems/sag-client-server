@@ -2,101 +2,223 @@ import { createSignal, createEffect } from "solid-js";
 import type { Component } from "solid-js";
 
 import { useNavigate } from "@solidjs/router";
-import { Button } from "@kobalte/core";
-import Swal from "sweetalert2";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@client/components/ui/card.tsx";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@client/components/ui/tabs.tsx";
+import { TextField, TextFieldErrorMessage, TextFieldInput, TextFieldLabel } from "@client/components/ui/textField.tsx";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  SelectLabel,
+  SelectErrorMessage,
+} from "@client/components/ui/select.tsx";
+import { Skeleton } from "@client/components/ui/skeleton.tsx";
+import { Button } from "@client/components/ui/button.tsx";
+import { showToast } from "@client/components/ui/toast.tsx";
+import { Alert, AlertDescription, AlertTitle } from "@client/components/ui/alert.tsx";
 
 import { eden } from "@client/api/index.ts";
 import authStore from "@store/authStore.ts";
 import Header from "@client/components/Header.tsx";
-import FormField from "@client/components/FormField.tsx";
 import styles from "@styles/Signin.module.css";
-import { Notification } from "@client/common.ts";
 
 interface NavigateProps {
   navigate: ReturnType<typeof useNavigate>;
 }
+interface LoginErrors {
+  username?: string;
+  password?: string;
+}
 
-const Register: Component<NavigateProps> = ({ navigate }) => {
-  const [name, setName] = createSignal<string | undefined>(undefined);
-  const [email, setEmail] = createSignal<string | undefined>(undefined);
-  const [username, setUsername] = createSignal<string | undefined>(undefined);
-  const [password, setPassword] = createSignal<string | undefined>(undefined);
-  const [municipality, setMunicipality] = createSignal<string | undefined>(undefined);
-  const [organization, setOrganization] = createSignal<string | undefined>(undefined);
-  const [municipalities, setMunicipalities] = createSignal<string[]>([]);
-  const [organizations, setOrganizations] = createSignal<string[]>([]);
+interface RegisterErrors {
+  username?: string;
+  password?: string;
+  name?: string;
+  email?: string;
+  municipality?: string;
+  organization?: string;
+}
 
-  const [isMunicipalitiesLoading, setIsMunicipalitiesLoading] = createSignal(true);
-  const [isOrganizationsLoading, setIsOrganizationsLoading] = createSignal(false);
+const ShadLogin: Component<NavigateProps> = ({ navigate }) => {
+  const [username, setUsername] = createSignal<string>("");
+  const [password, setPassword] = createSignal<string>("");
+  const [loginErrors, setLoginErrors] = createSignal<LoginErrors>({});
 
-  const fetchMunicipalities = async () => {
-    try {
-      const response = await eden.api.municipalities.get();
-      if (Array.isArray(response.data)) {
-        setMunicipalities(response.data);
-      } else {
-        console.error("Unexpected response format:", response.data);
-      }
-    } catch (error) {
-      console.error("Error fetching municipalities:", error);
-    } finally {
-      setIsMunicipalitiesLoading(false);
+  const validateField = (fieldName: "username" | "password", value: string): string | undefined => {
+    if (!value) return `${fieldName.charAt(0).toUpperCase() + fieldName.slice(1)} is required`;
+
+    if (fieldName === "username" && value.length < 4) return "Username must be at least 4 characters long";
+    if (fieldName === "password" && value.length < 8) return "Password must be at least 8 characters long";
+
+    return undefined;
+  };
+
+  const handleInputChange = (fieldName: "username" | "password", value: string) => {
+    const error = validateField(fieldName, value);
+    setLoginErrors({ ...loginErrors(), [fieldName]: error });
+
+    if (fieldName === "username") {
+      setUsername(value);
+    } else {
+      setPassword(value);
     }
   };
 
-  const fetchOrganizationsByMunicipality = async (municipalityName: string) => {
-    setIsOrganizationsLoading(true);
-    try {
-      const response = await eden.api.organizationsByMunicipality.post({ municipalityName });
-      if (Array.isArray(response.data)) {
-        setOrganizations(response.data);
-        if (organization()) {
-          setOrganization(undefined);
-        }
-      } else {
-        console.error("Unexpected response format:", response.data);
-      }
-    } catch (error) {
-      console.error("Error fetching organizations:", error);
-    } finally {
-      setIsOrganizationsLoading(false);
-    }
-  };
-
-  createEffect(() => {
-    fetchMunicipalities();
-  });
-
-  createEffect(() => {
-    if (municipality()) {
-      fetchOrganizationsByMunicipality(municipality()!);
-    }
-  });
-
-  const [registerErrors, setRegisterErrors] = createSignal<{ [key: string]: string }>({});
-  const validateRegisterForm = () => {
-    const newErrors: { [key: string]: string } = {};
-    if (!name()) newErrors.name = "Name is required";
-    else if (name()!.length < 4) newErrors.name = "Name must be at least 4 characters long";
-    if (!email()) newErrors.email = "Email is required";
-    else if (!/\S+@\S+\.\S+/.test(email()!)) newErrors.email = "Email is invalid";
-    if (!username()) newErrors.username = "Username is required";
-    else if (username()!.length < 4) newErrors.username = "Username must be at least 4 characters long";
-    if (!password()) newErrors.password = "Password is required";
-    else if (password()!.length < 8) newErrors.password = "Password must be at least 8 characters long";
-    if (!municipality()) newErrors.municipality = "Municipality is required";
-    if (!organization()) newErrors.organization = "Organization is required";
-
-    setRegisterErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+  const validateLoginForm = () => {
+    setLoginErrors({
+      username: validateField("username", username()),
+      password: validateField("password", password()),
+    });
   };
 
   const submit = async () => {
-    if (!validateRegisterForm()) {
-      Swal.fire({
+    validateLoginForm();
+    if (Object.values(loginErrors()).some(Boolean)) {
+      showToast({
+        variant: "destructive",
         title: "Error",
-        text: "Please fix the errors in the form.",
-        icon: "error",
+        description: "Please fix the errors in the form",
+      });
+      return;
+    }
+
+    const response = await eden.auth.login.post({
+      identifier: username(),
+      key: password(),
+      $fetch: {
+        mode: "cors",
+        credentials: "include",
+        method: "POST",
+      },
+    });
+
+    if (!response.data || response.error) {
+      showToast({
+        variant: "destructive",
+        title: "Error",
+        description: "Wrong login information",
+      });
+      return;
+    }
+
+    authStore.initializeAuth();
+    navigate("/home", { replace: true });
+
+    showToast({ variant: "success", title: "Success", description: "Login successful" });
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Sign in</CardTitle>
+        <CardDescription>You can sign in here using your username and password.</CardDescription>
+      </CardHeader>
+      <CardContent class="space-y-2">
+        <TextField class="space-y-1" validationState={loginErrors().username ? "invalid" : "valid"}>
+          <TextFieldLabel>Username</TextFieldLabel>
+          <TextFieldInput
+            placeholder="John Doe"
+            type="text"
+            onInput={(e) => handleInputChange("username", e.currentTarget.value)}
+          />
+          <TextFieldErrorMessage>{loginErrors().username}</TextFieldErrorMessage>
+        </TextField>
+        <TextField class="space-y-1" validationState={loginErrors().password ? "invalid" : "valid"}>
+          <TextFieldLabel>Password</TextFieldLabel>
+          <TextFieldInput
+            placeholder="password123"
+            type="password"
+            onInput={(e) => handleInputChange("password", e.currentTarget.value)}
+          />
+          <TextFieldErrorMessage>{loginErrors().password}</TextFieldErrorMessage>
+        </TextField>
+      </CardContent>
+      <CardFooter>
+        <Button onClick={submit} disabled={!username() || !password() || Object.values(loginErrors()).some(Boolean)}>
+          Sign in
+        </Button>
+      </CardFooter>
+    </Card>
+  );
+};
+
+const ShadRegister: Component<NavigateProps> = ({ navigate }) => {
+  const [username, setUsername] = createSignal<string>("");
+  const [password, setPassword] = createSignal<string>("");
+  const [name, setName] = createSignal<string>("");
+  const [email, setEmail] = createSignal<string>("");
+  const [municipality, setMunicipality] = createSignal<string>("");
+  const [organization, setOrganization] = createSignal<string>("");
+  const [registerErrors, setRegisterErrors] = createSignal<RegisterErrors>({});
+
+  const [municipalities, setMunicipalities] = createSignal<string[]>([]);
+  const [organizations, setOrganizations] = createSignal<string[]>([]);
+  const [isMunicipalitiesLoading, setIsMunicipalitiesLoading] = createSignal(true);
+  const [isOrganizationsLoading, setIsOrganizationsLoading] = createSignal(false);
+
+  const handleInputChange = (
+    fieldName: "username" | "password" | "name" | "email" | "municipality" | "organization",
+    value: string,
+  ) => {
+    const error = validateField(fieldName, value);
+    setRegisterErrors({ ...registerErrors(), [fieldName]: error });
+
+    switch (fieldName) {
+      case "username":
+        setUsername(value);
+        break;
+      case "password":
+        setPassword(value);
+        break;
+      case "name":
+        setName(value);
+        break;
+      case "email":
+        setEmail(value);
+        break;
+      case "municipality":
+        setMunicipality(value);
+        break;
+      case "organization":
+        setOrganization(value);
+        break;
+    }
+  };
+
+  const validateField = (
+    fieldName: "username" | "password" | "name" | "email" | "municipality" | "organization",
+    value: string,
+  ): string | undefined => {
+    if (!value) return `${fieldName.charAt(0).toUpperCase() + fieldName.slice(1)} is required`;
+
+    if (fieldName === "username" && value.length < 4) return "Username must be at least 4 characters long";
+    if (fieldName === "password" && value.length < 8) return "Password must be at least 8 characters long";
+    if (fieldName === "name" && value.length < 4) return "Name must be at least 4 characters long";
+    if (fieldName === "email" && !/\S+@\S+\.\S+/.test(value)) return "Email is invalid";
+
+    return undefined;
+  };
+
+  const validateRegisterForm = () => {
+    setRegisterErrors({
+      username: validateField("username", username()),
+      password: validateField("password", password()),
+      name: validateField("name", name()),
+      email: validateField("email", email()),
+      municipality: validateField("municipality", municipality()),
+      organization: validateField("organization", organization()),
+    });
+  };
+
+  const submit = async () => {
+    validateRegisterForm();
+    if (Object.values(registerErrors()).some(Boolean)) {
+      showToast({
+        variant: "destructive",
+        title: "Error",
+        description: "Please fix the errors in the form",
       });
       return;
     }
@@ -123,20 +245,20 @@ const Register: Component<NavigateProps> = ({ navigate }) => {
         },
       });
 
-      authStore.setState({
-        isAuthenticated: true,
-        email: formEmail,
-        name: formName,
-        userRole: "Developer",
-        verified: false,
-      });
-
       if (response.data) {
         if ("error" in response.data && response.data.error.includes("verification email")) {
-          Swal.fire({
-            title: "Success",
-            text: `Registration successful, but could not send verification email, please request new email.`,
-            icon: "success",
+          showToast({
+            variant: "warning",
+            title: "Successful registration",
+            description: "Registration successful, but could not send verification email, please request new link",
+          });
+
+          authStore.setState({
+            isAuthenticated: true,
+            email: formEmail,
+            name: formName,
+            userRole: "Developer",
+            verified: false,
           });
           navigate("/verify", { replace: true });
           return;
@@ -145,10 +267,19 @@ const Register: Component<NavigateProps> = ({ navigate }) => {
         }
       }
 
-      Swal.fire({
-        title: "Success",
-        text: `Registration successful. We have sent you a verification email, please check your inbox.`,
-        icon: "success",
+      // NOTE: At the moment default `userRole` is set to "Developer" for all new users
+      authStore.setState({
+        isAuthenticated: true,
+        email: formEmail,
+        name: formName,
+        userRole: "Developer",
+        verified: false,
+      });
+
+      showToast({
+        variant: "success",
+        title: "Successful registration",
+        description: "We have sent you a verification email",
       });
       navigate("/home", { replace: true });
       return;
@@ -158,171 +289,205 @@ const Register: Component<NavigateProps> = ({ navigate }) => {
         errorMessage = error.message;
       }
 
-      Swal.fire({
-        title: "Error",
-        text: errorMessage,
-        icon: "error",
+      showToast({
+        variant: "destructive",
+        title: "Unsuccessful registration",
+        description: errorMessage,
       });
       return;
     }
   };
+
+  const fetchMunicipalities = async () => {
+    try {
+      const response = await eden.api.municipalities.get();
+      if (Array.isArray(response.data)) {
+        setMunicipalities(response.data);
+      } else {
+        console.error("Unexpected response format:", response.data);
+      }
+    } catch (error) {
+      console.error("Error fetching municipalities:", error);
+    } finally {
+      setIsMunicipalitiesLoading(false);
+    }
+  };
+
+  const fetchOrganizationsByMunicipality = async (municipalityName: string) => {
+    setIsOrganizationsLoading(true);
+    try {
+      const response = await eden.api.organizationsByMunicipality.post({ municipalityName });
+      if (Array.isArray(response.data)) {
+        setOrganizations(response.data);
+        if (organization()) {
+          setOrganization("");
+        }
+      } else {
+        console.error("Unexpected response format:", response.data);
+      }
+    } catch (error) {
+      console.error("Error fetching organizations:", error);
+    } finally {
+      setIsOrganizationsLoading(false);
+    }
+  };
+
+  createEffect(() => {
+    fetchMunicipalities();
+  });
+
+  createEffect(() => {
+    if (municipality()) {
+      console.log("Fetching organizations for", municipality());
+      fetchOrganizationsByMunicipality(municipality()!);
+    }
+  });
 
   return (
-    <>
-      <div style={{ padding: "50px 0 50px 0", "margin-bottom": "30px" }} class={styles["signin-card-container"]}>
-        <form class={styles["signin-form-container"]}>
-          <FormField getter={name} setter={setName} labelText="Name" />
-          {registerErrors().name && <p class={styles["error-text"]}>{registerErrors().name}</p>}
-          <FormField getter={email} setter={setEmail} labelText="Email" />
-          {registerErrors().email && <p class={styles["error-text"]}>{registerErrors().email}</p>}
-          <FormField getter={username} setter={setUsername} labelText="Username" />
-          {registerErrors().username && <p class={styles["error-text"]}>{registerErrors().username}</p>}
-          <FormField getter={password} setter={setPassword} labelText="Password" password={true} />
-          {registerErrors().password && <p class={styles["error-text"]}>{registerErrors().password}</p>}
-          {isMunicipalitiesLoading() ? (
-            <div class={styles.loader}></div>
-          ) : (
-            <>
-              <FormField
-                getter={municipality}
-                setter={setMunicipality}
-                labelText="Municipality"
-                options={municipalities()}
-              />
-              {registerErrors().municipality && <p class={styles["error-text"]}>{registerErrors().municipality}</p>}
-            </>
-          )}
-          {isOrganizationsLoading() ? (
-            <div class={styles.loader}></div>
-          ) : (
-            <>
-              <FormField
-                getter={organization}
-                setter={setOrganization}
-                labelText="Organization"
-                options={organizations()}
-              />
-              {registerErrors().organization && <p class={styles["error-text"]}>{registerErrors().organization}</p>}
-            </>
-          )}
-        </form>
-        <Button.Root onClick={submit}>Submit</Button.Root>
-      </div>
-    </>
-  );
-};
-
-const Login: Component<NavigateProps> = ({ navigate }) => {
-  const [username, setUsername] = createSignal<string | undefined>(undefined);
-  const [password, setPassword] = createSignal<string | undefined>(undefined);
-  const [loginErrors, setLoginErrors] = createSignal<{ [key: string]: string }>({});
-
-  const validateLoginForm = () => {
-    const newErrors: { [key: string]: string } = {};
-    if (!username()) newErrors.username = "Username is required";
-    else if (username()!.length < 4) newErrors.username = "Username must be at least 4 characters long";
-    if (!password()) newErrors.password = "Password is required";
-    else if (password()!.length < 8) newErrors.password = "Password must be at least 8 characters long";
-
-    setLoginErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const submit = async () => {
-    if (!validateLoginForm()) {
-      Swal.fire({
-        title: "Error",
-        text: "Please fix the errors in the form.",
-        icon: "error",
-      });
-      return;
-    }
-
-    const formUsername = username();
-    const formPassword = password();
-
-    if (!(formUsername && formPassword)) {
-      Swal.fire({
-        title: "Error",
-        text: "Wrong login data",
-        icon: "error",
-      });
-      return;
-    }
-
-    const logged = await eden.auth.login.post({
-      identifier: formUsername,
-      key: formPassword,
-      $fetch: {
-        mode: "cors",
-        credentials: "include",
-        method: "POST",
-      },
-    });
-
-    if (!logged.data || logged.error) {
-      Swal.fire({
-        title: "Error",
-        text: "Wrong login data",
-        icon: "error",
-      });
-      return;
-    }
-
-    // console.log(`Login successful. Welcome ${logged.data.name}.`);
-    authStore.initializeAuth();
-    navigate("/home", { replace: true });
-
-    Notification.fire({
-      titleText: "Login successful",
-      icon: "success",
-    });
-  };
-
-  return (
-    <>
-      <div class={styles["signin-card-container"]}>
-        <form class={styles["signin-form-container"]}>
-          <FormField getter={username} setter={setUsername} labelText="Username" />
-          {loginErrors().username && <p class={styles["error-text"]}>{loginErrors().username}</p>}
-          <FormField getter={password} setter={setPassword} labelText="Password" password={true} />
-          {loginErrors().password && <p class={styles["error-text"]}>{loginErrors().password}</p>}
-        </form>
-        <Button.Root onClick={submit}>Submit</Button.Root>
-      </div>
-    </>
+    <Card>
+      <CardHeader>
+        <CardTitle>Register</CardTitle>
+        <CardDescription>
+          You may register here, make sure to choose the right Municipality and Organization.
+        </CardDescription>
+      </CardHeader>
+      <CardContent class="space-y-2">
+        <TextField class="space-y-1" validationState={registerErrors().name ? "invalid" : "valid"}>
+          <TextFieldLabel>Name</TextFieldLabel>
+          <TextFieldInput placeholder="John Doe" onInput={(e) => handleInputChange("name", e.currentTarget.value)} />
+          {registerErrors().name && <TextFieldErrorMessage>{registerErrors().name}</TextFieldErrorMessage>}
+        </TextField>
+        <TextField class="space-y-1" validationState={registerErrors().email ? "invalid" : "valid"}>
+          <TextFieldLabel>Email</TextFieldLabel>
+          <TextFieldInput
+            placeholder="john@doe.com"
+            type="email"
+            onInput={(e) => handleInputChange("email", e.currentTarget.value)}
+          />
+          {registerErrors().email && <TextFieldErrorMessage>{registerErrors().email}</TextFieldErrorMessage>}
+        </TextField>
+        <TextField class="space-y-1" validationState={registerErrors().username ? "invalid" : "valid"}>
+          <TextFieldLabel>Username</TextFieldLabel>
+          <TextFieldInput
+            placeholder="johndoe55"
+            onInput={(e) => handleInputChange("username", e.currentTarget.value)}
+          />
+          {registerErrors().username && <TextFieldErrorMessage>{registerErrors().username}</TextFieldErrorMessage>}
+        </TextField>
+        <TextField class="space-y-1" validationState={registerErrors().password ? "invalid" : "valid"}>
+          <TextFieldLabel>Password</TextFieldLabel>
+          <TextFieldInput
+            placeholder="password123"
+            type="password"
+            onInput={(e) => handleInputChange("password", e.currentTarget.value)}
+          />
+          {registerErrors().password && <TextFieldErrorMessage>{registerErrors().password}</TextFieldErrorMessage>}
+        </TextField>
+        <Select
+          value={municipality()}
+          onChange={(selectedValue) => {
+            if (!selectedValue) return;
+            handleInputChange("municipality", selectedValue);
+            console.log("Municipality selected:", selectedValue);
+          }}
+          options={municipalities()}
+          placeholder="Select a municipality…"
+          itemComponent={(props) => <SelectItem item={props.item}>{props.item.rawValue}</SelectItem>}
+          validationState={registerErrors().municipality ? "invalid" : "valid"}
+        >
+          <SelectLabel>Municipality</SelectLabel>
+          <div class="mt-1">
+            {isMunicipalitiesLoading() ? (
+              <>
+                <Skeleton height={40} radius={8} />
+              </>
+            ) : (
+              <>
+                <SelectTrigger aria-label="Municipalities">
+                  <SelectValue<string>>{(state) => state.selectedOption()}</SelectValue>
+                </SelectTrigger>
+                <SelectContent />
+                {registerErrors().password && <SelectErrorMessage>{registerErrors().municipality}</SelectErrorMessage>}
+              </>
+            )}
+          </div>
+        </Select>
+        <Select
+          value={organization()}
+          onChange={(selectedValue) => {
+            if (!selectedValue) return;
+            handleInputChange("organization", selectedValue);
+            console.log("Organization selected:", selectedValue);
+          }}
+          options={organizations()}
+          placeholder={!organizations().length ? "No organization found for municipality" : "Select an organization…"}
+          itemComponent={(props) => <SelectItem item={props.item}>{props.item.rawValue}</SelectItem>}
+          disabled={isOrganizationsLoading() || !municipality() || !organizations().length}
+          validationState={registerErrors().organization ? "invalid" : "valid"}
+        >
+          <SelectLabel>Organization</SelectLabel>
+          <div class="mt-1">
+            {isOrganizationsLoading() ? (
+              <>
+                <Skeleton height={40} radius={8} />
+              </>
+            ) : (
+              <>
+                <SelectTrigger aria-label="Organizations">
+                  <SelectValue<string>>{(state) => state.selectedOption()}</SelectValue>
+                </SelectTrigger>
+                <SelectContent />
+                {registerErrors().password && <SelectErrorMessage>{registerErrors().organization}</SelectErrorMessage>}
+              </>
+            )}
+          </div>
+        </Select>
+      </CardContent>
+      <CardFooter>
+        <Button
+          onClick={submit}
+          disabled={
+            Object.values(registerErrors()).some(Boolean) ||
+            !username() ||
+            !password() ||
+            !email() ||
+            !name() ||
+            !municipality() ||
+            !organization()
+          }
+        >
+          Register
+        </Button>
+      </CardFooter>
+    </Card>
   );
 };
 
 const SignIn: Component = () => {
   const navigate = useNavigate();
-  const [mode, setMode] = createSignal<"login" | "register">("login");
 
   return (
     <Header>
       <main class={styles["signin-main-container"]}>
         {authStore.state().isAuthenticated ? (
-          <div class={styles["signin-card-container"]}>
-            <h1>You are already logged in as {authStore.state().name}</h1>
-          </div>
+          <Alert variant="destructive">
+            {/* <IconTerminal /> */}
+            <AlertTitle>Already logged in!</AlertTitle>
+            <AlertDescription>You are already logged in as {authStore.state().name}</AlertDescription>
+          </Alert>
         ) : (
-          <>
-            {mode() === "login" ? <Login navigate={navigate} /> : <Register navigate={navigate} />}
-            <nav class={styles["submenu-container"]}>
-              <Button.Root
-                onClick={() => setMode("login")}
-                class={mode() === "login" ? styles["active-button"] : styles["nav-button"]}
-              >
-                Login
-              </Button.Root>
-              <Button.Root
-                onClick={() => setMode("register")}
-                class={mode() === "register" ? styles["active-button"] : styles["nav-button"]}
-              >
-                Register
-              </Button.Root>
-            </nav>
-          </>
+          <Tabs defaultValue="account" class="w-[400px]">
+            <TabsList class="grid w-full grid-cols-2">
+              <TabsTrigger value="signin">Sign in</TabsTrigger>
+              <TabsTrigger value="register">Register</TabsTrigger>
+            </TabsList>
+            <TabsContent value="signin">
+              <ShadLogin navigate={navigate} />
+            </TabsContent>
+            <TabsContent value="register">
+              <ShadRegister navigate={navigate} />
+            </TabsContent>
+          </Tabs>
         )}
       </main>
     </Header>

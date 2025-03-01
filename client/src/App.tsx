@@ -1,19 +1,7 @@
 import type { Component } from "solid-js";
-
 import DRoutes from "./components/DRoutes.tsx";
+import { Toaster } from "@client/components/ui/toast.tsx";
 import { EditorProvider } from "./contexts/editor.tsx";
-
-const t = (s: string) => s;
-
-// const getMessage = async (): Promise<string | null> => {
-//   const mes = (await eden.api.hello.get()).data;
-//
-//   console.log("Got a message: ", mes);
-//
-//   const compile = await eden.api.compile.post({ code: "hello" });
-//
-//   return compile.data;
-// };
 
 const App: Component = () => {
   // const [message] = createResource(getMessage);
@@ -28,7 +16,8 @@ const App: Component = () => {
   return (
     <>
       <EditorProvider>
-        <DRoutes />;
+        <DRoutes />
+        <Toaster />
       </EditorProvider>
     </>
   );

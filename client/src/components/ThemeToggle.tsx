@@ -1,6 +1,7 @@
 import { type Component, onMount, createSignal, onCleanup } from "solid-js";
 import { FaSolidSun, FaSolidMoon, FaSolidDesktop } from "solid-icons/fa";
 import { theme, setTheme } from "@store/index.ts";
+import { Button } from "@client/components/ui/button.tsx";
 
 const ThemeToggle: Component = () => {
   // Using a local signal to track the UI state
@@ -63,15 +64,11 @@ const ThemeToggle: Component = () => {
   };
 
   return (
-    <button
-      onClick={toggleTheme}
-      aria-label="Toggle theme"
-      class="p-2 rounded-md hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
-    >
+    <Button onClick={toggleTheme} aria-label="Toggle theme" variant="ghost" class="transition-colors cursor-pointer">
       {currentTheme() === "light" && <FaSolidSun class="h-5 w-5" />}
       {currentTheme() === "dark" && <FaSolidMoon class="h-5 w-5" />}
       {currentTheme() === "system" && <FaSolidDesktop class="h-5 w-5" />}
-    </button>
+    </Button>
   );
 };
 

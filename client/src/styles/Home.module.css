@@ -25,14 +25,14 @@
   padding: 0;
 }
 
-.intro-section p {
+/* .intro-section p {
   font-size: var(--body-text-linear);
   color: var(--primary-text);
   line-height: 35px;
 
   margin: clamp(0.625rem, 0.375rem + 1.25vw, 1.875rem) 0 clamp(0.625rem, 0.375rem + 1.25vw, 1.875rem) 0;
   padding: 0;
-}
+} */
 
 .map-section-container {
   display: flex;

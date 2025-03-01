@@ -32,12 +32,12 @@
   font-weight: bolder;
 }
 
-p {
+/* p {
   color: var(--primary-text);
   margin: 0 3rem 1.5rem 3rem;
   font-size: larger;
   text-align: center;
-}
+} */
 
 .unauth-button {
   background-color: transparent;

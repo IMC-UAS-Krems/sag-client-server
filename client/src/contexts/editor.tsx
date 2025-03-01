@@ -1,5 +1,5 @@
-import { TreeNode } from "@client/components/LeftSideBar";
-import { check } from "@client/routes/Editor";
+import { TreeNode } from "@client/components/LeftSideBar.tsx";
+import { check } from "@client/routes/Editor.tsx";
 import { Extension } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
 import { CompartmentReconfigurationCallback, createCodeMirror } from "solid-codemirror";
