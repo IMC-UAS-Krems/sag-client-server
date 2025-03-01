@@ -7,15 +7,8 @@ import { eden } from "@client/api/index.ts";
 import { theme } from "@store/index.ts";
 import authStore from "@store/authStore.ts";
 import styles from "@styles/Header.module.css";
-import { Notification } from "@client/common.ts";
-import {
-  NavigationMenu,
-  // NavigationMenuContent,
-  // NavigationMenuIcon,
-  // NavigationMenuItem,
-  // NavigationMenuLink,
-  NavigationMenuTrigger,
-} from "@client/components/ui/navigation-menu.tsx";
+import { NavigationMenu, NavigationMenuTrigger } from "@client/components/ui/navigation-menu.tsx";
+import { showToast } from "@client/components/ui/toast.tsx";
 
 import logoLight from "@assets/logos/logo_imc_inverse.png";
 import logoDark from "@assets/logos/logo_imc.png";
@@ -36,22 +29,25 @@ const Header: Component<{ children: JSX.Element }> = (props) => {
       });
 
       if (response?.data?.success) {
-        Notification.fire({
-          titleText: "Logged out successfully",
-          icon: "success",
+        showToast({
+          variant: "success",
+          title: "Success",
+          description: "Logged out successfully",
         });
       } else {
         console.error("Failed to log out. Server response:", response);
-        Notification.fire({
-          titleText: "Logout failed",
-          icon: "error",
+        showToast({
+          variant: "destructive",
+          title: "Error",
+          description: "Logout failed",
         });
       }
     } catch (error) {
       console.error("Failed to log out:", error);
-      Notification.fire({
-        titleText: "Logout failed",
-        icon: "error",
+      showToast({
+        variant: "destructive",
+        title: "Error",
+        description: "Logout failed",
       });
     } finally {
       authStore.resetAuth();

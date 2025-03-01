@@ -19,13 +19,16 @@ import {
   getPaginationRowModel,
   getFilteredRowModel,
   getSortedRowModel,
-  Table,
+  Table as TableType,
   PaginationState,
   Row,
   ColumnFiltersState,
 } from "@tanstack/solid-table";
 import Swal from "sweetalert2";
-
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@client/components/ui/card.tsx";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@client/components/ui/table";
+import { Button } from "@client/components/ui/button.tsx";
+import { TbLoader2 } from "solid-icons/tb";
 import { eden } from "@client/api/index.ts";
 import { handleUnauthorized } from "@client/utils/authUtils.ts";
 import Header from "@client/components/Header.tsx";
@@ -364,7 +367,7 @@ const Users: Component = () => {
   };
 
   // TanStack Solid Table - Table definition
-  const table: Table<UserDetails> = createSolidTable({
+  const table: TableType<UserDetails> = createSolidTable({
     get data() {
       return data();
     },
@@ -419,184 +422,189 @@ const Users: Component = () => {
 
   return (
     <Header>
-      <main class={styles["users-main"]}>
-        <h1>Admin users page</h1>
-        <div class={styles["nav-button-container"]}>
-          <button onClick={handleCreateUser} class={styles["nav-button"]}>
-            Create new user
-          </button>
-          <button onClick={() => setReload(!reload())} class={styles["nav-button"]}>
-            Refresh data
-          </button>
-          <button
-            onClick={() => {
-              const newShowDeleted = !showDeleted();
-              setShowDeleted(newShowDeleted);
-            }}
-            class={showDeleted() ? styles["nav-button-inverse"] : styles["nav-button"]}
-          >
-            {showDeleted() ? "Hide deleted" : "Show deleted"}
-          </button>
-          <div class={styles["page-size-selector"]}>
-            <span>Page size: </span>
-            <select
-              value={table?.getState().pagination.pageSize}
-              onChange={(e) => {
-                table.setPageSize(Number(e.target.value));
-              }}
-            >
-              {[5, 10, 20, 40].map((pageSize) => (
-                <option value={pageSize}>{pageSize}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-        {loading() ? (
-          <div class={styles.loader}></div>
-        ) : error() ? (
-          <p class={styles["error-text"]}>Error: {error()}</p>
-        ) : (
-          table && (
-            <>
-              <div class={styles["table-wrapper"]}>
-                <table>
-                  <thead>
-                    <For each={table.getHeaderGroups()}>
-                      {(headerGroup) => (
-                        <>
-                          <tr>
-                            <For each={headerGroup.headers}>
-                              {(header) => (
-                                <th>
-                                  {header.column.getCanSort() ? (
-                                    <div
-                                      class={styles.sortable}
-                                      onClick={header.column.getToggleSortingHandler()}
-                                      title={
-                                        header.column.getCanSort()
-                                          ? header.column.getNextSortingOrder() === "asc"
-                                            ? "Sort ascending"
-                                            : header.column.getNextSortingOrder() === "desc"
-                                              ? "Sort descending"
-                                              : "Clear sort"
-                                          : undefined
-                                      }
-                                    >
-                                      {header.isPlaceholder
-                                        ? null
-                                        : flexRender(header.column.columnDef.header, header.getContext())}
-                                      {{
-                                        asc: <FaSolidArrowDownAZ />,
-                                        desc: <FaSolidArrowUpAZ />,
-                                      }[header.column.getIsSorted() as string] ?? null}
-                                    </div>
-                                  ) : header.isPlaceholder ? null : (
-                                    flexRender(header.column.columnDef.header, header.getContext())
-                                  )}
-                                </th>
-                              )}
-                            </For>
-                          </tr>
-                          <tr>
-                            <For each={headerGroup.headers}>
-                              {(header) => (
-                                <th class={styles["filter-row"]}>
-                                  {(header.column.id === "userRole" ||
-                                    header.column.id === "organization" ||
-                                    header.column.id === "municipality") && (
-                                    <select
-                                      value={(header.column.getFilterValue() as string) ?? ""}
-                                      onChange={(e) => header.column.setFilterValue(e.currentTarget.value)}
-                                    >
-                                      <option value="">All</option>
-                                      <For each={getUniqueValues(data(), header.column.id)}>
-                                        {(value) => <option value={value as string}>{value as string}</option>}
-                                      </For>
-                                    </select>
-                                  )}
-                                  {(header.column.id === "username" ||
-                                    header.column.id === "email" ||
-                                    header.column.id === "name") && (
-                                    <input
-                                      value={(header.column.getFilterValue() as string) ?? ""}
-                                      onChange={(e) => header.column.setFilterValue(e.currentTarget.value)}
-                                      placeholder={`Search`}
-                                    />
-                                  )}
-                                  {header.column.id === "loggedIn" && (
-                                    <select
-                                      value={(header.column.getFilterValue() as string) ?? "all"}
-                                      onChange={(e) => header.column.setFilterValue(e.currentTarget.value)}
-                                    >
-                                      <option value="all">All</option>
-                                      <option value="loggedIn">Logged in</option>
-                                      <option value="loggedOut">Logged out</option>
-                                    </select>
-                                  )}
-                                </th>
-                              )}
-                            </For>
-                          </tr>
-                        </>
-                      )}
-                    </For>
-                  </thead>
-                  <tbody>
-                    <For each={table.getRowModel().rows}>
-                      {(row) => (
-                        <tr>
-                          <For each={row.getVisibleCells()}>
-                            {(cell) => (
-                              <td class={cell.column.id === "actions" ? styles["actions-column"] : ""}>
-                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                              </td>
-                            )}
-                          </For>
-                        </tr>
-                      )}
-                    </For>
-                  </tbody>
-                </table>
-              </div>
-              <div class={styles["pagination-container"]}>
-                <button
-                  onClick={() => table.firstPage()}
-                  disabled={!table.getCanPreviousPage()}
-                  class={styles["nav-button"]}
-                >
-                  <FaSolidAnglesLeft />
-                </button>
-                <button
-                  onClick={() => table.previousPage()}
-                  disabled={!table.getCanPreviousPage()}
-                  class={styles["nav-button"]}
-                >
-                  <FaSolidAngleLeft />
-                </button>
-                <span>
-                  Page <strong>{table.getState().pagination.pageIndex + 1}</strong> of{" "}
-                  {table.getPageCount().toLocaleString()}
-                </span>
-                <button
-                  onClick={() => table.nextPage()}
-                  disabled={!table.getCanNextPage()}
-                  class={styles["nav-button"]}
-                >
-                  <FaSolidAngleRight />
-                </button>
-                <button
-                  onClick={() => {
-                    table.lastPage();
+      <main>
+        <Card class="w-fit mx-auto">
+          <CardHeader class="w-fit">
+            <CardTitle>Users Admin Area</CardTitle>
+            <CardDescription>Here you can manage users, edit, delete, and log out users.</CardDescription>
+          </CardHeader>
+          <CardContent class="w-fit">
+            {/* <div class={styles["nav-button-container"]}> */}
+            <div class="w-fit">
+              <Button onClick={handleCreateUser}>Create new user</Button>
+              <Button onClick={() => setReload(!reload())}>Refresh data</Button>
+              <Button
+                onClick={() => {
+                  const newShowDeleted = !showDeleted();
+                  setShowDeleted(newShowDeleted);
+                }}
+                // class={showDeleted() ? styles["nav-button-inverse"] : styles["nav-button"]}
+              >
+                {showDeleted() ? "Hide deleted" : "Show deleted"}
+              </Button>
+              <div class={styles["page-size-selector"]}>
+                <span>Page size: </span>
+                <select
+                  value={table?.getState().pagination.pageSize}
+                  onChange={(e) => {
+                    table.setPageSize(Number(e.target.value));
                   }}
-                  disabled={!table.getCanNextPage()}
-                  class={styles["nav-button"]}
                 >
-                  <FaSolidAnglesRight />
-                </button>
+                  {[5, 10, 20, 40].map((pageSize) => (
+                    <option value={pageSize}>{pageSize}</option>
+                  ))}
+                </select>
               </div>
-            </>
-          )
-        )}
+            </div>
+            {loading() ? (
+              <TbLoader2 class="animate-spin h-10 w-10" />
+            ) : error() ? (
+              <p class={styles["error-text"]}>Error: {error()}</p>
+            ) : (
+              table && (
+                <>
+                  {/* <div class={styles["table-wrapper"]}> */}
+                  <div>
+                    <Table>
+                      <TableHeader>
+                        <For each={table.getHeaderGroups()}>
+                          {(headerGroup) => (
+                            <>
+                              <TableRow>
+                                <For each={headerGroup.headers}>
+                                  {(header) => (
+                                    <TableHead>
+                                      {header.column.getCanSort() ? (
+                                        <div
+                                          class={styles.sortable}
+                                          onClick={header.column.getToggleSortingHandler()}
+                                          title={
+                                            header.column.getCanSort()
+                                              ? header.column.getNextSortingOrder() === "asc"
+                                                ? "Sort ascending"
+                                                : header.column.getNextSortingOrder() === "desc"
+                                                  ? "Sort descending"
+                                                  : "Clear sort"
+                                              : undefined
+                                          }
+                                        >
+                                          {header.isPlaceholder
+                                            ? null
+                                            : flexRender(header.column.columnDef.header, header.getContext())}
+                                          {{
+                                            asc: <FaSolidArrowDownAZ />,
+                                            desc: <FaSolidArrowUpAZ />,
+                                          }[header.column.getIsSorted() as string] ?? null}
+                                        </div>
+                                      ) : header.isPlaceholder ? null : (
+                                        flexRender(header.column.columnDef.header, header.getContext())
+                                      )}
+                                    </TableHead>
+                                  )}
+                                </For>
+                              </TableRow>
+                              <TableRow>
+                                <For each={headerGroup.headers}>
+                                  {(header) => (
+                                    <TableHead class={styles["filter-row"]}>
+                                      {(header.column.id === "userRole" ||
+                                        header.column.id === "organization" ||
+                                        header.column.id === "municipality") && (
+                                        <select
+                                          value={(header.column.getFilterValue() as string) ?? ""}
+                                          onChange={(e) => header.column.setFilterValue(e.currentTarget.value)}
+                                        >
+                                          <option value="">All</option>
+                                          <For each={getUniqueValues(data(), header.column.id)}>
+                                            {(value) => <option value={value as string}>{value as string}</option>}
+                                          </For>
+                                        </select>
+                                      )}
+                                      {(header.column.id === "username" ||
+                                        header.column.id === "email" ||
+                                        header.column.id === "name") && (
+                                        <input
+                                          value={(header.column.getFilterValue() as string) ?? ""}
+                                          onChange={(e) => header.column.setFilterValue(e.currentTarget.value)}
+                                          placeholder={`Search`}
+                                        />
+                                      )}
+                                      {header.column.id === "loggedIn" && (
+                                        <select
+                                          value={(header.column.getFilterValue() as string) ?? "all"}
+                                          onChange={(e) => header.column.setFilterValue(e.currentTarget.value)}
+                                        >
+                                          <option value="all">All</option>
+                                          <option value="loggedIn">Logged in</option>
+                                          <option value="loggedOut">Logged out</option>
+                                        </select>
+                                      )}
+                                    </TableHead>
+                                  )}
+                                </For>
+                              </TableRow>
+                            </>
+                          )}
+                        </For>
+                      </TableHeader>
+                      <TableBody>
+                        <For each={table.getRowModel().rows}>
+                          {(row) => (
+                            <tr>
+                              <For each={row.getVisibleCells()}>
+                                {(cell) => (
+                                  <td class={cell.column.id === "actions" ? styles["actions-column"] : ""}>
+                                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                  </td>
+                                )}
+                              </For>
+                            </tr>
+                          )}
+                        </For>
+                      </TableBody>
+                    </Table>
+                  </div>
+                  <div class="w-fit">
+                    <button
+                      onClick={() => table.firstPage()}
+                      disabled={!table.getCanPreviousPage()}
+                      class={styles["nav-button"]}
+                    >
+                      <FaSolidAnglesLeft />
+                    </button>
+                    <button
+                      onClick={() => table.previousPage()}
+                      disabled={!table.getCanPreviousPage()}
+                      class={styles["nav-button"]}
+                    >
+                      <FaSolidAngleLeft />
+                    </button>
+                    <span>
+                      Page <strong>{table.getState().pagination.pageIndex + 1}</strong> of{" "}
+                      {table.getPageCount().toLocaleString()}
+                    </span>
+                    <button
+                      onClick={() => table.nextPage()}
+                      disabled={!table.getCanNextPage()}
+                      class={styles["nav-button"]}
+                    >
+                      <FaSolidAngleRight />
+                    </button>
+                    <button
+                      onClick={() => {
+                        table.lastPage();
+                      }}
+                      disabled={!table.getCanNextPage()}
+                      class={styles["nav-button"]}
+                    >
+                      <FaSolidAnglesRight />
+                    </button>
+                  </div>
+                </>
+              )
+            )}
+          </CardContent>
+        </Card>
       </main>
     </Header>
   );

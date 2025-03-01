@@ -1,7 +1,7 @@
 import { Context } from "elysia";
 
 // import { panic } from "@utils/panic";
-import { sql } from "./sql";
+import { sql } from "./sql.ts";
 
 interface CustomContext {
   set: Context["set"];

@@ -1,9 +1,9 @@
 import { createId } from "@paralleldrive/cuid2";
-import { prisma } from "@∆";
-import { UserRole } from "@utils/roles";
-import { UserDetails, OrganisationDetails, UpdateOrganisationBody } from "@server/types";
+import { prisma } from "@server/prisma.ts";
+import { UserRole } from "@utils/roles.ts";
+import { UserDetails, OrganisationDetails, UpdateOrganisationBody } from "@server/types.ts";
 import { Organization, Project, User, Municipality, UserType, DocumentType } from "@prisma/client";
-import { SagError } from "./errors";
+import { SagError } from "./errors.ts";
 import path from "path";
 
 export type Document = {

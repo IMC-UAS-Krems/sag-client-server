@@ -5,11 +5,11 @@ import { logger } from "@bogeychan/elysia-logger";
 import pretty from "pino-pretty";
 import { jwt } from "@elysiajs/jwt";
 
-import { auth } from "@server/routes/auth";
-import { api } from "@server/routes/api";
-import { admin } from "@server/routes/admin";
-import { panic } from "@utils/panic";
-import { updateUser } from "./sql";
+import { auth } from "@server/routes/auth.ts";
+import { api } from "@server/routes/api.ts";
+import { admin } from "@server/routes/admin.ts";
+import { panic } from "@utils/panic.ts";
+import { updateUser } from "./sql.ts";
 
 // TODO: @elysiajs/cookie not needed, can be reverted to original
 // TODO: check cors settings for production

@@ -1,11 +1,11 @@
 import { Elysia, t } from "elysia";
 
-import { prisma } from "@server/prisma";
-import { authMiddleware } from "@server/middleware";
-import { sql, Document } from "@server/sql";
+import { prisma } from "@server/prisma.ts";
+import { authMiddleware } from "@server/middleware.ts";
+import { sql, Document } from "@server/sql.ts";
 import { DocumentType } from "@prisma/client";
-import { SagError } from "@server/errors";
-import { AuthContext, AuthContextWithBody, AuthContextWithQuery } from "@server/types";
+import { SagError } from "@server/errors.ts";
+import { AuthContext, AuthContextWithBody, AuthContextWithQuery } from "@server/types.ts";
 
 const COMPILER_URL = Bun.env.COMPILER_URL || "http://localhost:8080";
 
