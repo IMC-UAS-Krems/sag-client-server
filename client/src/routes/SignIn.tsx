@@ -18,6 +18,7 @@ import { Skeleton } from "@client/components/ui/skeleton.tsx";
 import { Button } from "@client/components/ui/button.tsx";
 import { showToast } from "@client/components/ui/toast.tsx";
 import { Alert, AlertDescription, AlertTitle } from "@client/components/ui/alert.tsx";
+import { IoAlertCircleOutline } from "solid-icons/io";
 
 import { eden } from "@client/api/index.ts";
 import authStore from "@store/authStore.ts";
@@ -470,8 +471,8 @@ const SignIn: Component = () => {
     <Header>
       <main class={styles["signin-main-container"]}>
         {authStore.state().isAuthenticated ? (
-          <Alert variant="destructive">
-            {/* <IconTerminal /> */}
+          <Alert variant="destructive" class="max-w-2xl">
+            <IoAlertCircleOutline class="w-5 h-5" />
             <AlertTitle>Already logged in!</AlertTitle>
             <AlertDescription>You are already logged in as {authStore.state().name}</AlertDescription>
           </Alert>

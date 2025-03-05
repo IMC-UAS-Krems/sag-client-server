@@ -1,15 +1,6 @@
 import { Component, createSignal, onMount, createEffect, For } from "solid-js";
-
-import {
-  FaSolidEllipsis,
-  FaSolidAngleLeft,
-  FaSolidAnglesLeft,
-  FaSolidAngleRight,
-  FaSolidAnglesRight,
-  FaSolidArrowDownAZ,
-  FaSolidArrowUpAZ,
-} from "solid-icons/fa";
-import { DropdownMenu } from "@kobalte/core/dropdown-menu";
+import { FaSolidEllipsis, FaSolidArrowDownAZ, FaSolidArrowUpAZ } from "solid-icons/fa";
+import { IoAlertCircleOutline } from "solid-icons/io";
 import { useNavigate } from "@solidjs/router";
 import {
   createColumnHelper,
@@ -24,20 +15,39 @@ import {
   Row,
   ColumnFiltersState,
 } from "@tanstack/solid-table";
+import {
+  Pagination,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationItems,
+  PaginationNext,
+  PaginationPrevious,
+} from "@client/components/ui/pagination.tsx";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@client/components/ui/dropdown-menu.tsx";
 import Swal from "sweetalert2";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@client/components/ui/card.tsx";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@client/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@client/components/ui/table.tsx";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@client/components/ui/select.tsx";
+import { Switch, SwitchControl, SwitchLabel, SwitchThumb } from "@client/components/ui/switch.tsx";
+import { Alert, AlertDescription, AlertTitle } from "@client/components/ui/alert.tsx";
+import { TextField, TextFieldInput } from "@client/components/ui/textField.tsx";
+import { Skeleton } from "@client/components/ui/skeleton.tsx";
 import { Button } from "@client/components/ui/button.tsx";
-import { TbLoader2 } from "solid-icons/tb";
 import { eden } from "@client/api/index.ts";
 import { handleUnauthorized } from "@client/utils/authUtils.ts";
 import Header from "@client/components/Header.tsx";
-// import authStore from "@store/authStore"; // Not used anymore but could be used for highlighting the current user
 import styles from "@styles/Users.module.css";
-import menu_styles from "@styles/ContextMenu.module.css";
 import { UserDetails } from "@server/types.ts";
 import { panic } from "@utils/panic.ts";
 import { Notification } from "@client/common.ts";
+// import authStore from "@store/authStore"; // TODO: Not used anymore but could be used for highlighting the current user
 
 interface UsersResponse {
   data: UserDetails[] | { error: string } | null;
@@ -289,50 +299,96 @@ const Users: Component = () => {
       id: "actions",
       header: "Actions",
       cell: (props) => (
-        <DropdownMenu>
-          <DropdownMenu.Trigger
-            class={(menu_styles["trigger"], styles["trigger"])}
-            aria-haspopup="menu"
-            aria-expanded={false}
-          >
-            <FaSolidEllipsis />
-          </DropdownMenu.Trigger>
-          <DropdownMenu.Content class={menu_styles["context-menu__content"]} role="menu">
-            <div class={styles["context-menu-title"]} role="presentation">
-              {props.row.original.name}
-            </div>
-            <DropdownMenu.Separator role="separator" />
-            <DropdownMenu.Item
-              class={menu_styles["context-menu__item"]}
-              onSelect={() => handleEditUser(props.row.original.id)}
-              disabled={props.row.original.userRole == "Administrator"}
-              role="menuitem"
+        <div class="p-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              aria-haspopup="menu"
+              aria-expanded={false}
+              class="h-full w-full hover:bg-accent rounded-md cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-0"
+              aria-hidden
             >
-              ✏️ Edit
-            </DropdownMenu.Item>
-            <DropdownMenu.Item
-              class={menu_styles["context-menu__item"]}
-              onSelect={() => handleDeleteUser(props.row.original.id)}
-              disabled={props.row.original.userRole === "Administrator" || props.row.original.deleted}
-              role="menuitem"
-            >
-              🗑️ Delete
-            </DropdownMenu.Item>
-            <DropdownMenu.Separator role="separator" />
-            <DropdownMenu.Item
-              class={menu_styles["context-menu__item"]}
-              onSelect={() => handleLogOutUser(props.row.original.id, props.row.original.name)}
-              disabled={
-                props.row.original.userRole == "Administrator" ||
-                props.row.original.needsToBeLoggedOut ||
-                now() - new Date(props.row.original.lastTimeActive).getTime() > loggedInTimespan * 1000
-              }
-              role="menuitem"
-            >
-              🔒 Log out
-            </DropdownMenu.Item>
-          </DropdownMenu.Content>
-        </DropdownMenu>
+              <div class="h-full w-full flex items-center justify-center p-2">
+                <FaSolidEllipsis class="h-5 w-5" />
+              </div>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent role="menu">
+              <DropdownMenuLabel role="presentation">{props.row.original.name}</DropdownMenuLabel>
+              <DropdownMenuSeparator role="separator" />
+              <DropdownMenuItem
+                onSelect={() => handleEditUser(props.row.original.id)}
+                disabled={props.row.original.userRole == "Administrator"}
+                role="menuitem"
+              >
+                ✏️ Edit
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() => handleDeleteUser(props.row.original.id)}
+                disabled={props.row.original.userRole === "Administrator" || props.row.original.deleted}
+                role="menuitem"
+              >
+                🗑️ Delete
+              </DropdownMenuItem>
+              <DropdownMenuSeparator role="separator" />
+              <DropdownMenuItem
+                onSelect={() => handleLogOutUser(props.row.original.id, props.row.original.name)}
+                disabled={
+                  props.row.original.userRole == "Administrator" ||
+                  props.row.original.needsToBeLoggedOut ||
+                  now() - new Date(props.row.original.lastTimeActive).getTime() > loggedInTimespan * 1000
+                }
+                role="menuitem"
+              >
+                🔒 Log out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+
+        // OLD
+        // <DropdownMenu>
+        //   <DropdownMenu.Trigger
+        //     class={(menu_styles["trigger"], styles["trigger"])}
+        //     aria-haspopup="menu"
+        //     aria-expanded={false}
+        //   >
+        //     <FaSolidEllipsis />
+        //   </DropdownMenu.Trigger>
+        //   <DropdownMenu.Content class={menu_styles["context-menu__content"]} role="menu">
+        //     <div class={styles["context-menu-title"]} role="presentation">
+        //       {props.row.original.name}
+        //     </div>
+        //     <DropdownMenu.Separator role="separator" />
+        //     <DropdownMenu.Item
+        //       class={menu_styles["context-menu__item"]}
+        //       onSelect={() => handleEditUser(props.row.original.id)}
+        //       disabled={props.row.original.userRole == "Administrator"}
+        //       role="menuitem"
+        //     >
+        //       ✏️ Edit
+        //     </DropdownMenu.Item>
+        //     <DropdownMenu.Item
+        //       class={menu_styles["context-menu__item"]}
+        //       onSelect={() => handleDeleteUser(props.row.original.id)}
+        //       disabled={props.row.original.userRole === "Administrator" || props.row.original.deleted}
+        //       role="menuitem"
+        //     >
+        //       🗑️ Delete
+        //     </DropdownMenu.Item>
+        //     <DropdownMenu.Separator role="separator" />
+        //     <DropdownMenu.Item
+        //       class={menu_styles["context-menu__item"]}
+        //       onSelect={() => handleLogOutUser(props.row.original.id, props.row.original.name)}
+        //       disabled={
+        //         props.row.original.userRole == "Administrator" ||
+        //         props.row.original.needsToBeLoggedOut ||
+        //         now() - new Date(props.row.original.lastTimeActive).getTime() > loggedInTimespan * 1000
+        //       }
+        //       role="menuitem"
+        //     >
+        //       🔒 Log out
+        //     </DropdownMenu.Item>
+        //   </DropdownMenu.Content>
+        // </DropdownMenu>
       ),
     }),
   ];
@@ -422,49 +478,64 @@ const Users: Component = () => {
 
   return (
     <Header>
-      <main>
-        <Card class="w-fit mx-auto">
-          <CardHeader class="w-fit">
+      <main class="flex content-center items-center justify-center align-middle min-h-full">
+        <Card class="w-fit my-8">
+          <CardHeader>
             <CardTitle>Users Admin Area</CardTitle>
             <CardDescription>Here you can manage users, edit, delete, and log out users.</CardDescription>
+            <CardDescription>
+              To order users by column you can click on the column header, to filter and search you can use the second
+              row.
+            </CardDescription>
           </CardHeader>
           <CardContent class="w-fit">
             {/* <div class={styles["nav-button-container"]}> */}
-            <div class="w-fit">
-              <Button onClick={handleCreateUser}>Create new user</Button>
-              <Button onClick={() => setReload(!reload())}>Refresh data</Button>
-              <Button
-                onClick={() => {
-                  const newShowDeleted = !showDeleted();
-                  setShowDeleted(newShowDeleted);
-                }}
-                // class={showDeleted() ? styles["nav-button-inverse"] : styles["nav-button"]}
-              >
-                {showDeleted() ? "Hide deleted" : "Show deleted"}
-              </Button>
-              <div class={styles["page-size-selector"]}>
-                <span>Page size: </span>
-                <select
-                  value={table?.getState().pagination.pageSize}
-                  onChange={(e) => {
-                    table.setPageSize(Number(e.target.value));
-                  }}
-                >
-                  {[5, 10, 20, 40].map((pageSize) => (
-                    <option value={pageSize}>{pageSize}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
+
             {loading() ? (
-              <TbLoader2 class="animate-spin h-10 w-10" />
+              <div class="h-80 w-289">
+                <Skeleton class="h-full! w-full! rounded-md" />
+              </div>
             ) : error() ? (
-              <p class={styles["error-text"]}>Error: {error()}</p>
+              <Alert variant="destructive">
+                <IoAlertCircleOutline class="h-5 w-5" />
+                <AlertTitle>Error</AlertTitle>
+                <AlertDescription>{error()}</AlertDescription>
+                <AlertDescription>Plesase try again later, or contact us if the problem persists.</AlertDescription>
+              </Alert>
             ) : (
+              // <p class={styles["error-text"]}>Error: {error()}</p>
               table && (
                 <>
-                  {/* <div class={styles["table-wrapper"]}> */}
-                  <div>
+                  <div class="w-full flex gap-2">
+                    <Button onClick={handleCreateUser}>Create new user</Button>
+                    <Button onClick={() => setReload(!reload())}>Refresh data</Button>
+                    <Switch
+                      class="flex items-center space-x-2"
+                      checked={showDeleted()}
+                      onChange={() => setShowDeleted(!showDeleted())}
+                      // onCheckedChange={() => setShowDeleted(!showDeleted())}
+                    >
+                      <SwitchLabel>Show deleted</SwitchLabel>
+                      <SwitchControl>
+                        <SwitchThumb />
+                      </SwitchControl>
+                    </Switch>
+                    <div class={styles["page-size-selector"]}>
+                      <span>Page size: </span>
+                      <Select
+                        value={table?.getState().pagination.pageSize}
+                        onChange={(value) => table.setPageSize(Number(value))}
+                        options={[5, 10, 20, 40]}
+                        itemComponent={(props) => <SelectItem item={props.item}>{props.item.rawValue}</SelectItem>}
+                      >
+                        <SelectTrigger aria-label="Page size" class="font-semibold">
+                          <SelectValue<string>>{(state) => state.selectedOption()}</SelectValue>
+                        </SelectTrigger>
+                        <SelectContent />
+                      </Select>
+                    </div>
+                  </div>
+                  <div class="border rounded-md my-4">
                     <Table>
                       <TableHeader>
                         <For each={table.getHeaderGroups()}>
@@ -473,7 +544,7 @@ const Users: Component = () => {
                               <TableRow>
                                 <For each={headerGroup.headers}>
                                   {(header) => (
-                                    <TableHead>
+                                    <TableHead class="p-5 font-semibold">
                                       {header.column.getCanSort() ? (
                                         <div
                                           class={styles.sortable}
@@ -510,34 +581,88 @@ const Users: Component = () => {
                                       {(header.column.id === "userRole" ||
                                         header.column.id === "organization" ||
                                         header.column.id === "municipality") && (
-                                        <select
-                                          value={(header.column.getFilterValue() as string) ?? ""}
-                                          onChange={(e) => header.column.setFilterValue(e.currentTarget.value)}
+                                        <Select
+                                          value={(header.column.getFilterValue() as string) ?? "All"}
+                                          onChange={(value) => {
+                                            // console.log("Select onChange Value:", value);
+                                            if (value === "All") {
+                                              return header.column.setFilterValue("");
+                                            }
+                                            return header.column.setFilterValue(value);
+                                          }}
+                                          options={["All", ...getUniqueValues(data(), header.column.id)]}
+                                          itemComponent={(props) => {
+                                            // console.log("Select item props:", props);
+                                            return <SelectItem item={props.item}>{props.item.rawValue}</SelectItem>;
+                                          }}
                                         >
-                                          <option value="">All</option>
-                                          <For each={getUniqueValues(data(), header.column.id)}>
-                                            {(value) => <option value={value as string}>{value as string}</option>}
-                                          </For>
-                                        </select>
+                                          <SelectTrigger aria-label={"Filter by " + header.column.id} class="border-0">
+                                            <SelectValue<string>>
+                                              {(state) => {
+                                                const selectedOption = state.selectedOption();
+                                                // console.log("Selected option:", selectedOption);
+                                                if (!selectedOption) {
+                                                  return "All"; // Or whatever your default display text should be
+                                                }
+                                                return selectedOption === "" ? "All" : selectedOption;
+                                              }}
+                                            </SelectValue>
+                                          </SelectTrigger>
+                                          <SelectContent />
+                                        </Select>
                                       )}
                                       {(header.column.id === "username" ||
                                         header.column.id === "email" ||
                                         header.column.id === "name") && (
-                                        <input
-                                          value={(header.column.getFilterValue() as string) ?? ""}
-                                          onChange={(e) => header.column.setFilterValue(e.currentTarget.value)}
-                                          placeholder={`Search`}
-                                        />
+                                        <TextField>
+                                          <TextFieldInput
+                                            value={(header.column.getFilterValue() as string) ?? ""}
+                                            onInput={(e) => header.column.setFilterValue(e.currentTarget.value)}
+                                            placeholder={`Search`}
+                                            class="border-0"
+                                          />
+                                        </TextField>
                                       )}
                                       {header.column.id === "loggedIn" && (
-                                        <select
+                                        // NOTE: TS gives some errors here, because this is not expected way to use the component, but it works
+                                        <Select
                                           value={(header.column.getFilterValue() as string) ?? "all"}
-                                          onChange={(e) => header.column.setFilterValue(e.currentTarget.value)}
+                                          onChange={(value) => header.column.setFilterValue(value.value)}
+                                          options={[
+                                            { value: "all", label: "All" },
+                                            { value: "loggedIn", label: "Logged in" },
+                                            { value: "loggedOut", label: "Logged out" },
+                                          ]}
+                                          optionValue="value"
+                                          optionTextValue="label"
+                                          itemComponent={(props) => (
+                                            <SelectItem
+                                              item={props.item}
+                                              // onSelect={() => header.column.setFilterValue(props.item.value)}
+                                            >
+                                              {props.item.rawValue.label}
+                                            </SelectItem>
+                                          )}
                                         >
-                                          <option value="all">All</option>
-                                          <option value="loggedIn">Logged in</option>
-                                          <option value="loggedOut">Logged out</option>
-                                        </select>
+                                          <SelectTrigger aria-label="Logged in" class="border-0">
+                                            <SelectValue<{ value: string; label: string }>>
+                                              {() => {
+                                                const currentValue =
+                                                  (header.column.getFilterValue() as string) ?? "all";
+                                                const options = [
+                                                  { value: "all", label: "All" },
+                                                  { value: "loggedIn", label: "Logged in" },
+                                                  { value: "loggedOut", label: "Logged out" },
+                                                ];
+                                                const selectedOption = options.find(
+                                                  (opt) => opt.value === currentValue,
+                                                );
+                                                return selectedOption ? selectedOption.label : "All";
+                                              }}
+                                            </SelectValue>
+                                          </SelectTrigger>
+                                          <SelectContent />
+                                        </Select>
                                       )}
                                     </TableHead>
                                   )}
@@ -549,61 +674,45 @@ const Users: Component = () => {
                       </TableHeader>
                       <TableBody>
                         <For each={table.getRowModel().rows}>
-                          {(row) => (
-                            <tr>
+                          {(row, index) => (
+                            <TableRow class={index() % 2 === 0 ? "bg-accent/40" : ""}>
                               <For each={row.getVisibleCells()}>
                                 {(cell) => (
-                                  <td class={cell.column.id === "actions" ? styles["actions-column"] : ""}>
+                                  <TableCell class={cell.column.id === "actions" ? styles["actions-column"] : ""}>
                                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                                  </td>
+                                  </TableCell>
                                 )}
                               </For>
-                            </tr>
+                            </TableRow>
                           )}
                         </For>
                       </TableBody>
                     </Table>
                   </div>
-                  <div class="w-fit">
-                    <button
-                      onClick={() => table.firstPage()}
-                      disabled={!table.getCanPreviousPage()}
-                      class={styles["nav-button"]}
-                    >
-                      <FaSolidAnglesLeft />
-                    </button>
-                    <button
-                      onClick={() => table.previousPage()}
-                      disabled={!table.getCanPreviousPage()}
-                      class={styles["nav-button"]}
-                    >
-                      <FaSolidAngleLeft />
-                    </button>
-                    <span>
-                      Page <strong>{table.getState().pagination.pageIndex + 1}</strong> of{" "}
-                      {table.getPageCount().toLocaleString()}
-                    </span>
-                    <button
-                      onClick={() => table.nextPage()}
-                      disabled={!table.getCanNextPage()}
-                      class={styles["nav-button"]}
-                    >
-                      <FaSolidAngleRight />
-                    </button>
-                    <button
-                      onClick={() => {
-                        table.lastPage();
-                      }}
-                      disabled={!table.getCanNextPage()}
-                      class={styles["nav-button"]}
-                    >
-                      <FaSolidAnglesRight />
-                    </button>
-                  </div>
+                  {/* PAGINATION HERE */}
+                  <Pagination
+                    count={table.getPageCount()}
+                    fixedItems
+                    itemComponent={(props) => (
+                      <PaginationItem page={props.page} onClick={() => table.setPageIndex(props.page - 1)}>
+                        {props.page}
+                      </PaginationItem>
+                    )}
+                    ellipsisComponent={() => <PaginationEllipsis />}
+                  >
+                    <PaginationPrevious onClick={table.previousPage} />
+                    <PaginationItems />
+                    <PaginationNext onClick={table.nextPage} />
+                  </Pagination>
                 </>
               )
             )}
           </CardContent>
+          <CardFooter class="w-fit">
+            <CardDescription>
+              <strong>Legend:</strong> 🟢 = Logged in, 🔴 = Logged out, 🗑️ = Deleted
+            </CardDescription>
+          </CardFooter>
         </Card>
       </main>
     </Header>

@@ -81,7 +81,7 @@ const SelectItem = <T extends ValidComponent = "li">(props: PolymorphicProps<T, 
       )}
       {...others}
     >
-      <SelectPrimitive.ItemIndicator class="absolute right-2 flex size-3.5 items-center justify-center">
+      {/* <SelectPrimitive.ItemIndicator class="absolute right-2 flex size-3.5 items-center justify-center">
         <svg
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 24 24"
@@ -95,7 +95,7 @@ const SelectItem = <T extends ValidComponent = "li">(props: PolymorphicProps<T, 
           <path stroke="none" d="M0 0h24v24H0z" fill="none" />
           <path d="M5 12l5 5l10 -10" />
         </svg>
-      </SelectPrimitive.ItemIndicator>
+      </SelectPrimitive.ItemIndicator> */}
       <SelectPrimitive.ItemLabel>{local.children}</SelectPrimitive.ItemLabel>
     </SelectPrimitive.Item>
   );
