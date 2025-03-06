@@ -9,7 +9,7 @@
   flex-direction: row;
   border: none;
   background-color: inherit;
-
+  cursor: pointer;
 }
 
 .file-node-btn-selected{
@@ -37,7 +37,7 @@
 }
 
 .file-node-list {
-  margin-left: 1rem;
+  margin-left: 1.5rem;
   min-height: 0px;
 }
 
@@ -74,4 +74,10 @@
 
 .file-tree-item {
   margin-left: 1rem;
+}
+
+.file-tree-icon-container {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }

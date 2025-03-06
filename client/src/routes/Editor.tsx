@@ -3,6 +3,8 @@ import { createEditorControlledValue } from "solid-codemirror";
 import { linter, Diagnostic, lintGutter } from "@codemirror/lint";
 import { EditorView, lineNumbers, keymap } from "@codemirror/view";
 import { Button } from "@kobalte/core";
+import { DropdownMenu } from "@kobalte/core/dropdown-menu";
+import { Breadcrumbs } from "@kobalte/core/breadcrumbs";
 
 import { eden } from "@client/api";
 import styles from "@client/styles/Editor.module.css";
@@ -160,24 +162,57 @@ const checkErrors = () => {
   return errorMap;
 };
 
+function FileTreeBreadcrumb(lastSelectedNode: TreeNode | null): JSX.Element {
+  if (!lastSelectedNode) {
+    return <></>;
+  }
+
+  const pathList = lastSelectedNode.getPathList();
+
+  return (
+    <Breadcrumbs class={styles.breadcrumbs}>
+      <ol class={styles["breadcrumbs__list"]}>
+        {pathList.map((name, index) => (
+          <li class={styles["breadcrumbs__item"]}>
+            <Breadcrumbs.Link
+              // href="/"
+              class={styles["breadcrumbs__link"]}
+              {...(index === pathList.length - 1 ? { current: true } : {})}
+            >
+              {name}
+            </Breadcrumbs.Link>
+            {index < pathList.length - 1 && <Breadcrumbs.Separator class={styles["breadcrumbs__separator"]} />}
+          </li>
+        ))}
+      </ol>
+    </Breadcrumbs>
+  );
+}
+
 function Editor(): JSX.Element {
-  const { editorView, editorRef, createExtension, code, selectedNode } = useContext(EditorContext) as IEditorContext;
+  const { editorView, editorRef, createExtension, code, selectedNode, navigateToFile } = useContext(
+    EditorContext,
+  ) as IEditorContext;
 
   const [lastSelectedFile, setLastSelectedFile] = createSignal<TreeNode | null>(null);
 
   // track the saved content
   const [savedContent, setSavedContent] = createSignal<string | null>(null);
-
   const hasUnsavedChanges = () => savedContent() !== code();
+  const [saveMethod, setSaveMethod] = createSignal<"file" | "template">("file");
+
+  // track selected node attributes
+  const isTemplate = () => lastSelectedFile()?.isTemplate || false;
 
   createEffect(() => {
     const node = selectedNode();
     if (node !== null) {
       setLastSelectedFile(node);
-      node.getContent().then((content) => setSavedContent(content));
-
-      setIsCompiled(false);
-      setDashboardUrl(null);
+      if (node.isFile()) {
+        node.getContent().then((content) => setSavedContent(content));
+        setIsCompiled(false);
+        setDashboardUrl(null);
+      }
     }
   });
 
@@ -315,50 +350,126 @@ function Editor(): JSX.Element {
 
   createExtension(customKeyBehaviour);
 
+  // console.log("Selected node in the editor:", selectedNode());
+
   return (
     <Header>
       <main>
-        <div class={styles["button-row"]}>
-          <Button.Root
-            class={[styles.btn, lastSelectedFile()?.isFile() ? "" : styles["btn-disabled"]].join(" ")}
-            {...(lastSelectedFile()?.isFile() ? {} : { disabled: true })}
-            onClick={async () => {
-              await compile(code(), selectedNode());
-            }}
-          >
-            Compile
-          </Button.Root>
-          <Button.Root
-            class={[styles["btn-dashboard"], isCompiled() ? "" : styles["btn-disabled"]].join(" ")}
-            onClick={() => {
-              const url = dashboardUrl();
-              if (url) {
-                handleOpenWindow(url);
-              } else {
-                Notification.fire({
-                  icon: "error",
-                  titleText: "Dashboard not deployed yet",
-                  timer: 5000,
-                });
-              }
-            }}
-            disabled={!isCompiled()}
-          >
-            Open Dashboard
-          </Button.Root>
-          <Button.Root
-            class={[styles.btn, lastSelectedFile()?.isFile() ? "" : styles["btn-disabled"]].join(" ")}
-            disabled={!(lastSelectedFile()?.isFile() && hasUnsavedChanges())}
-            onClick={async () => {
-              const node = selectedNode();
-              if (node !== null) {
-                node.saveContent(code());
-                setSavedContent(code());
-              }
-            }}
-          >
-            Save File
-          </Button.Root>
+        <div class={styles["context-row"]}>
+          {FileTreeBreadcrumb(lastSelectedFile())}
+
+          <div class={styles["context-row-actions"]}>
+            {!isTemplate() && (
+              <>
+                <Button.Root
+                  class={styles.btn}
+                  {...(lastSelectedFile()?.isFile() ? {} : { disabled: true })}
+                  onClick={async () => {
+                    await compile(code(), selectedNode());
+                  }}
+                >
+                  Compile
+                </Button.Root>
+                <Button.Root
+                  class={styles.btn}
+                  onClick={() => {
+                    const url = dashboardUrl();
+                    if (url) {
+                      handleOpenWindow(url);
+                    } else {
+                      Notification.fire({
+                        icon: "error",
+                        titleText: "Dashboard not deployed yet",
+                        timer: 5000,
+                      });
+                    }
+                  }}
+                  disabled={!isCompiled()}
+                >
+                  Open Dashboard
+                </Button.Root>
+                <DropdownMenu>
+                  <DropdownMenu.Trigger
+                    class={styles.btn}
+                    disabled={!(lastSelectedFile()?.isFile() && hasUnsavedChanges()) && !lastSelectedFile()?.isFile()}
+                  >
+                    <span>Save as</span>
+                  </DropdownMenu.Trigger>
+                  <DropdownMenu.Portal>
+                    <DropdownMenu.Content class={styles["dropdown-menu__content"]}>
+                      <DropdownMenu.RadioGroup value={saveMethod()} onChange={setSaveMethod}>
+                        <DropdownMenu.RadioItem
+                          class={`${styles["dropdown-menu__radio-item"]} ${
+                            !(lastSelectedFile()?.isFile() && hasUnsavedChanges())
+                              ? styles["dropdown-menu__radio-item--disabled"]
+                              : ""
+                          }`}
+                          value="file"
+                          disabled={!(lastSelectedFile()?.isFile() && hasUnsavedChanges())}
+                          onSelect={async () => {
+                            const node = selectedNode();
+                            if (node !== null) {
+                              const success = await node.saveContent(code());
+                              if (success) {
+                                setSavedContent(code());
+                              }
+                            }
+                          }}
+                        >
+                          <DropdownMenu.ItemIndicator
+                            class={styles["dropdown-menu__item-indicator"]}
+                          ></DropdownMenu.ItemIndicator>
+                          Save as File
+                        </DropdownMenu.RadioItem>
+                        <DropdownMenu.RadioItem
+                          class={`${styles["dropdown-menu__radio-item"]} ${
+                            !lastSelectedFile()?.isFile() ? styles["dropdown-menu__radio-item--disabled"] : ""
+                          }`}
+                          value="template"
+                          disabled={!lastSelectedFile()?.isFile()}
+                          onSelect={async () => {
+                            const node = selectedNode();
+                            if (node !== null) {
+                              const result = await node.saveFileAsTemplate(code());
+                              if (result instanceof TreeNode) {
+                                navigateToFile(result);
+                              }
+                            }
+                          }}
+                        >
+                          <DropdownMenu.ItemIndicator
+                            class={styles["dropdown-menu__item-indicator"]}
+                          ></DropdownMenu.ItemIndicator>
+                          Save as Template
+                        </DropdownMenu.RadioItem>
+                      </DropdownMenu.RadioGroup>
+                      <DropdownMenu.Arrow />
+                    </DropdownMenu.Content>
+                  </DropdownMenu.Portal>
+                </DropdownMenu>
+              </>
+            )}
+            {isTemplate() && (
+              <>
+                <Button.Root
+                  class={styles.btn}
+                  disabled={!(lastSelectedFile()?.isFile() && hasUnsavedChanges())}
+                  onClick={async () => {
+                    const node = selectedNode();
+                    console.log("Calling save on template node:", node);
+                    if (node !== null) {
+                      const success = await node.saveContent(code());
+                      if (success) {
+                        setSavedContent(code());
+                      }
+                    }
+                  }}
+                >
+                  Update template
+                </Button.Root>
+              </>
+            )}
+          </div>
         </div>
         <div class={styles["editor-container"]}>
           <LeftSideBar />

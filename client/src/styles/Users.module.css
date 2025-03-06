@@ -39,6 +39,49 @@ td {
   padding: 15px;
 }
 
+input {
+  /* padding: 5px; */
+  background: none;
+  color: var(--primary-text);
+  border: 0;
+  cursor: pointer;
+}
+
+input:focus {
+  outline: none;
+  border: 2px solid var(--primary-text);
+  box-shadow: none;
+  border-radius: 5px;
+}
+
+input:active {
+  outline: none;
+  border: 2px solid var(--primary-text);
+  box-shadow: none;
+  border-radius: 5px;
+}
+
+select {
+  background: none;
+  color: var(--primary-text);
+  background-color: var(--secondary-color);
+  border: 0;
+  cursor: pointer;
+}
+
+select:focus {
+  outline: none;
+  border: 2px solid var(--primary-text);
+  box-shadow: none;
+  border-radius: 5px;
+}
+select:active {
+  outline: none;
+  border: 2px solid var(--primary-text);
+  box-shadow: none;
+  border-radius: 5px;
+}
+
 .actions-column {
   padding: 0;
   height: 100%;
@@ -53,6 +96,10 @@ td {
   overflow-y: hidden;
   cursor: pointer;
   transition: all 0.25s;
+  background-color: var(--background-color);
+  color: var(--primary-text);
+  border: 0;
+  border-radius: 0;
 }
 
 .trigger:hover {
@@ -160,6 +207,7 @@ td {
 .nav-button:not(:disabled):hover {
   background-color: var(--primary-text);
   color: var(--secondary-color);
+  cursor: pointer;
 }
 
 .nav-button:disabled {

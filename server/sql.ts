@@ -4,6 +4,7 @@ import { UserRole } from "@utils/roles";
 import { UserDetails, OrganisationDetails, UpdateOrganisationBody } from "@server/types";
 import { Organization, Project, User, Municipality, UserType, DocumentType } from "@prisma/client";
 import { SagError } from "./errors";
+import path from "path";
 
 export type Document = {
   name: string;
@@ -54,10 +55,11 @@ export async function createOrganization(
   municipalityName: string,
   verified?: boolean,
 ): Promise<Organization> {
-  if (await selectMunicipality(municipalityName) === null) {
+  if ((await selectMunicipality(municipalityName)) === null) {
     throw new SagError(`Municipality ${municipalityName} does not exist`);
   }
-  return await prisma.organization.create({
+  // Create org
+  const organization = await prisma.organization.create({
     data: {
       name: name,
       description: description,
@@ -67,6 +69,55 @@ export async function createOrganization(
       verified: verified ?? false,
     },
   });
+
+  // Add templates folder - NOTE: We can not use prisma.document.create() here because it does not support ltree type
+  // TODO: The owner / author of this folder is the default user. Is this correct?
+  await prisma.$executeRaw`
+    INSERT INTO documents (id, name, content, "authorId", "organizationId", path, "documentType", "isTemplate")
+    VALUES (
+      ${createId()},
+      'Templates',
+      'This is the template folder for the organization: ${organization.name}',
+      (SELECT id FROM users WHERE users.name = 'default'),
+      (SELECT id FROM organisations WHERE organisations.name = ${organization.name}),
+      text2ltree('templates'),
+      'FOLDER'::"DocumentType",
+      true
+    );
+  `;
+
+  // Add example templates to the templates folder
+  const exampleTemplates = [
+    {
+      templateTitle: "Example template 1",
+      templateContent:
+        "Welcome to the templates feature!\n\nHere you can see all of your organization's templates and edit, delete them as needed.\n\nTo create a new template you can simply save file as template when creating it regularly.\n\nYou can also create new files from templates when creating a new file, to do this you have select one of your organisation's templates like this one.",
+    },
+    {
+      templateTitle: "Example template 2",
+      templateContent:
+        "service:\n    title is Dash dashboard\n    version is 1.0.0\n    scope is Environment\n\ndata:\n    sources -> first\n\nfirst:\n    type is SmartMeter\n    provider is Fiware\n    uri is http://localhost:1026/v2/entities\n    query is AirQualityObserved\n    config:\n        measurements:\n            450 is temperature\n            330 is humidity\n        token is 1234567890\n        company is 23\n\napplication:\n    type is Web\n    dashboard is Dash\n    layout is SinglePage\n    roles -> User, SuperUser, Admin\n    panels -> Map, Pie, XY, TS, Bar\n\nMap:\n    label is map\n    type is geomap\n    source is first\n    area is Madrid\n    data -> location, stationName, O3, NO2, SO2, address\n\nPie:\n    label is pie\n    type is pie_chart\n    source is first\n    traces -> NOx, O3, NO2, SO2, id\n    pie_chart_type is pie\n\nXY:\n    label is xy\n    type is xy_chart\n    source is first\n    traces -> dateObserved, NOx, O3, NO2, SO2, id\n\nTS:\n    label is ts\n    type is timeseries\n    source is first\n    traces -> dateObserved, NOx, O3, NO2, SO2, id\n\nBar:\n    label is bar\n    type is bar_chart\n    source is first\n    traces -> dateObserved, NOx, O3, NO2, SO2, id\n\ndeployment:\n    environments -> <local | azure>\n\n<local:>\n    <uri is https://localhost.org:3000/test>\n    <port is 50055>\n    <type is Docker>",
+    },
+  ];
+
+  // TODO: The owner / author of these files is the default user. Is this correct?
+  for (const template of exampleTemplates) {
+    await prisma.$executeRaw`
+        INSERT INTO documents (id, name, content, "authorId", "organizationId", path, "documentType", "isTemplate")
+        VALUES (
+          ${createId()},
+          ${template.templateTitle},
+          ${template.templateContent},
+          (SELECT id FROM users WHERE users.name = 'default'),
+          (SELECT id FROM organisations WHERE organisations.name = ${organization.name}),
+          text2ltree(${joinPath("templates", template.templateTitle)}),
+          'FILE'::"DocumentType",
+          true
+        );
+      `;
+  }
+
+  return organization;
 }
 
 export async function selectOrganization(name: string): Promise<Organization | null> {
@@ -588,18 +639,33 @@ export async function deleteUser(userId: string): Promise<void> {
 
 export async function getDocumentFolderPath(
   path: string,
-  projectName: string,
+  projectName: string | undefined,
   organizationName: string,
   municipalityName: string,
 ): Promise<{ path: string }[]> {
-  return await prisma.$queryRaw<{ path: string }[]>`
+  if (projectName) {
+    return await prisma.$queryRaw<{ path: string }[]>`
     SELECT ltree2text(path) as path FROM documents
     INNER JOIN projects ON projects.id = documents."projectId"
     INNER JOIN organisations ON organisations.id = projects."organizationId"
     INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
-    WHERE projects.name = ${projectName} AND organisations.name = ${organizationName} AND municipalities.name = ${municipalityName}
-    AND documents.path = text2ltree(${path}) AND documents."documentType" = 'FOLDER'::"DocumentType"
+    WHERE projects.name = ${projectName} 
+      AND organisations.name = ${organizationName} 
+      AND municipalities.name = ${municipalityName}
+      AND documents.path = text2ltree(${path}) 
+      AND documents."documentType" = 'FOLDER'::"DocumentType"
     `;
+  } else {
+    return await prisma.$queryRaw<{ path: string }[]>`
+    SELECT ltree2text(path) as path FROM documents
+    INNER JOIN organisations ON organisations.id = documents."organizationId"
+    INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
+    WHERE organisations.name = ${organizationName} 
+      AND municipalities.name = ${municipalityName}
+      AND documents.path = text2ltree(${path}) 
+      AND documents."documentType" = 'FOLDER'::"DocumentType"
+    `;
+  }
 }
 
 function joinPath(path: string, name: string): string {
@@ -615,18 +681,20 @@ function joinPath(path: string, name: string): string {
 export async function createDocument(
   name: string,
   authorId: string,
-  projectName: string,
+  projectName: string | undefined,
   organizationName: string,
   municipalityName: string,
   path: string,
   documentType: DocumentType,
+  content?: string | null,
+  isTemplate: boolean = false,
 ): Promise<string | null> {
   if (
     path.length > 0 &&
     (await getDocumentFolderPath(path, projectName, organizationName, municipalityName)).length < 1
   ) {
     throw new SagError(
-      `${path} does not exist in ${municipalityName}.${organizationName}.${projectName} or it's not a folder`,
+      `${path} does not exist in ${municipalityName}.${organizationName}${projectName && "." + projectName} or it's not a folder`,
     );
   }
 
@@ -635,40 +703,70 @@ export async function createDocument(
   // @ts-ignore
   const user: User | UserDocument = await selectUser(authorId);
   let result = 0;
+  content = content ?? "";
+  console.log("Creating document with content:", content);
+  console.log("New document projectName:", projectName);
+  console.log("New document is teplate:", isTemplate);
 
   try {
     switch (user.userType) {
       case UserType.DEFAULT: {
-        result = await prisma.$executeRaw`
+        if (projectName) {
+          result = await prisma.$executeRaw`
             INSERT INTO documents (id, name, content, "authorId", "projectId", path, "documentType")
-            VALUES (${createId()}, ${name}, '', ${authorId},
+            VALUES (${createId()}, ${name}, ${content}, ${authorId},
               (SELECT id FROM projects WHERE projects.name = ${projectName}
               AND projects."organizationId" =
                 (SELECT organisations.id FROM organisations
                   INNER JOIN users ON users."organizationId" = organisations.id
                   INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
-                  WHERE organisations.name = ${organizationName} AND organisations.id = (SELECT "organizationId" FROM users WHERE id = ${authorId})
-                  AND municipalities.name = ${municipalityName} AND municipalities.id = (SELECT "municipalityId" FROM users WHERE id = ${authorId}))),
+                  WHERE organisations.name = ${organizationName} 
+                    AND organisations.id = (SELECT "organizationId" FROM users WHERE id = ${authorId})
+                    AND municipalities.name = ${municipalityName} 
+                    AND municipalities.id = (SELECT "municipalityId" FROM users WHERE id = ${authorId}))),
               text2ltree(${path}), ${documentType}::"DocumentType")
             `;
+        } else {
+          result = await prisma.$executeRaw`
+            INSERT INTO documents (id, name, content, "authorId", "organizationId", path, "documentType", "isTemplate")
+            VALUES (${createId()}, ${name}, ${content}, ${authorId},
+              (SELECT id FROM organisations WHERE organisations.name = ${organizationName}
+              AND organisations.id =
+                (SELECT "organizationId" FROM users WHERE id = ${authorId})),
+              text2ltree(${path}), ${documentType}::"DocumentType", ${isTemplate})
+            `;
+        }
       }
       case UserType.SUPERUSER_MUNICIPALITY: {
-        result = await prisma.$executeRaw`
+        if (projectName) {
+          result = await prisma.$executeRaw`
             INSERT INTO documents (id, name, content, "authorId", "projectId", path, "documentType")
-            VALUES (${createId()}, ${name}, '', ${authorId},
+            VALUES (${createId()}, ${name}, ${content}, ${authorId},
               (SELECT id FROM projects WHERE projects.name = ${projectName}
               AND projects."organizationId" =
                 (SELECT organisations.id FROM organisations
                   INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
                   WHERE organisations.name = ${organizationName}
-                  AND municipalities.name = ${municipalityName} AND municipalities.id = (SELECT "municipalityId" FROM users WHERE id = ${authorId}))),
+                    AND municipalities.name = ${municipalityName} 
+                    AND municipalities.id = (SELECT "municipalityId" FROM users WHERE id = ${authorId}))),
               text2ltree(${path}), ${documentType}::"DocumentType")
             `;
+        } else {
+          result = await prisma.$executeRaw`
+            INSERT INTO documents (id, name, content, "authorId", "organizationId", path, "documentType", "isTemplate")
+            VALUES (${createId()}, ${name}, ${content}, ${authorId},
+              (SELECT id FROM organisations WHERE organisations.name = ${organizationName}
+              AND organisations."municipalityId" =
+                (SELECT "municipalityId" FROM users WHERE id = ${authorId})),
+              text2ltree(${path}), ${documentType}::"DocumentType", ${isTemplate})
+            `;
+        }
       }
       case UserType.SUPERUSER_GLOBAL: {
-        result = await prisma.$executeRaw`
+        if (projectName) {
+          result = await prisma.$executeRaw`
             INSERT INTO documents (id, name, content, "authorId", "projectId", path, "documentType")
-            VALUES (${createId()}, ${name}, '', ${authorId},
+            VALUES (${createId()}, ${name}, ${content}, ${authorId},
               (SELECT id FROM projects WHERE projects.name = ${projectName}
               AND projects."organizationId" =
                 (SELECT organisations.id FROM organisations
@@ -676,6 +774,17 @@ export async function createDocument(
                   WHERE organisations.name = ${organizationName} AND municipalities.name = ${municipalityName})),
               text2ltree(${path}), ${documentType}::"DocumentType")
             `;
+        } else {
+          console.log("Creating document that isTemplate:", isTemplate);
+          result = await prisma.$executeRaw`
+            INSERT INTO documents (id, name, content, "authorId", "organizationId", path, "documentType", "isTemplate")
+            VALUES (${createId()}, ${name}, ${content}, ${authorId},
+              (SELECT id FROM organisations WHERE organisations.name = ${organizationName}
+              AND organisations."municipalityId" =
+                (SELECT municipalities.id FROM municipalities WHERE municipalities.name = ${municipalityName})),
+              text2ltree(${path}), ${documentType}::"DocumentType", ${isTemplate})
+            `;
+        }
       }
     }
     if (result === 1) {
@@ -707,43 +816,140 @@ export async function getDocuments(userId: string): Promise<Document[]> {
   switch (user.userType) {
     case UserType.DEFAULT: {
       return await prisma.$queryRaw<Document[]>`
-            SELECT documents.name,  municipalities.name as "municipalityName", organisations.name as "orgName", projects.name as "projectName",
-              lower(documents."documentType"::text) as "documentType", documents.path::text AS "documentPath"
-            FROM users
-            INNER JOIN organisations ON organisations.id = users."organizationId"
-            INNER JOIN projects ON organisations.id = "projects"."organizationId"
-            INNER JOIN documents ON "documents"."projectId" = projects.id
-            INNER JOIN municipalities ON municipalities.id = users."municipalityId"
-            WHERE "users"."id" = ${userId}
-            ORDER BY "municipalityName", "orgName", "projectName", CASE WHEN documents."documentType" = 'FOLDER'::"DocumentType" then 0 else 1 end,
-            "documentPath";`;
+        SELECT * FROM (
+          -- Subquery 1: Documents linked to Projects
+          SELECT 
+            documents.name,  
+            municipalities.name AS "municipalityName", 
+            organisations.name AS "orgName", 
+            projects.name AS "projectName",
+            lower(documents."documentType"::text) AS "documentType", 
+            documents.path::text AS "documentPath",
+            documents."isTemplate" AS "isTemplate"
+          FROM users
+          INNER JOIN organisations ON organisations.id = users."organizationId"
+          INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
+          LEFT JOIN projects ON organisations.id = projects."organizationId"
+          INNER JOIN documents ON documents."projectId" = projects.id
+          WHERE users.id = ${userId}
+          
+          UNION ALL
+          
+          -- Subquery 2: Documents linked directly to Organizations
+          SELECT 
+            documents.name, 
+            municipalities.name AS "municipalityName", 
+            organisations.name AS "orgName", 
+            NULL AS "projectName",
+            lower(documents."documentType"::text) AS "documentType", 
+            documents.path::text AS "documentPath",
+            documents."isTemplate" AS "isTemplate"
+          FROM users
+          INNER JOIN organisations ON organisations.id = users."organizationId"
+          INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
+          INNER JOIN documents ON documents."organizationId" = organisations.id
+          WHERE users.id = ${userId}
+        ) AS combined_documents
+        ORDER BY 
+          "municipalityName", 
+          "orgName", 
+          "projectName" ASC NULLS LAST,
+          CASE WHEN "documentType" = 'FOLDER' THEN 0 ELSE 1 END,
+          "documentPath";
+      `;
     }
     case UserType.SUPERUSER_MUNICIPALITY: {
       return await prisma.$queryRaw<Document[]>`
-            SELECT documents.name, municipalities.name as "municipalityName", organisations.name as "orgName", projects.name as "projectName",
-              lower(documents."documentType"::text) as "documentType", documents.path::text AS "documentPath"
-            FROM users
-            INNER JOIN organisations ON organisations."municipalityId" = users."municipalityId"
-            INNER JOIN projects ON organisations.id = projects."organizationId"
-            INNER JOIN documents ON documents."projectId" = projects.id
-            INNER JOIN municipalities ON municipalities.id = users."municipalityId"
-            WHERE "users"."id" = ${userId}
-            ORDER BY "municipalityName", "orgName", "projectName", CASE WHEN documents."documentType" = 'FOLDER'::"DocumentType" then 0 else 1 end,
-            "documentPath";`;
+        SELECT * FROM (
+          -- Subquery 1: Documents linked to Projects
+          SELECT 
+            documents.name, 
+            municipalities.name AS "municipalityName", 
+            organisations.name AS "orgName", 
+            projects.name AS "projectName",
+            lower(documents."documentType"::text) AS "documentType", 
+            documents.path::text AS "documentPath",
+            documents."isTemplate" AS "isTemplate"
+          FROM users
+          INNER JOIN organisations ON organisations."municipalityId" = users."municipalityId"
+          INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
+          LEFT JOIN projects ON organisations.id = projects."organizationId"
+          INNER JOIN documents ON documents."projectId" = projects.id
+          WHERE users.id = ${userId}
+          
+          UNION ALL
+          
+          -- Subquery 2: Documents linked directly to Organizations
+          SELECT 
+            documents.name, 
+            municipalities.name AS "municipalityName", 
+            organisations.name AS "orgName", 
+            NULL AS "projectName",
+            lower(documents."documentType"::text) AS "documentType", 
+            documents.path::text AS "documentPath",
+            documents."isTemplate" AS "isTemplate"
+          FROM users
+          INNER JOIN organisations ON organisations."municipalityId" = users."municipalityId"
+          INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
+          INNER JOIN documents ON documents."organizationId" = organisations.id
+          WHERE users.id = ${userId}
+        ) AS combined_documents
+        ORDER BY 
+          "municipalityName", 
+          "orgName", 
+          "projectName" ASC NULLS LAST,
+          CASE WHEN "documentType" = 'FOLDER' THEN 0 ELSE 1 END,
+          "documentPath";
+      `;
     }
     case UserType.SUPERUSER_GLOBAL: {
       return await prisma.$queryRaw<Document[]>`
-            SELECT documents.name, municipalities.name as "municipalityName", organisations.name AS "orgName", projects.name AS "projectName",
-              lower(documents."documentType"::text) as "documentType", documents.path::text AS "documentPath"
-            FROM users
-            CROSS JOIN organisations
-            INNER JOIN projects ON organisations.id = projects."organizationId"
-            INNER JOIN documents ON documents."projectId" = projects.id
-            INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
-            WHERE users.id = ${userId}
-            ORDER BY "municipalityName", "orgName", "projectName", CASE WHEN documents."documentType" = 'FOLDER'::"DocumentType" then 0 else 1 end,
-            "documentPath";`;
+        SELECT * FROM (
+          -- Subquery 1: Documents linked to Projects
+          SELECT 
+            documents.name, 
+            municipalities.name AS "municipalityName", 
+            organisations.name AS "orgName", 
+            projects.name AS "projectName",
+            lower(documents."documentType"::text) AS "documentType", 
+            documents.path::text AS "documentPath",
+            documents."isTemplate" AS "isTemplate"
+          FROM users
+          -- Joins and conditions for project-linked documents
+          CROSS JOIN organisations
+          INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
+          LEFT JOIN projects ON organisations.id = projects."organizationId"
+          INNER JOIN documents ON documents."projectId" = projects.id
+          WHERE users.id = ${userId}
+          
+          UNION ALL
+          
+          -- Subquery 2: Documents linked directly to Organizations
+          SELECT 
+            documents.name, 
+            municipalities.name AS "municipalityName", 
+            organisations.name AS "orgName", 
+            NULL AS "projectName",
+            lower(documents."documentType"::text) AS "documentType", 
+            documents.path::text AS "documentPath",
+            documents."isTemplate" AS "isTemplate"
+          FROM users
+          -- Joins and conditions for organization-linked documents
+          CROSS JOIN organisations
+          INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
+          INNER JOIN documents ON documents."organizationId" = organisations.id
+          WHERE users.id = ${userId}
+        ) AS combined_documents
+        ORDER BY 
+          "municipalityName", 
+          "orgName", 
+          "projectName" ASC NULLS LAST,
+          CASE WHEN "documentType" = 'FOLDER' THEN 0 ELSE 1 END,
+          "documentPath";
+    `;
     }
+    default:
+      throw new Error("Unsupported user type");
   }
 }
 
@@ -751,51 +957,119 @@ export async function getContent(
   userId: string,
   municipalityName: string,
   orgName: string,
-  projectName: string,
+  projectName: string | undefined,
   documentPath: string,
 ): Promise<{ content: string }[]> {
   // @ts-ignore
   const user: User | UserDocument = await selectUser(userId);
+  // console.log(
+  //   `Getting content at:\n Municipality: ${municipalityName}\n Org: ${orgName}\n Project: ${projectName}\n Path: ${documentPath}`,
+  // );
 
   switch (user.userType) {
     case UserType.DEFAULT: {
-      return await prisma.$queryRaw<{ content: string }[]>`
-            SELECT documents.content
-            FROM documents
-            INNER JOIN projects ON projects.id = documents."projectId"
-            INNER JOIN organisations ON organisations.id = projects."organizationId"
-            INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
-            WHERE municipalities.name = ${municipalityName} AND municipalities.id = (SELECT "municipalityId" FROM users WHERE id = ${userId})
-            AND organisations.name = ${orgName} AND organisations.id = (SELECT "organizationId" FROM users WHERE id = ${userId})
+      if (projectName) {
+        // Query when projectName is provided
+        return await prisma.$queryRaw<{ content: string }[]>`
+          SELECT documents.content
+          FROM documents
+          INNER JOIN projects ON projects.id = documents."projectId"
+          INNER JOIN organisations ON organisations.id = projects."organizationId"
+          INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
+          WHERE municipalities.name = ${municipalityName}
+            AND municipalities.id = (SELECT "municipalityId" FROM users WHERE id = ${userId})
+            AND organisations.name = ${orgName} 
+            AND organisations.id = (SELECT "organizationId" FROM users WHERE id = ${userId})
             AND projects.name = ${projectName}
-            AND documents.path = text2ltree(${documentPath}) AND documents."documentType" = 'FILE'::"DocumentType"
-            LIMIT 1
-            `;
+            AND documents.path = text2ltree(${documentPath})
+            AND documents."documentType" = 'FILE'::"DocumentType"
+          LIMIT 1
+        `;
+      } else {
+        // Query when projectName is not provided
+        return await prisma.$queryRaw<{ content: string }[]>`
+          SELECT documents.content
+          FROM documents
+          INNER JOIN projects ON projects.id = documents."projectId"
+          INNER JOIN organisations ON organisations.id = projects."organizationId"
+          INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
+          WHERE municipalities.name = ${municipalityName}
+            AND municipalities.id = (SELECT "municipalityId" FROM users WHERE id = ${userId})
+            AND organisations.name = ${orgName} 
+            AND organisations.id = (SELECT "organizationId" FROM users WHERE id = ${userId})
+            AND documents.path = text2ltree(${documentPath})
+            AND documents."documentType" = 'FILE'::"DocumentType"
+            AND documents."projectId" IS NULL
+          LIMIT 1
+        `;
+      }
     }
     case UserType.SUPERUSER_MUNICIPALITY: {
-      return await prisma.$queryRaw<{ content: string }[]>`
-            SELECT documents.content
-            FROM documents
-            INNER JOIN projects ON projects.id = documents."projectId"
-            INNER JOIN organisations ON organisations.id = projects."organizationId"
-            INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
-            WHERE municipalities.name = ${municipalityName} AND municipalities.id = (SELECT "municipalityId" FROM users WHERE id = ${userId})
-            AND organisations.name = ${orgName} AND projects.name = ${projectName}
-            AND documents.path = text2ltree(${documentPath}) AND documents."documentType" = 'FILE'::"DocumentType"
-            LIMIT 1
-            `;
+      if (projectName) {
+        // Query when projectName is provided
+        return await prisma.$queryRaw<{ content: string }[]>`
+          SELECT documents.content
+          FROM documents
+          INNER JOIN projects ON projects.id = documents."projectId"
+          INNER JOIN organisations ON organisations.id = projects."organizationId"
+          INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
+          WHERE municipalities.name = ${municipalityName} 
+            AND municipalities.id = (SELECT "municipalityId" FROM users WHERE id = ${userId})
+            AND organisations.name = ${orgName} 
+            AND projects.name = ${projectName}
+            AND documents.path = text2ltree(${documentPath}) 
+            AND documents."documentType" = 'FILE'::"DocumentType"
+          LIMIT 1;
+        `;
+      } else {
+        // Query when projectName is not provided
+        return await prisma.$queryRaw<{ content: string }[]>`
+          SELECT documents.content
+          FROM documents
+          INNER JOIN projects ON projects.id = documents."projectId"
+          INNER JOIN organisations ON organisations.id = projects."organizationId"
+          INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
+          WHERE municipalities.name = ${municipalityName} 
+            AND municipalities.id = (SELECT "municipalityId" FROM users WHERE id = ${userId})
+            AND organisations.name = ${orgName} 
+            AND documents.path = text2ltree(${documentPath}) 
+            AND documents."documentType" = 'FILE'::"DocumentType"
+            AND documents."projectId" IS NULL
+          LIMIT 1;
+        `;
+      }
     }
     case UserType.SUPERUSER_GLOBAL: {
-      return await prisma.$queryRaw<{ content: string }[]>`
-            SELECT documents.content
-            FROM documents
-            INNER JOIN projects ON projects.id = documents."projectId"
-            INNER JOIN organisations ON organisations.id = projects."organizationId"
-            INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
-            WHERE municipalities.name = ${municipalityName} AND organisations.name = ${orgName} AND projects.name = ${projectName}
-            AND documents.path = text2ltree(${documentPath}) AND documents."documentType" = 'FILE'::"DocumentType"
-            LIMIT 1
-            `;
+      if (projectName) {
+        // console.log("Getting content for global superuser with project");
+        return await prisma.$queryRaw<{ content: string }[]>`
+        SELECT documents.content
+        FROM documents
+        INNER JOIN projects ON projects.id = documents."projectId"
+        INNER JOIN organisations ON organisations.id = projects."organizationId"
+        INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
+        WHERE municipalities.name = ${municipalityName}
+          AND organisations.name = ${orgName}
+          AND projects.name = ${projectName}
+          AND documents.path = text2ltree(${documentPath})
+          AND documents."documentType" = 'FILE'::"DocumentType"
+        LIMIT 1
+        `;
+      } else {
+        // console.log("Getting content for global superuser without project");
+        return await prisma.$queryRaw<{ content: string }[]>`
+        SELECT documents.content
+        FROM documents
+        INNER JOIN organisations ON organisations.id = documents."organizationId"
+        INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
+        WHERE municipalities.name = ${municipalityName}
+          AND organisations.name = ${orgName}
+          AND documents.path = text2ltree(${documentPath})
+          AND documents."documentType" = 'FILE'::"DocumentType"
+          AND documents."projectId" IS NULL
+        LIMIT 1
+        `;
+      }
     }
   }
 }
@@ -804,7 +1078,7 @@ export async function updateContent(
   authorId: string,
   municipalityName: string,
   orgName: string,
-  projectName: string,
+  projectName: string | undefined,
   documentPath: string,
   content: string,
 ) {
@@ -813,43 +1087,100 @@ export async function updateContent(
 
   switch (user.userType) {
     case UserType.DEFAULT: {
-      return await prisma.$executeRaw`
-            UPDATE documents
-            SET content = ${content}, "authorId" = ${authorId}
-            FROM projects
-            INNER JOIN organisations ON organisations.id = projects."organizationId"
-            INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
-            WHERE municipalities.name = ${municipalityName} AND municipalities.id = (SELECT "municipalityId" FROM users WHERE id = ${authorId})
-            AND organisations.name = ${orgName} AND organisations.id = (SELECT "organizationId" FROM users WHERE id = ${authorId})
+      if (projectName) {
+        return await prisma.$executeRaw`
+          UPDATE documents
+          SET content = ${content}, "authorId" = ${authorId}
+          FROM projects
+          INNER JOIN organisations ON organisations.id = projects."organizationId"
+          INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
+          WHERE municipalities.name = ${municipalityName} 
+            AND municipalities.id = (SELECT "municipalityId" FROM users WHERE id = ${authorId})
+            AND organisations.name = ${orgName} 
+            AND organisations.id = (SELECT "organizationId" FROM users WHERE id = ${authorId})
             AND projects.name = ${projectName}
-            AND documents.path = text2ltree(${documentPath}) AND documents."projectId" = projects.id
+            AND documents.path = text2ltree(${documentPath}) 
+            AND documents."projectId" = projects.id
             AND documents."documentType" = 'FILE'::"DocumentType"
-            `;
+          `;
+      } else {
+        return await prisma.$executeRaw`
+          UPDATE documents
+          SET content = ${content}, "authorId" = ${authorId}
+          FROM organisations
+          INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
+          WHERE municipalities.name = ${municipalityName} 
+            AND municipalities.id = (SELECT "municipalityId" FROM users WHERE id = ${authorId})
+            AND organisations.name = ${orgName} 
+            AND organisations.id = (SELECT "organizationId" FROM users WHERE id = ${authorId})
+            AND documents.path = text2ltree(${documentPath}) 
+            AND documents."organizationId" = organisations.id
+            AND documents."documentType" = 'FILE'::"DocumentType"
+            AND documents."projectId" IS NULL
+          `;
+      }
     }
     case UserType.SUPERUSER_MUNICIPALITY: {
-      return await prisma.$executeRaw`
-            UPDATE documents
-            SET content = ${content}, "authorId" = ${authorId}
-            FROM projects
-            INNER JOIN organisations ON organisations.id = projects."organizationId"
-            INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
-            WHERE municipalities.name = ${municipalityName} AND municipalities.id = (SELECT "municipalityId" FROM users WHERE id = ${authorId})
-            AND organisations.name = ${orgName} AND projects.name = ${projectName}
-            AND documents.path = text2ltree(${documentPath}) AND documents."projectId" = projects.id
+      if (projectName) {
+        return await prisma.$executeRaw`
+          UPDATE documents
+          SET content = ${content}, "authorId" = ${authorId}
+          FROM projects
+          INNER JOIN organisations ON organisations.id = projects."organizationId"
+          INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
+          WHERE municipalities.name = ${municipalityName} 
+            AND municipalities.id = (SELECT "municipalityId" FROM users WHERE id = ${authorId})
+            AND organisations.name = ${orgName} 
+            AND projects.name = ${projectName}
+            AND documents.path = text2ltree(${documentPath}) 
+            AND documents."projectId" = projects.id
             AND documents."documentType" = 'FILE'::"DocumentType"
-            `;
+          `;
+      } else {
+        return await prisma.$executeRaw`
+          UPDATE documents
+          SET content = ${content}, "authorId" = ${authorId}
+          FROM organisations
+          INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
+          WHERE municipalities.name = ${municipalityName} 
+            AND municipalities.id = (SELECT "municipalityId" FROM users WHERE id = ${authorId})
+            AND organisations.name = ${orgName}
+            AND documents.path = text2ltree(${documentPath})
+            AND documents."organizationId" = organisations.id 
+            AND documents."documentType" = 'FILE'::"DocumentType"
+            AND documents."projectId" IS NULL
+          `;
+      }
     }
     case UserType.SUPERUSER_GLOBAL: {
-      return await prisma.$executeRaw`
-            UPDATE documents
-            SET content = ${content}, "authorId" = ${authorId}
-            FROM projects
-            INNER JOIN organisations ON organisations.id = projects."organizationId"
-            INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
-            WHERE municipalities.name = ${municipalityName} AND organisations.name = ${orgName} AND projects.name = ${projectName}
-            AND documents.path = text2ltree(${documentPath}) AND documents."projectId" = projects.id
+      if (projectName) {
+        return await prisma.$executeRaw`
+          UPDATE documents
+          SET content = ${content}, "authorId" = ${authorId}
+          FROM projects
+          INNER JOIN organisations ON organisations.id = projects."organizationId"
+          INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
+          WHERE municipalities.name = ${municipalityName} 
+            AND organisations.name = ${orgName} 
+            AND projects.name = ${projectName}
+            AND documents.path = text2ltree(${documentPath}) 
+            AND documents."projectId" = projects.id
             AND documents."documentType" = 'FILE'::"DocumentType"
-            `;
+          `;
+      } else {
+        return await prisma.$executeRaw`
+          UPDATE documents
+          SET content = ${content}, "authorId" = ${authorId}
+          FROM organisations
+          INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
+          WHERE municipalities.name = ${municipalityName} 
+            AND organisations.name = ${orgName}
+            AND documents.path = text2ltree(${documentPath}) 
+            AND documents."organizationId" = organisations.id
+            AND documents."documentType" = 'FILE'::"DocumentType"
+            AND documents."projectId" IS NULL
+          `;
+      }
     }
   }
 }
@@ -858,45 +1189,128 @@ export async function deleteDocument(
   userId: string,
   municipalityName: string,
   orgName: string,
-  projectName: string,
+  projectName: string | undefined,
   documentPath: string,
 ) {
   // @ts-ignore
   const user: User | UserDocument = await selectUser(userId);
-
   switch (user.userType) {
     case UserType.DEFAULT: {
-      return await prisma.$executeRaw`
-            DELETE FROM documents
-            USING projects
-            INNER JOIN organisations ON organisations.id = projects."organizationId"
-            INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
-            WHERE municipalities.name = ${municipalityName} AND municipalities.id = (SELECT "municipalityId" FROM users WHERE id = ${userId})
-            AND organisations.name = ${orgName} AND organisations.id = (SELECT "organizationId" FROM users WHERE id = ${userId})
+      if (projectName) {
+        return await prisma.$executeRaw`
+          DELETE FROM documents
+          USING projects
+          INNER JOIN organisations ON organisations.id = projects."organizationId"
+          INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
+          WHERE municipalities.name = ${municipalityName} 
+            AND municipalities.id = (SELECT "municipalityId" FROM users WHERE id = ${userId})
+            AND organisations.name = ${orgName} 
+            AND organisations.id = (SELECT "organizationId" FROM users WHERE id = ${userId})
             AND projects.name = ${projectName}
-            AND text2ltree(${documentPath}) @> documents.path AND documents."projectId" = projects.id
-            `;
+            AND text2ltree(${documentPath}) @> documents.path 
+            AND documents."projectId" = projects.id
+            -- Check that the document is not the org level templates folder
+            AND NOT (documents."documentType" = 'FOLDER'::"DocumentType" AND documents."isTemplate" = true AND documents.path = 'templates')
+          `;
+      } else {
+        return await prisma.$executeRaw`
+          DELETE FROM documents
+          INNER JOIN organisations ON organisations.id = documents."organizationId"
+          INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
+          WHERE municipalities.name = ${municipalityName} 
+            AND municipalities.id = (SELECT "municipalityId" FROM users WHERE id = ${userId})
+            AND organisations.name = ${orgName} 
+            AND organisations.id = (SELECT "organizationId" FROM users WHERE id = ${userId})
+            AND text2ltree(${documentPath}) @> documents.path 
+            AND documents."organizationId" = organisations.id
+            AND documents."projectId" IS NULL
+            -- Check that the document is not the org level templates folder
+            AND NOT (documents."documentType" = 'FOLDER'::"DocumentType" AND documents."isTemplate" = true AND documents.path = 'templates')
+          `;
+      }
     }
     case UserType.SUPERUSER_MUNICIPALITY: {
-      return await prisma.$executeRaw`
-            DELETE FROM documents
-            USING projects
-            INNER JOIN organisations ON organisations.id = projects."organizationId"
-            INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
-            WHERE municipalities.name = ${municipalityName} AND municipalities.id = (SELECT "municipalityId" FROM users WHERE id = ${userId})
-            AND organisations.name = ${orgName} AND projects.name = ${projectName}
-            AND text2ltree(${documentPath}) @> documents.path AND documents."projectId" = projects.id
-            `;
+      if (projectName) {
+        return await prisma.$executeRaw`
+          DELETE FROM documents
+          USING projects
+          INNER JOIN organisations ON organisations.id = projects."organizationId"
+          INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
+          WHERE municipalities.name = ${municipalityName} 
+            AND municipalities.id = (SELECT "municipalityId" FROM users WHERE id = ${userId})
+            AND organisations.name = ${orgName} 
+            AND projects.name = ${projectName}
+            AND text2ltree(${documentPath}) @> documents.path 
+            AND documents."projectId" = projects.id
+            -- Check that the document is not the org level templates folder
+            AND NOT (documents."documentType" = 'FOLDER'::"DocumentType" AND documents."isTemplate" = true AND documents.path = 'templates')
+          `;
+      } else {
+        return await prisma.$executeRaw`
+          DELETE FROM documents
+          INNER JOIN organisations ON organisations.id = documents."organizationId"
+          INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
+          WHERE municipalities.name = ${municipalityName} 
+            AND municipalities.id = (SELECT "municipalityId" FROM users WHERE id = ${userId})
+            AND organisations.name = ${orgName} 
+            AND text2ltree(${documentPath}) @> documents.path 
+            AND documents."organizationId" = organisations.id
+            AND documents."projectId" IS NULL
+            -- Check that the document is not the org level templates folder
+            AND NOT (documents."documentType" = 'FOLDER'::"DocumentType" AND documents."isTemplate" = true AND documents.path = 'templates')
+          `;
+      }
     }
     case UserType.SUPERUSER_GLOBAL: {
-      return await prisma.$executeRaw`
-            DELETE  FROM documents
-            USING projects
-            INNER JOIN organisations ON organisations.id = projects."organizationId"
-            INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
-            WHERE municipalities.name = ${municipalityName} AND organisations.name = ${orgName} AND projects.name = ${projectName}
-            AND text2ltree(${documentPath}) @> documents.path AND documents."projectId" = projects.id
-            `;
+      if (projectName) {
+        return await prisma.$executeRaw`
+          DELETE FROM documents
+          USING projects
+          INNER JOIN organisations ON organisations.id = projects."organizationId"
+          INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
+          WHERE municipalities.name = ${municipalityName} 
+            AND organisations.name = ${orgName} 
+            AND projects.name = ${projectName}
+            AND text2ltree(${documentPath}) @> documents.path 
+            AND documents."projectId" = projects.id
+            -- Check that the document is not the org level templates folder
+            AND NOT (documents."documentType" = 'FOLDER'::"DocumentType" AND documents."isTemplate" = true AND documents.path = 'templates')
+          `;
+      } else {
+        // Validate that it is not the templates folder
+        const target = await prisma.$queryRaw<{ documentType: DocumentType; isTemplate: boolean; path: string }[]>`
+          SELECT documents.id, documents."documentType", documents."isTemplate", documents.path
+          FROM documents
+          WHERE documents.path = text2ltree(${documentPath})
+            AND documents."organizationId" = (
+              SELECT organisations.id FROM organisations WHERE organisations.name = ${orgName}
+            )
+            AND documents."projectId" IS NULL
+        `;
+        // TODO: Deletion of main Template folder should be reworked
+        if (
+          target &&
+          target[0] &&
+          target[0].documentType === "FOLDER" &&
+          target[0].isTemplate === true &&
+          target[0].path === "templates"
+        ) {
+          throw new SagError("Cannot delete the org level templates folder.");
+        }
+
+        return await prisma.$executeRaw`
+          DELETE FROM documents
+          USING organisations
+          INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
+          WHERE municipalities.name = ${municipalityName} 
+            AND organisations.name = ${orgName} 
+            AND text2ltree(${documentPath}) @> documents.path 
+            AND documents."organizationId" = organisations.id
+            AND documents."projectId" IS NULL
+            -- Check that the document is not the org level templates folder
+            AND NOT (documents."documentType" = 'FOLDER'::"DocumentType" AND documents."isTemplate" = true AND documents.path = 'templates')
+          `;
+      }
     }
   }
 }
@@ -905,7 +1319,7 @@ export async function renameDocument(
   userId: string,
   municipalityName: string,
   orgName: string,
-  projectName: string,
+  projectName: string | undefined,
   documentPath: string,
   newName: string,
 ): Promise<string | null> {
@@ -918,40 +1332,100 @@ export async function renameDocument(
 
   switch (user.userType) {
     case UserType.DEFAULT: {
-      result = await prisma.$executeRaw`
-            UPDATE documents
-            SET name = ${newName}, path = text2ltree(${path})
-            FROM projects
-            INNER JOIN organisations ON organisations.id = projects."organizationId"
-            INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
-            WHERE municipalities.name = ${municipalityName} AND municipalities.id = (SELECT "municipalityId" FROM users WHERE id = ${userId})
-            AND organisations.name = ${orgName} AND organisations.id = (SELECT "organizationId" FROM users WHERE id = ${userId})
+      if (projectName) {
+        result = await prisma.$executeRaw`
+          UPDATE documents
+          SET name = ${newName}, path = text2ltree(${path})
+          FROM projects
+          INNER JOIN organisations ON organisations.id = projects."organizationId"
+          INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
+          WHERE municipalities.name = ${municipalityName} 
+            AND municipalities.id = (SELECT "municipalityId" FROM users WHERE id = ${userId})
+            AND organisations.name = ${orgName} 
+            AND organisations.id = (SELECT "organizationId" FROM users WHERE id = ${userId})
             AND projects.name = ${projectName}
-            AND documents.path = text2ltree(${documentPath}) AND documents."projectId" = projects.id
-            `;
+            AND documents.path = text2ltree(${documentPath}) 
+            AND documents."projectId" = projects.id
+          `;
+      } else {
+        result = await prisma.$executeRaw`
+          UPDATE documents
+          SET name = ${newName}, path = text2ltree(${path})
+          FROM organisations
+          INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
+          WHERE municipalities.name = ${municipalityName} 
+            AND municipalities.id = (SELECT "municipalityId" FROM users WHERE id = ${userId})
+            AND organisations.name = ${orgName} 
+            AND organisations.id = (SELECT "organizationId" FROM users WHERE id = ${userId})
+            AND documents.path = text2ltree(${documentPath}) 
+            AND documents."organizationId" = organisations.id
+            AND documents."projectId" IS NULL
+            -- Check that the document is not the org level templates folder
+            AND NOT (documents."documentType" = 'FOLDER'::"DocumentType" AND documents."isTemplate" = true AND documents.path = 'templates')
+          `;
+      }
     }
     case UserType.SUPERUSER_MUNICIPALITY: {
-      result = await prisma.$executeRaw`
-            UPDATE documents
-            SET name = ${newName}, path = text2ltree(${path})
-            FROM projects
-            INNER JOIN organisations ON organisations.id = projects."organizationId"
-            INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
-            WHERE municipalities.name = ${municipalityName} AND municipalities.id = (SELECT "municipalityId" FROM users WHERE id = ${userId})
-            AND organisations.name = ${orgName} AND projects.name = ${projectName}
-            AND documents.path = text2ltree(${documentPath}) AND documents."projectId" = projects.id
-            `;
+      if (projectName) {
+        result = await prisma.$executeRaw`
+          UPDATE documents
+          SET name = ${newName}, path = text2ltree(${path})
+          FROM projects
+          INNER JOIN organisations ON organisations.id = projects."organizationId"
+          INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
+          WHERE municipalities.name = ${municipalityName} 
+            AND municipalities.id = (SELECT "municipalityId" FROM users WHERE id = ${userId})
+            AND organisations.name = ${orgName} 
+            AND projects.name = ${projectName}
+            AND documents.path = text2ltree(${documentPath}) 
+            AND documents."projectId" = projects.id
+          `;
+      } else {
+        result = await prisma.$executeRaw`
+          UPDATE documents
+          SET name = ${newName}, path = text2ltree(${path})
+          FROM organisations
+          INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
+          WHERE municipalities.name = ${municipalityName} 
+            AND municipalities.id = (SELECT "municipalityId" FROM users WHERE id = ${userId})
+            AND organisations.name = ${orgName} 
+            AND documents.path = text2ltree(${documentPath}) 
+            AND documents."organizationId" = organisations.id
+            AND documents."projectId" IS NULL
+            -- Check that the document is not the org level templates folder
+            AND NOT (documents."documentType" = 'FOLDER'::"DocumentType" AND documents."isTemplate" = true AND documents.path = 'templates')
+          `;
+      }
     }
     case UserType.SUPERUSER_GLOBAL: {
-      result = await prisma.$executeRaw`
-            UPDATE documents
-            SET name = ${newName}, path = text2ltree(${path})
-            FROM projects
-            INNER JOIN organisations ON organisations.id = projects."organizationId"
-            INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
-            WHERE municipalities.name = ${municipalityName} AND organisations.name = ${orgName} AND projects.name = ${projectName}
-            AND documents.path = text2ltree(${documentPath}) AND documents."projectId" = projects.id
-            `;
+      if (projectName) {
+        result = await prisma.$executeRaw`
+          UPDATE documents
+          SET name = ${newName}, path = text2ltree(${path})
+          FROM projects
+          INNER JOIN organisations ON organisations.id = projects."organizationId"
+          INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
+          WHERE municipalities.name = ${municipalityName} 
+            AND organisations.name = ${orgName} 
+            AND projects.name = ${projectName}
+            AND documents.path = text2ltree(${documentPath}) 
+            AND documents."projectId" = projects.id
+          `;
+      } else {
+        result = await prisma.$executeRaw`
+          UPDATE documents
+          SET name = ${newName}, path = text2ltree(${path})
+          FROM organisations
+          INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
+          WHERE municipalities.name = ${municipalityName} 
+            AND organisations.name = ${orgName} 
+            AND documents.path = text2ltree(${documentPath}) 
+            AND documents."organizationId" = organisations.id
+            AND documents."projectId" IS NULL
+            -- Check that the document is not the org level templates folder
+            AND NOT (documents."documentType" = 'FOLDER'::"DocumentType" AND documents."isTemplate" = true AND documents.path = 'templates')
+          `;
+      }
     }
   }
   if (result === 1) {
@@ -961,22 +1435,120 @@ export async function renameDocument(
   return null;
 }
 
+export async function saveAsTemplate(userId: string, organizationName: string, name: string, content: string) {
+  const organization = await selectOrganization(organizationName);
+  if (!organization) {
+    throw new SagError(`Organization ${organizationName} does not exist`);
+  }
+
+  // @ts-ignore
+  const user: User | UserDocument | null = await selectUser(userId);
+  if (!user) {
+    throw new SagError(`User ${userId} does not exist`);
+  }
+  console.log("User is trying to author a new template:", user.email);
+  // TODO: Check if user has permissions to create a template in the organisation
+  // - Just check that user is a member of the organisation - superuserglobal, superusermunicipality, default
+  if (user.userType === UserType.SUPERUSER_MUNICIPALITY) {
+    // TODO: Check that the user's municipality has the organisation as a member
+    const isOrgInUserMunicipality = await prisma.organization.findFirst({
+      where: {
+        id: organization.id,
+        municipalityId: user.municipalityId,
+      },
+    });
+
+    if (!isOrgInUserMunicipality) {
+      throw new SagError("User does not have permissions to create a template in this organization.");
+    }
+  } else if (user.userType === UserType.DEFAULT) {
+    // Check that the user's organisation is the same as the template's organisation
+    if (user.organizationId !== organization.id) {
+      throw new SagError("User does not have permissions to create a template in this organisation");
+    }
+  } // ELSE: Superuser global can create templates in any organisation
+
+  // Check if a template with the same name already exists in the organisation
+  const templatePath = joinPath("templates", name);
+  const existingTemplate = await prisma.$executeRaw`
+    SELECT * FROM documents
+    WHERE "organizationId" = ${organization.id}
+      AND path = text2ltree(${templatePath})
+      AND name = ${name}
+      AND "isTemplate" = ${true}
+      AND "documentType" = 'FILE'::"DocumentType"
+  `;
+  // console.log("Trying to create a template with path:", templatePath);
+  // console.log("Existing template:", existingTemplate);
+  if (existingTemplate) {
+    throw new SagError(`Template "${name}" already exists in organization "${organizationName}".`);
+  }
+
+  // Create the template
+  try {
+    const result = await prisma.$executeRaw`
+      INSERT INTO documents (id, name, content, "authorId", "organizationId", path, "documentType", "isTemplate")
+      VALUES (
+        ${createId()},
+        ${name},
+        ${content},
+        ${userId},
+        ${organization.id},
+        text2ltree(${templatePath}),
+        'FILE'::"DocumentType",
+        true
+      );`;
+
+    return templatePath;
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError) {
+      switch (e.code) {
+        case "P2002":
+          throw new SagError(`Template with name "${name}" already exists.`);
+        case "P2010":
+          throw new SagError("Can't create template, invalid permissions.");
+        default:
+          throw e; // Re-throw unexpected Prisma errors
+      }
+    }
+    throw e; // Re-throw non-Prisma errors
+  }
+}
+
 async function updateChildPaths(
   municipalityName: string,
   orgName: string,
-  projectName: string,
+  projectName: string | undefined,
   documentPath: string,
   newPath: string,
 ) {
-  const children = await prisma.$queryRaw<{ id: string; path: string }[]>`
-    SELECT documents.id as "id", path::text
-    FROM documents
-    INNER JOIN projects ON projects.id = documents."projectId"
-    INNER JOIN organisations ON organisations.id = projects."organizationId"
-    INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
-    WHERE projects.name = ${projectName} AND organisations.name = ${orgName} AND municipalities.name = ${municipalityName}
-    AND text2ltree(${documentPath}) @> documents.path AND documents.path != text2ltree(${documentPath})
-    `;
+  let children: { id: string; path: string }[] = [];
+  if (projectName) {
+    children = await prisma.$queryRaw<{ id: string; path: string }[]>`
+      SELECT documents.id as "id", path::text
+      FROM documents
+      INNER JOIN projects ON projects.id = documents."projectId"
+      INNER JOIN organisations ON organisations.id = projects."organizationId"
+      INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
+      WHERE projects.name = ${projectName} 
+        AND organisations.name = ${orgName} 
+        AND municipalities.name = ${municipalityName}
+        AND text2ltree(${documentPath}) @> documents.path 
+        AND documents.path != text2ltree(${documentPath})
+      `;
+  } else {
+    children = await prisma.$queryRaw<{ id: string; path: string }[]>`
+      SELECT documents.id as "id", path::text
+      FROM documents
+      INNER JOIN organisations ON organisations.id = documents."organizationId"
+      INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
+      WHERE organisations.name = ${orgName} 
+        AND municipalities.name = ${municipalityName}
+        AND text2ltree(${documentPath}) @> documents.path 
+        AND documents.path != text2ltree(${documentPath})
+        AND documents."projectId" IS NULL
+      `;
+  }
   for (const child of children) {
     const newPathChild = child.path.replace(documentPath, newPath);
     await prisma.$executeRaw`
@@ -995,7 +1567,7 @@ export async function checkPathExists(
   possibleName: string,
   municipalityName: string,
   orgName: string,
-  projectName: string,
+  projectName: string | undefined,
   path: string,
   isNew: boolean,
 ): Promise<boolean> {
@@ -1005,15 +1577,31 @@ export async function checkPathExists(
     const splitIndex = (path as string).lastIndexOf(".");
     path = splitIndex === -1 ? joinPath("", possibleName) : joinPath(path.substring(0, splitIndex), possibleName);
   }
-  const result = await prisma.$queryRaw<{ path: string }[]>`
-    SELECT path::text
-    FROM documents
-    INNER JOIN projects ON projects.id = documents."projectId"
-    INNER JOIN organisations ON organisations.id = projects."organizationId"
-    INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
-    WHERE projects.name = ${projectName} AND organisations.name = ${orgName} AND municipalities.name = ${municipalityName}
-    AND documents.path = text2ltree(${path}) AND documents.name = ${possibleName}
-    `;
+  let result: { path: string }[] = [];
+  if (projectName) {
+    result = await prisma.$queryRaw<{ path: string }[]>`
+      SELECT path::text
+      FROM documents
+      INNER JOIN projects ON projects.id = documents."projectId"
+      INNER JOIN organisations ON organisations.id = projects."organizationId"
+      INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
+      WHERE projects.name = ${projectName} 
+        AND organisations.name = ${orgName} 
+        AND municipalities.name = ${municipalityName}
+        AND documents.path = text2ltree(${path}) 
+      `;
+  } else {
+    result = await prisma.$queryRaw<{ path: string }[]>`
+      SELECT path::text
+      FROM documents
+      INNER JOIN organisations ON organisations.id = documents."organizationId"
+      INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
+      WHERE organisations.name = ${orgName} 
+        AND municipalities.name = ${municipalityName}
+        AND documents.path = text2ltree(${path}) 
+        AND documents."projectId" IS NULL
+      `;
+  }
   return result.length > 0;
 }
 
