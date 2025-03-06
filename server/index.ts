@@ -65,10 +65,6 @@ const app = new Elysia()
     let authType = AuthType.None;
     // raw JWT token
     let tokenStr = "";
-    // token after jwt.verify()
-    let verifiedToken: unknown | null = null;
-    // verifiedToken casted to `Token`
-    let jwtToken: Token | null = null; // tets
 
     if (cookie.jwtUser && cookie.jwtToken.value !== undefined) {
       authType = AuthType.Cookie;
@@ -84,6 +80,11 @@ const app = new Elysia()
       console.warn("No JWT token found in cookies or Authorization header.");
       return { userId: null };
     }
+
+    // token after jwt.verify()
+    let verifiedToken: unknown | null = null;
+    // verifiedToken casted to `Token`
+    let jwtToken: Token | null = null;
 
     try {
       verifiedToken = (await jwt.verify(tokenStr)) as unknown;
