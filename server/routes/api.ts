@@ -367,27 +367,4 @@ export const api = new Elysia({ prefix: "/api" })
       }),
       detail: { tags: ["api"] },
     },
-  )
-  .post(
-    "/resolve_templates",
-    async ({
-      log,
-      set,
-      body: { user_id, paths },
-    }: AuthContextWithBody<{
-      user_id: string;
-      paths: string[];
-    }>) => {
-      log.info(`user_id: ${user_id}`);
-      log.info(`paths: ${paths}`);
-      set.status = 200;
-      return { response: "Not implemented" };
-    },
-    {
-      body: t.Object({
-        user_id: t.String(),
-        paths: t.Array(t.String()),
-      }),
-      detail: { tags: ["api"] },
-    },
   );
