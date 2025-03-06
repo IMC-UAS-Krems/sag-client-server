@@ -2,10 +2,6 @@ import { createSignal, onMount, Component, For } from "solid-js";
 
 import {
   FaSolidEllipsis,
-  FaSolidAngleLeft,
-  FaSolidAnglesLeft,
-  FaSolidAngleRight,
-  FaSolidAnglesRight,
   FaSolidArrowDownAZ,
   FaSolidArrowUpAZ,
   FaSolidArrowUp19,
@@ -13,7 +9,8 @@ import {
   FaSolidSortUp,
   FaSolidSortDown,
 } from "solid-icons/fa";
-import { DropdownMenu } from "@kobalte/core/dropdown-menu";
+import { IoAlertCircleOutline } from "solid-icons/io";
+// import { DropdownMenu } from "@kobalte/core/dropdown-menu";
 import { useNavigate } from "@solidjs/router";
 import {
   createColumnHelper,
@@ -23,20 +20,51 @@ import {
   getPaginationRowModel,
   getFilteredRowModel,
   getSortedRowModel,
-  Table,
+  Table as TableType,
   PaginationState,
   Row,
   ColumnFiltersState,
 } from "@tanstack/solid-table";
 import Swal from "sweetalert2";
 
+import {
+  Pagination,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationItems,
+  PaginationNext,
+  PaginationPrevious,
+} from "@client/components/ui/pagination.tsx";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@client/components/ui/dropdown-menu.tsx";
+import {
+  NumberField,
+  NumberFieldDecrementTrigger,
+  NumberFieldGroup,
+  NumberFieldIncrementTrigger,
+  NumberFieldInput,
+} from "@client/components/ui/number-field.tsx";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@client/components/ui/card.tsx";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@client/components/ui/table.tsx";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@client/components/ui/select.tsx";
+import { Alert, AlertDescription, AlertTitle } from "@client/components/ui/alert.tsx";
+import { TextField, TextFieldInput } from "@client/components/ui/textField.tsx";
+import { Skeleton } from "@client/components/ui/skeleton.tsx";
+import { Button } from "@client/components/ui/button.tsx";
+import OrganisationCreateDialog from "@client/components/OrganisationCreateDialog.tsx";
 import { eden } from "@client/api/index.ts";
 import { handleUnauthorized } from "@client/utils/authUtils.ts";
 import styles from "@styles/Organisations.module.css";
-import menu_styles from "@styles/ContextMenu.module.css";
 import { OrganisationDetails } from "@server/types.ts";
 import { theme } from "@client/store/index.ts";
 import Header from "@client/components/Header.tsx";
+import { showToast } from "@client/components/ui/toast.tsx";
 
 const Organisations: Component = () => {
   const navigate = useNavigate();
@@ -51,6 +79,7 @@ const Organisations: Component = () => {
   });
 
   async function fetchOrganisations() {
+    setLoading(true);
     try {
       const fetchedOrganisations = await eden.admin.organisations.get({
         $fetch: {
@@ -89,10 +118,6 @@ const Organisations: Component = () => {
     } finally {
       setLoading(false);
     }
-  }
-
-  async function handleCreateOrganisation() {
-    navigate("/organisations/create");
   }
 
   async function handleEditOrganisation(organisationId: string) {
@@ -234,52 +259,47 @@ const Organisations: Component = () => {
       id: "actions",
       header: "Actions",
       cell: (props) => (
-        <DropdownMenu>
-          <DropdownMenu.Trigger
-            class={(menu_styles["trigger"], styles["trigger"])}
-            aria-haspopup="menu"
-            aria-expanded={false}
-          >
-            <FaSolidEllipsis />
-          </DropdownMenu.Trigger>
-          <DropdownMenu.Content class={menu_styles["context-menu__content"]} role="menu">
-            <div class={styles["context-menu-title"]} role="presentation">
-              {props.row.original.name}
-            </div>
-            <DropdownMenu.Separator role="separator" />
-            <DropdownMenu.Item
-              onClick={() => handleEditOrganisation(props.row.original.id)}
-              class={menu_styles["context-menu__item"]}
-              role="menuitem"
+        <div class="p-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              class="h-full w-full hover:bg-accent rounded-md cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-0"
+              aria-haspopup="menu"
+              aria-expanded={false}
+              aria-hidden
             >
-              ✏️ Edit
-            </DropdownMenu.Item>
-            <DropdownMenu.Item
-              onClick={() => handleDeleteOrganisation(props.row.original.id)}
-              class={menu_styles["context-menu__item"]}
-              role="menuitem"
-            >
-              🗑️ Delete
-            </DropdownMenu.Item>
-          </DropdownMenu.Content>
-        </DropdownMenu>
+              <div class="h-full w-full flex items-center justify-center p-2">
+                <FaSolidEllipsis class="h-5 w-5" />
+              </div>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent role="menu">
+              <DropdownMenuLabel role="presentation">{props.row.original.name}</DropdownMenuLabel>
+              <DropdownMenuSeparator role="separator" />
+              <DropdownMenuItem onClick={() => handleEditOrganisation(props.row.original.id)} role="menuitem">
+                ✏️ Edit
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleDeleteOrganisation(props.row.original.id)} role="menuitem">
+                🗑️ Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       ),
     }),
   ];
 
-  const [columnFilters, setColumnFilters] = createSignal<ColumnFiltersState>([]);
-  const [sorting, setSorting] = createSignal([]);
   const [pagination, setPagination] = createSignal<PaginationState>({
     pageIndex: 0,
     pageSize: 5,
   });
+  const [columnFilters, setColumnFilters] = createSignal<ColumnFiltersState>([]);
+  const [sorting, setSorting] = createSignal([]);
 
   const resetPagination = () => {
     setPagination((prev) => ({ ...prev, pageIndex: 0 }));
   };
 
   // TanStack Solid Table - Table
-  const table: Table<OrganisationDetails> = createSolidTable({
+  const table: TableType<OrganisationDetails> = createSolidTable({
     get data() {
       return organisations();
     },
@@ -347,219 +367,249 @@ const Organisations: Component = () => {
   return (
     <Header>
       <main class={styles["organisations-main"]}>
-        <h1>Admin Organisations page</h1>
-        <div class={styles["nav-button-container"]}>
-          <button onClick={handleCreateOrganisation} class={styles["nav-button"]}>
-            Create new organisation
-          </button>
-          <div class={styles["page-size-selector"]}>
-            <span>Page size: </span>
-            <select
-              value={table?.getState().pagination.pageSize}
-              onChange={(e) => {
-                table.setPageSize(Number(e.target.value));
-              }}
-            >
-              {[5, 10, 20, 40].map((pageSize) => (
-                <option value={pageSize}>{pageSize}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-        {loading() ? (
-          <div class={styles.loader}></div>
-        ) : error() ? (
-          <p class={styles["error-text"]}>Error: {error()}</p>
-        ) : (
-          table && (
-            <>
-              <div class={styles["table-wrapper"]}>
-                <table>
-                  <thead>
-                    <For each={table.getHeaderGroups()}>
-                      {(headerGroup) => (
-                        <>
-                          <tr>
-                            <For each={headerGroup.headers}>
-                              {(header) => (
-                                <th>
-                                  {header.column.getCanSort() ? (
-                                    <div
-                                      class={styles.sortable}
-                                      onClick={header.column.getToggleSortingHandler()}
-                                      title={
-                                        header.column.getCanSort()
-                                          ? header.column.getNextSortingOrder() === "asc"
-                                            ? "Sort ascending"
-                                            : header.column.getNextSortingOrder() === "desc"
-                                              ? "Sort descending"
-                                              : "Clear sort"
-                                          : undefined
-                                      }
-                                    >
-                                      {header.isPlaceholder
-                                        ? null
-                                        : flexRender(header.column.columnDef.header, header.getContext())}
-                                      {(() => {
-                                        const sortedState = header.column.getIsSorted();
-                                        if (typeof sortedState === "string") {
-                                          return getSortingIcons(header.column.id)[sortedState] ?? null;
-                                        }
-                                        return null;
-                                      })()}
-                                    </div>
-                                  ) : header.isPlaceholder ? null : (
-                                    flexRender(header.column.columnDef.header, header.getContext())
-                                  )}
-                                </th>
-                              )}
-                            </For>
-                          </tr>
-                          <tr>
-                            <For each={headerGroup.headers}>
-                              {(header) => (
-                                <th class={styles["filter-row"]}>
-                                  {header.column.id === "name" && (
-                                    <input
-                                      value={(header.column.getFilterValue() as string) ?? ""}
-                                      onChange={(e) => header.column.setFilterValue(e.currentTarget.value)}
-                                      placeholder={`Search`}
-                                    />
-                                  )}
-                                  {header.column.id === "municipality" && (
-                                    <select
-                                      value={(header.column.getFilterValue() as string) ?? ""}
-                                      onChange={(e) => header.column.setFilterValue(e.currentTarget.value)}
-                                    >
-                                      <option value="">All</option>
-                                      <For each={getUniqueValues(organisations(), header.column.id)}>
-                                        {(value) => <option value={value as string}>{value as string}</option>}
-                                      </For>
-                                    </select>
-                                  )}
-                                  {header.column.id === "usersCount" && (
-                                    <div>
-                                      <input
-                                        type="number"
-                                        value={getRangeFilterValue(header.column.getFilterValue()).min || ""}
-                                        onChange={(e) => {
-                                          const filterValue = getRangeFilterValue(header.column.getFilterValue());
-                                          const minValue = Number(e.currentTarget.value);
-                                          if (filterValue.max < minValue) {
-                                            header.column.setFilterValue({
-                                              min: minValue,
-                                              max: minValue,
-                                            });
-                                          } else {
-                                            header.column.setFilterValue({ min: minValue, max: filterValue.max });
-                                          }
-                                        }}
-                                        min={0}
-                                        placeholder={`Min`}
-                                      />
-                                      <input
-                                        type="number"
-                                        value={getRangeFilterValue(header.column.getFilterValue()).max || ""}
-                                        onChange={(e) => {
-                                          const filterValue = getRangeFilterValue(header.column.getFilterValue());
-                                          const maxValue = Number(e.currentTarget.value);
-                                          if (filterValue.min > maxValue) {
-                                            header.column.setFilterValue({
-                                              min: maxValue,
-                                              max: maxValue,
-                                            });
-                                          } else {
-                                            header.column.setFilterValue({ min: filterValue.min, max: maxValue });
-                                          }
-                                        }}
-                                        min={0}
-                                        placeholder={`Max`}
-                                      />
-                                    </div>
-                                  )}
-                                  {(header.column.id === "createdAt" || header.column.id === "updatedAt") && (
-                                    // TODO: Styling of default date pickers is pretty inconsistent and only light mode
-                                    <input
-                                      type="date"
-                                      style={theme() === "dark" ? "color-scheme: dark;" : ""}
-                                      value={(header.column.getFilterValue() as string) ?? ""}
-                                      onChange={(e) => header.column.setFilterValue(e.currentTarget.value)}
-                                    />
-                                  )}
-                                  {header.column.id === "verified" && (
-                                    <select
-                                      value={(header.column.getFilterValue() as string) ?? ""}
-                                      onChange={(e) => header.column.setFilterValue(e.currentTarget.value)}
-                                    >
-                                      <option value="">All</option>
-                                      <option value="✅">Verified</option>
-                                      <option value="❌">Unverified</option>
-                                    </select>
-                                  )}
-                                </th>
-                              )}
-                            </For>
-                          </tr>
-                        </>
-                      )}
-                    </For>
-                  </thead>
-                  <tbody>
-                    <For each={table.getRowModel().rows}>
-                      {(row) => (
-                        <tr>
-                          <For each={row.getVisibleCells()}>
-                            {(cell) => (
-                              <td class={cell.column.id === "actions" ? styles["actions-column"] : ""}>
-                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                              </td>
-                            )}
-                          </For>
-                        </tr>
-                      )}
-                    </For>
-                  </tbody>
-                </table>
+        <Card class="w-fit my-8">
+          <CardHeader>
+            <CardTitle>Organisations Admin Area</CardTitle>
+            <CardDescription>Here you may manage organisations, create, edit and delete them.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {loading() ? (
+              <div class="h-80 w-289">
+                <Skeleton class="h-full! w-full! rounded-md" />
               </div>
-              <div class={styles["pagination-container"]}>
-                <button
-                  onClick={() => table.firstPage()}
-                  disabled={!table.getCanPreviousPage()}
-                  class={styles["nav-button"]}
-                >
-                  <FaSolidAnglesLeft />
-                </button>
-                <button
-                  onClick={() => table.previousPage()}
-                  disabled={!table.getCanPreviousPage()}
-                  class={styles["nav-button"]}
-                >
-                  <FaSolidAngleLeft />
-                </button>
-                <span>
-                  Page <strong>{table.getState().pagination.pageIndex + 1}</strong> of{" "}
-                  {table.getPageCount().toLocaleString()}
-                </span>
-                <button
-                  onClick={() => table.nextPage()}
-                  disabled={!table.getCanNextPage()}
-                  class={styles["nav-button"]}
-                >
-                  <FaSolidAngleRight />
-                </button>
-                <button
-                  onClick={() => {
-                    table.lastPage();
-                  }}
-                  disabled={!table.getCanNextPage()}
-                  class={styles["nav-button"]}
-                >
-                  <FaSolidAnglesRight />
-                </button>
-              </div>
-            </>
-          )
-        )}
+            ) : error() ? (
+              <Alert variant="destructive">
+                <IoAlertCircleOutline class="h-5 w-5" />
+                <AlertTitle>Error</AlertTitle>
+                <AlertDescription>{error()}</AlertDescription>
+                <AlertDescription>Plesase try again later, or contact us if the problem persists.</AlertDescription>
+              </Alert>
+            ) : (
+              table && (
+                <>
+                  <div class="w-full flex gap-4">
+                    <OrganisationCreateDialog fetchOrganisations={fetchOrganisations} />
+                    <div class="flex justify-center items-center gap-2.5">
+                      <span>Page size: </span>
+                      <Select
+                        value={table?.getState().pagination.pageSize}
+                        onChange={(value) => table.setPageSize(Number(value))}
+                        options={[5, 10, 20, 40]}
+                        itemComponent={(props) => <SelectItem item={props.item}>{props.item.rawValue}</SelectItem>}
+                        disallowEmptySelection
+                      >
+                        <SelectTrigger aria-label="Page size" class="font-semibold">
+                          <SelectValue<string>>{(state) => state.selectedOption()}</SelectValue>
+                        </SelectTrigger>
+                        <SelectContent />
+                      </Select>
+                    </div>
+                  </div>
+                  <div class="border rounded-md my-4">
+                    <Table>
+                      <TableHeader>
+                        <For each={table.getHeaderGroups()}>
+                          {(headerGroup) => (
+                            <>
+                              <TableRow>
+                                <For each={headerGroup.headers}>
+                                  {(header) => (
+                                    <TableHead class="p-5 font-semibold">
+                                      {header.column.getCanSort() ? (
+                                        <div
+                                          class={styles.sortable}
+                                          onClick={header.column.getToggleSortingHandler()}
+                                          title={
+                                            header.column.getCanSort()
+                                              ? header.column.getNextSortingOrder() === "asc"
+                                                ? "Sort ascending"
+                                                : header.column.getNextSortingOrder() === "desc"
+                                                  ? "Sort descending"
+                                                  : "Clear sort"
+                                              : undefined
+                                          }
+                                        >
+                                          {header.isPlaceholder
+                                            ? null
+                                            : flexRender(header.column.columnDef.header, header.getContext())}
+                                          {(() => {
+                                            const sortedState = header.column.getIsSorted();
+                                            if (typeof sortedState === "string") {
+                                              return getSortingIcons(header.column.id)[sortedState] ?? null;
+                                            }
+                                            return null;
+                                          })()}
+                                        </div>
+                                      ) : header.isPlaceholder ? null : (
+                                        flexRender(header.column.columnDef.header, header.getContext())
+                                      )}
+                                    </TableHead>
+                                  )}
+                                </For>
+                              </TableRow>
+                              <TableRow>
+                                <For each={headerGroup.headers}>
+                                  {(header) => (
+                                    <TableHead class={styles["filter-row"]}>
+                                      {header.column.id === "name" && (
+                                        // <input
+                                        //   value={(header.column.getFilterValue() as string) ?? ""}
+                                        //   onChange={(e) => header.column.setFilterValue(e.currentTarget.value)}
+                                        //   placeholder={`Search`}
+                                        // />
+                                        <TextField>
+                                          <TextFieldInput
+                                            value={(header.column.getFilterValue() as string) ?? ""}
+                                            onInput={(e) => header.column.setFilterValue(e.currentTarget.value)}
+                                            placeholder={`Search`}
+                                            class="border-0"
+                                          />
+                                        </TextField>
+                                      )}
+                                      {header.column.id === "municipality" && (
+                                        // <select
+                                        //   value={(header.column.getFilterValue() as string) ?? ""}
+                                        //   onChange={(e) => header.column.setFilterValue(e.currentTarget.value)}
+                                        // >
+                                        //   <option value="">All</option>
+                                        //   <For each={getUniqueValues(organisations(), header.column.id)}>
+                                        //     {(value) => <option value={value as string}>{value as string}</option>}
+                                        //   </For>
+                                        // </select>
+                                        <Select
+                                          value={(header.column.getFilterValue() as string) ?? ""}
+                                          onChange={header.column.setFilterValue}
+                                          options={getUniqueValues(organisations(), header.column.id)}
+                                          itemComponent={(props) => (
+                                            <SelectItem item={props.item}>{props.item.rawValue}</SelectItem>
+                                          )}
+                                        >
+                                          <SelectTrigger aria-label="filter municipality">
+                                            <SelectValue<string>>{(state) => state.selectedOption()}</SelectValue>
+                                          </SelectTrigger>
+                                          <SelectContent />
+                                        </Select>
+                                      )}
+                                      {header.column.id === "usersCount" && (
+                                        <div>
+                                          <NumberField
+                                            class="max-w-20"
+                                            minValue={0}
+                                            maxValue={100}
+                                            value={getRangeFilterValue(header.column.getFilterValue()).min || ""}
+                                            onChange={(value) => {
+                                              const filterValue = getRangeFilterValue(header.column.getFilterValue());
+                                              const minValue = Number(value);
+                                              if (filterValue.max < minValue) {
+                                                header.column.setFilterValue({
+                                                  min: minValue,
+                                                  max: minValue,
+                                                });
+                                              } else {
+                                                header.column.setFilterValue({ min: minValue, max: filterValue.max });
+                                              }
+                                            }}
+                                          >
+                                            <NumberFieldGroup>
+                                              <NumberFieldInput class="border-0" placeholder="Min" />
+                                              <NumberFieldIncrementTrigger />
+                                              <NumberFieldDecrementTrigger />
+                                            </NumberFieldGroup>
+                                          </NumberField>
+                                          <NumberField
+                                            class="max-w-20"
+                                            minValue={0}
+                                            maxValue={100}
+                                            value={getRangeFilterValue(header.column.getFilterValue()).max || ""}
+                                            onChange={(value) => {
+                                              const filterValue = getRangeFilterValue(header.column.getFilterValue());
+                                              const maxValue = Number(value);
+                                              if (filterValue.min > maxValue) {
+                                                header.column.setFilterValue({
+                                                  min: maxValue,
+                                                  max: maxValue,
+                                                });
+                                              } else {
+                                                header.column.setFilterValue({ min: filterValue.min, max: maxValue });
+                                              }
+                                            }}
+                                          >
+                                            <NumberFieldGroup>
+                                              <NumberFieldInput class="border-0" placeholder="Max" />
+                                              <NumberFieldIncrementTrigger />
+                                              <NumberFieldDecrementTrigger />
+                                            </NumberFieldGroup>
+                                          </NumberField>
+                                        </div>
+                                      )}
+                                      {(header.column.id === "createdAt" || header.column.id === "updatedAt") && (
+                                        // TODO: Styling of default date pickers is pretty inconsistent and only light mode
+                                        <input
+                                          type="date"
+                                          style={theme() === "dark" ? "color-scheme: dark;" : ""}
+                                          value={(header.column.getFilterValue() as string) ?? ""}
+                                          onChange={(e) => header.column.setFilterValue(e.currentTarget.value)}
+                                        />
+                                      )}
+                                      {header.column.id === "verified" && (
+                                        <select
+                                          value={(header.column.getFilterValue() as string) ?? ""}
+                                          onChange={(e) => header.column.setFilterValue(e.currentTarget.value)}
+                                        >
+                                          <option value="">All</option>
+                                          <option value="✅">Verified</option>
+                                          <option value="❌">Unverified</option>
+                                        </select>
+                                      )}
+                                    </TableHead>
+                                  )}
+                                </For>
+                              </TableRow>
+                            </>
+                          )}
+                        </For>
+                      </TableHeader>
+                      <TableBody>
+                        <For each={table.getRowModel().rows}>
+                          {(row, index) => (
+                            <TableRow class={index() % 2 === 0 ? "bg-accent/40" : ""}>
+                              <For each={row.getVisibleCells()}>
+                                {(cell) => (
+                                  <TableCell class={cell.column.id === "actions" ? styles["actions-column"] : ""}>
+                                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                  </TableCell>
+                                )}
+                              </For>
+                            </TableRow>
+                          )}
+                        </For>
+                      </TableBody>
+                    </Table>
+                  </div>
+                  <Pagination
+                    count={table.getPageCount()}
+                    fixedItems
+                    itemComponent={(props) => (
+                      <PaginationItem page={props.page} onClick={() => table.setPageIndex(props.page - 1)}>
+                        {props.page}
+                      </PaginationItem>
+                    )}
+                    ellipsisComponent={() => <PaginationEllipsis />}
+                  >
+                    <PaginationPrevious onClick={table.previousPage} />
+                    <PaginationItems />
+                    <PaginationNext onClick={table.nextPage} />
+                  </Pagination>
+                </>
+              )
+            )}
+          </CardContent>
+          <CardFooter>
+            <CardDescription>
+              <strong>Legend:</strong> ✅ = Verified, ❌ = Unverified
+            </CardDescription>
+          </CardFooter>
+        </Card>
       </main>
     </Header>
   );

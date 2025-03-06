@@ -6,7 +6,6 @@ import About from "@client/routes/About.tsx";
 import Editor from "@client/routes/Editor.tsx";
 import SignIn from "@client/routes/SignIn.tsx";
 import Users from "@client/routes/Users.tsx";
-import UsersCreate from "@client/routes/UsersCreate.tsx";
 import UsersEdit from "@client/routes/UsersEdit.tsx";
 import Unauthorized from "@client/routes/Unauthorized.tsx";
 import AuthGuard from "@client/guard/authGuard.tsx";
@@ -45,15 +44,6 @@ const DRoutes: Component = () => {
         component={() => (
           <AuthGuard role={["Manager", "Developer"]}>
             <Editor />
-          </AuthGuard>
-        )}
-      />
-
-      <Route
-        path="/users/create"
-        component={() => (
-          <AuthGuard role="Administrator">
-            <UsersCreate />
           </AuthGuard>
         )}
       />

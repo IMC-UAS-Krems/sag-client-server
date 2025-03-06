@@ -1,7 +1,7 @@
 import { Component, createSignal, onMount, createEffect, For } from "solid-js";
 import { FaSolidEllipsis, FaSolidArrowDownAZ, FaSolidArrowUpAZ } from "solid-icons/fa";
 import { IoAlertCircleOutline } from "solid-icons/io";
-import { useNavigate, A } from "@solidjs/router";
+import { useNavigate } from "@solidjs/router";
 import {
   createColumnHelper,
   createSolidTable,
@@ -43,10 +43,13 @@ import { Button } from "@client/components/ui/button.tsx";
 import { eden } from "@client/api/index.ts";
 import { handleUnauthorized } from "@client/utils/authUtils.ts";
 import Header from "@client/components/Header.tsx";
-import styles from "@styles/Users.module.css";
+import UserCreateDialog from "@client/components/UserCreateDialog.tsx";
+import UserEditDialog from "@client/components/UserEditDialog.tsx";
+import DestructiveDialog from "@client/components/DestructiveDialog.tsx";
 import { UserDetails } from "@server/types.ts";
 import { panic } from "@utils/panic.ts";
 import { showToast } from "@client/components/ui/toast.tsx";
+
 // import authStore from "@store/authStore"; // TODO: Not used anymore but could be used for highlighting the current user
 
 interface UsersResponse {
@@ -125,71 +128,55 @@ const Users: Component = () => {
     }
   }
 
-  async function handleEditUser(userId: string) {
-    navigate(`/users/edit/${userId}`);
-  }
-
   // Function to delete user
   async function handleDeleteUser(userId: string) {
-    Swal.fire({
-      title: "Are you sure?",
-      text: "You won't be able to revert this!",
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonColor: "#3085d6",
-      cancelButtonColor: "#d33",
-      confirmButtonText: "Yes, delete it!",
-    }).then(async (result) => {
-      if (result.isConfirmed) {
-        try {
-          const deletedUser = await eden.admin["delete-user"].delete({
-            userId: userId,
-            $fetch: {
-              mode: "cors",
-              credentials: "include",
-              method: "DELETE",
-            },
-          });
+    try {
+      const deletedUser = await eden.admin["delete-user"].delete({
+        userId: userId,
+        $fetch: {
+          mode: "cors",
+          credentials: "include",
+          method: "DELETE",
+        },
+      });
 
-          // Unauthorized check
-          if (deletedUser.status === 401 || deletedUser.status === 403) {
-            console.log("User is not authorized for this request:", deletedUser);
-            handleUnauthorized(navigate);
-            return;
-          }
-
-          if (deletedUser.status !== 200 || (deletedUser.data && "error" in deletedUser.data)) {
-            console.log("Failed to delete user:", deletedUser.error);
-            const errorMessage =
-              deletedUser.data && "error" in deletedUser.data ? deletedUser.data.error : "Couldn't delete the user";
-            Swal.fire({
-              title: "Error",
-              text: errorMessage,
-              icon: "error",
-            });
-            return;
-          } else {
-            showToast({
-              variant: "success",
-              title: "Success",
-              description: "User deketed successfully",
-            });
-            setData((prevUsers) => {
-              return prevUsers.map((user) =>
-                user.id === userId ? { ...user, needsToBeLoggedOut: true, deleted: true } : user,
-              );
-            });
-          }
-        } catch (error) {
-          console.error("Failed to delete user:", error);
-          showToast({
-            variant: "error",
-            title: "Error",
-            description: "Couldn't delete the user",
-          });
-        }
+      // Unauthorized check
+      if (deletedUser.status === 401 || deletedUser.status === 403) {
+        console.log("User is not authorized for this request:", deletedUser);
+        handleUnauthorized(navigate);
+        return;
       }
-    });
+
+      if (deletedUser.status !== 200 || (deletedUser.data && "error" in deletedUser.data)) {
+        console.log("Failed to delete user:", deletedUser.error);
+        const errorMessage =
+          deletedUser.data && "error" in deletedUser.data ? deletedUser.data.error : "Couldn't delete the user";
+        showToast({
+          variant: "error",
+          title: "Error",
+          description: errorMessage,
+        });
+        return;
+      } else {
+        showToast({
+          variant: "success",
+          title: "Success",
+          description: "User deleted successfully",
+        });
+        setData((prevUsers) => {
+          return prevUsers.map((user) =>
+            user.id === userId ? { ...user, needsToBeLoggedOut: true, deleted: true } : user,
+          );
+        });
+      }
+    } catch (error) {
+      console.error("Failed to delete user:", error);
+      showToast({
+        variant: "error",
+        title: "Error",
+        description: "Couldn't delete the user",
+      });
+    }
   }
 
   // Function to log out user
@@ -313,18 +300,25 @@ const Users: Component = () => {
               <DropdownMenuLabel role="presentation">{props.row.original.name}</DropdownMenuLabel>
               <DropdownMenuSeparator role="separator" />
               <DropdownMenuItem
-                onSelect={() => handleEditUser(props.row.original.id)}
                 disabled={props.row.original.userRole == "Administrator"}
                 role="menuitem"
+                closeOnSelect={false}
               >
-                ✏️ Edit
+                {/* ✏️ Edit */}
+                <UserEditDialog userId={props.row.original.id} />
               </DropdownMenuItem>
               <DropdownMenuItem
-                onSelect={() => handleDeleteUser(props.row.original.id)}
                 disabled={props.row.original.userRole === "Administrator" || props.row.original.deleted}
                 role="menuitem"
+                closeOnSelect={false}
               >
-                🗑️ Delete
+                {/* TODO: This immediately closes for some reason */}
+                <DestructiveDialog
+                  deleteHandler={() => handleDeleteUser(props.row.original.id)}
+                  triggerTitle="🗑️ Delete"
+                  deleteTitle="Delete User"
+                  deleteSubject={props.row.original.username}
+                />
               </DropdownMenuItem>
               <DropdownMenuSeparator role="separator" />
               <DropdownMenuItem
@@ -335,6 +329,7 @@ const Users: Component = () => {
                   now() - new Date(props.row.original.lastTimeActive).getTime() > loggedInTimespan * 1000
                 }
                 role="menuitem"
+                class="w-full text-start"
               >
                 🔒 Log out
               </DropdownMenuItem>
@@ -441,8 +436,6 @@ const Users: Component = () => {
             </CardDescription>
           </CardHeader>
           <CardContent class="w-fit">
-            {/* <div class={styles["nav-button-container"]}> */}
-
             {loading() ? (
               <div class="h-80 w-289">
                 <Skeleton class="h-full! w-full! rounded-md" />
@@ -455,32 +448,29 @@ const Users: Component = () => {
                 <AlertDescription>Plesase try again later, or contact us if the problem persists.</AlertDescription>
               </Alert>
             ) : (
-              // <p class={styles["error-text"]}>Error: {error()}</p>
               table && (
                 <>
-                  <div class="w-full flex gap-2">
-                    <Button as={A} href="/users/create">
-                      Create new user
-                    </Button>
+                  <div class="w-full flex gap-4">
+                    <UserCreateDialog />
                     <Button onClick={() => setReload(!reload())}>Refresh data</Button>
                     <Switch
                       class="flex items-center space-x-2"
                       checked={showDeleted()}
                       onChange={() => setShowDeleted(!showDeleted())}
-                      // onCheckedChange={() => setShowDeleted(!showDeleted())}
                     >
                       <SwitchLabel>Show deleted</SwitchLabel>
                       <SwitchControl>
                         <SwitchThumb />
                       </SwitchControl>
                     </Switch>
-                    <div class={styles["page-size-selector"]}>
+                    <div class="flex justify-center items-center gap-2.5">
                       <span>Page size: </span>
                       <Select
                         value={table?.getState().pagination.pageSize}
                         onChange={(value) => table.setPageSize(Number(value))}
                         options={[5, 10, 20, 40]}
                         itemComponent={(props) => <SelectItem item={props.item}>{props.item.rawValue}</SelectItem>}
+                        disallowEmptySelection
                       >
                         <SelectTrigger aria-label="Page size" class="font-semibold">
                           <SelectValue<string>>{(state) => state.selectedOption()}</SelectValue>
@@ -501,7 +491,8 @@ const Users: Component = () => {
                                     <TableHead class="p-5 font-semibold">
                                       {header.column.getCanSort() ? (
                                         <div
-                                          class={styles.sortable}
+                                          class="cursor-pointer flex justify-center items-center gap-2.5"
+                                          style={{ "user-select": "none" }}
                                           onClick={header.column.getToggleSortingHandler()}
                                           title={
                                             header.column.getCanSort()
@@ -531,7 +522,7 @@ const Users: Component = () => {
                               <TableRow>
                                 <For each={headerGroup.headers}>
                                   {(header) => (
-                                    <TableHead class={styles["filter-row"]}>
+                                    <TableHead class="[&_*]:cursor-pointer">
                                       {(header.column.id === "userRole" ||
                                         header.column.id === "organization" ||
                                         header.column.id === "municipality") && (
@@ -632,7 +623,7 @@ const Users: Component = () => {
                             <TableRow class={index() % 2 === 0 ? "bg-accent/40" : ""}>
                               <For each={row.getVisibleCells()}>
                                 {(cell) => (
-                                  <TableCell class={cell.column.id === "actions" ? styles["actions-column"] : ""}>
+                                  <TableCell style={cell.column.id === "actions" ? "padding: 0; height: 100%;" : ""}>
                                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                                   </TableCell>
                                 )}
@@ -643,7 +634,6 @@ const Users: Component = () => {
                       </TableBody>
                     </Table>
                   </div>
-                  {/* PAGINATION HERE */}
                   <Pagination
                     count={table.getPageCount()}
                     fixedItems

@@ -15,8 +15,8 @@ const OrganisationCreate: Component = () => {
   const [organisationName, setOrganizationName] = createSignal<string | undefined>(undefined);
   const [organisationDescription, setOrganisationDescription] = createSignal<string | undefined>(undefined);
   const [municipalityName, setMunicipalityName] = createSignal<string | undefined>(undefined);
-  const [municipalities, setMunicipalities] = createSignal<string[]>([]);
 
+  const [municipalities, setMunicipalities] = createSignal<string[]>([]);
   const [isMunicipalitiesLoading, setIsMunicipalitiesLoading] = createSignal(true);
   const [errors, setErrors] = createSignal<{ [key: string]: string }>({});
 
