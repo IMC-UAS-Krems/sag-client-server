@@ -53,6 +53,10 @@ td {
   overflow-y: hidden;
   cursor: pointer;
   transition: all 0.25s;
+  background-color: var(--background-color);
+  color: var(--primary-text);
+  border: 0;
+  border-radius: 0;
 }
 
 .trigger:hover {
@@ -171,6 +175,7 @@ td {
 .nav-button:not(:disabled):hover {
   background-color: var(--primary-text);
   color: var(--secondary-color);
+  cursor: pointer;
 }
 
 .nav-button:disabled {

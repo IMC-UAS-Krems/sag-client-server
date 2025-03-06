@@ -89,9 +89,13 @@ model Document {
     author   User   @relation(fields: [authorId], references: [id])
     authorId String
 
-    // Project data
-    project   Project @relation(fields: [projectId], references: [id])
-    projectId String
+    // Project data - Optional
+    project   Project? @relation(fields: [projectId], references: [id])
+    projectId String?
+
+    // Organization data - Optional
+    organization Organization? @relation(fields: [organizationId], references: [id])
+    organizationId String?
 
     // Path to document
     path Unsupported("ltree")
@@ -141,6 +145,7 @@ model Organization {
 
     projects Project[]
     users    User[]
+    documents Document[]
 
     verified Boolean @default(false)
 

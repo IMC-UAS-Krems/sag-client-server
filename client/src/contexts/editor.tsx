@@ -36,47 +36,95 @@ export function EditorProvider(props: { children: JSX.Element }): JSX.Element {
     });
   };
 
-  const navigateToFile = async (newNode: TreeNode) => {
-    if (selectedNode()?.path() === newNode.path()) {
-      return;
+  const isSameNode = (node1: TreeNode, node2: TreeNode) => {
+    const path1 = node1.path();
+    const path2 = node2.path();
+
+    // 1. If path names don't match return false
+    if (path1 !== path2) {
+      return false;
     }
 
-    const currentContent = code();
-    const savedContent = (await selectedNode()?.getContent()) ?? "";
+    const pathList1 = node1.getPathList();
+    const pathList2 = node2.getPathList();
 
-    if (!isEditorInitialized()) {
-      setIsEditorInitialized(true);
-    } else if (currentContent.trim() === "" || currentContent !== savedContent || savedContent === "") {
-      try {
-        const result = await Swal.fire({
-          title: "Unsaved Changes",
-          text: "The current file has unsaved changes. Save it before leaving?",
-          icon: "warning",
-          showCancelButton: true,
-          confirmButtonText: "Yes",
-          cancelButtonText: "No",
-        });
+    // 2. If path lists don't match return false
+    if (pathList1.length !== pathList2.length) {
+      return false;
+    }
 
-        if (result.isConfirmed) {
-          try {
-            await selectedNode()?.saveContent(currentContent);
-          } catch (error) {
-            console.error("Failed to save content:", error);
-          }
-        }
-      } catch (error) {
-        console.error("Swal prompt failed:", error);
+    for (let i = 0; i < pathList1.length; i++) {
+      if (pathList1[i] !== pathList2[i]) {
+        return false;
       }
     }
 
+    // 3. If both path names and path lists match return true
+    return true;
+  };
+
+  const navigateToFile = async (newNode: TreeNode) => {
+    // If user pressed on the currently selected node, do nothing - if no node is selected, skip check
+    if (selectedNode() instanceof TreeNode) {
+      if (isSameNode(newNode, selectedNode() as TreeNode)) {
+        return;
+      }
+    }
+
+    const currentContent = code();
+
+    if (selectedNode()?.isFile()) {
+      const savedContent = (await selectedNode()?.getContent()) ?? "";
+      if (!isEditorInitialized()) {
+        setIsEditorInitialized(true);
+        // } else if (currentContent.trim() === "" || currentContent !== savedContent || savedContent === "") {
+      } else if (currentContent !== savedContent) {
+        try {
+          const result = await Swal.fire({
+            title: "Unsaved Changes",
+            text: "The current file has unsaved changes. Save it before leaving?",
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonText: "Yes",
+            cancelButtonText: "No",
+          });
+
+          if (result.isConfirmed) {
+            try {
+              await selectedNode()?.saveContent(currentContent);
+            } catch (error) {
+              console.error("Failed to save content:", error);
+            }
+          }
+        } catch (error) {
+          console.error("Swal prompt failed:", error);
+        }
+      }
+    }
     try {
-      const newContent = await newNode.getContent();
-      handleFileClick(newContent);
+      if (newNode.isFile()) {
+        const newContent = await newNode.getContent();
+        handleFileClick(newContent);
+      } else {
+        // If the node is a directory, clear the editor
+        setCode("");
+        handleFileClick("");
+      }
       setSelectedNode(newNode);
     } catch (error) {
       console.error("Failed to navigate to file:", newNode.name(), error);
     }
   };
+
+  const debouncedCheck = (() => {
+    let checkTimer: ReturnType<typeof setTimeout>;
+    return (value: string) => {
+      clearTimeout(checkTimer);
+      checkTimer = setTimeout(() => {
+        check(value);
+      }, 500);
+    };
+  })();
 
   const {
     editorView,
@@ -86,7 +134,7 @@ export function EditorProvider(props: { children: JSX.Element }): JSX.Element {
     value: code(),
     onValueChange: (value) => {
       setCode(value);
-      check(value);
+      debouncedCheck(value);
     },
   });
 
