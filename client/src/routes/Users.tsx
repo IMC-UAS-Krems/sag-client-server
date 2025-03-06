@@ -1,7 +1,7 @@
 import { Component, createSignal, onMount, createEffect, For } from "solid-js";
 import { FaSolidEllipsis, FaSolidArrowDownAZ, FaSolidArrowUpAZ } from "solid-icons/fa";
 import { IoAlertCircleOutline } from "solid-icons/io";
-import { useNavigate } from "@solidjs/router";
+import { useNavigate, A } from "@solidjs/router";
 import {
   createColumnHelper,
   createSolidTable,
@@ -46,7 +46,7 @@ import Header from "@client/components/Header.tsx";
 import styles from "@styles/Users.module.css";
 import { UserDetails } from "@server/types.ts";
 import { panic } from "@utils/panic.ts";
-import { Notification } from "@client/common.ts";
+import { showToast } from "@client/components/ui/toast.tsx";
 // import authStore from "@store/authStore"; // TODO: Not used anymore but could be used for highlighting the current user
 
 interface UsersResponse {
@@ -125,10 +125,6 @@ const Users: Component = () => {
     }
   }
 
-  async function handleCreateUser() {
-    navigate("/users/create");
-  }
-
   async function handleEditUser(userId: string) {
     navigate(`/users/edit/${userId}`);
   }
@@ -173,9 +169,10 @@ const Users: Component = () => {
             });
             return;
           } else {
-            Notification.fire({
-              titleText: "User deleted successfully",
-              icon: "success",
+            showToast({
+              variant: "success",
+              title: "Success",
+              description: "User deketed successfully",
             });
             setData((prevUsers) => {
               return prevUsers.map((user) =>
@@ -185,10 +182,10 @@ const Users: Component = () => {
           }
         } catch (error) {
           console.error("Failed to delete user:", error);
-          Swal.fire({
+          showToast({
+            variant: "error",
             title: "Error",
-            text: "Couldn't delete the user",
-            icon: "error",
+            description: "Couldn't delete the user",
           });
         }
       }
@@ -238,9 +235,10 @@ const Users: Component = () => {
             });
             return;
           } else {
-            Notification.fire({
-              titleText: "User logged out successfully",
-              icon: "success",
+            showToast({
+              variant: "success",
+              title: "Success",
+              description: "User logged out successfully",
             });
             setData((prevUsers) => {
               return prevUsers.map((user) =>
@@ -250,10 +248,10 @@ const Users: Component = () => {
           }
         } catch (error) {
           console.error("Failed to log out user:", error);
-          Swal.fire({
+          showToast({
+            variant: "error",
             title: "Error",
-            text: "Couldn't log out the user",
-            icon: "error",
+            description: "Couldn't log out the user",
           });
         }
       }
@@ -343,52 +341,6 @@ const Users: Component = () => {
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-
-        // OLD
-        // <DropdownMenu>
-        //   <DropdownMenu.Trigger
-        //     class={(menu_styles["trigger"], styles["trigger"])}
-        //     aria-haspopup="menu"
-        //     aria-expanded={false}
-        //   >
-        //     <FaSolidEllipsis />
-        //   </DropdownMenu.Trigger>
-        //   <DropdownMenu.Content class={menu_styles["context-menu__content"]} role="menu">
-        //     <div class={styles["context-menu-title"]} role="presentation">
-        //       {props.row.original.name}
-        //     </div>
-        //     <DropdownMenu.Separator role="separator" />
-        //     <DropdownMenu.Item
-        //       class={menu_styles["context-menu__item"]}
-        //       onSelect={() => handleEditUser(props.row.original.id)}
-        //       disabled={props.row.original.userRole == "Administrator"}
-        //       role="menuitem"
-        //     >
-        //       ✏️ Edit
-        //     </DropdownMenu.Item>
-        //     <DropdownMenu.Item
-        //       class={menu_styles["context-menu__item"]}
-        //       onSelect={() => handleDeleteUser(props.row.original.id)}
-        //       disabled={props.row.original.userRole === "Administrator" || props.row.original.deleted}
-        //       role="menuitem"
-        //     >
-        //       🗑️ Delete
-        //     </DropdownMenu.Item>
-        //     <DropdownMenu.Separator role="separator" />
-        //     <DropdownMenu.Item
-        //       class={menu_styles["context-menu__item"]}
-        //       onSelect={() => handleLogOutUser(props.row.original.id, props.row.original.name)}
-        //       disabled={
-        //         props.row.original.userRole == "Administrator" ||
-        //         props.row.original.needsToBeLoggedOut ||
-        //         now() - new Date(props.row.original.lastTimeActive).getTime() > loggedInTimespan * 1000
-        //       }
-        //       role="menuitem"
-        //     >
-        //       🔒 Log out
-        //     </DropdownMenu.Item>
-        //   </DropdownMenu.Content>
-        // </DropdownMenu>
       ),
     }),
   ];
@@ -507,7 +459,9 @@ const Users: Component = () => {
               table && (
                 <>
                   <div class="w-full flex gap-2">
-                    <Button onClick={handleCreateUser}>Create new user</Button>
+                    <Button as={A} href="/users/create">
+                      Create new user
+                    </Button>
                     <Button onClick={() => setReload(!reload())}>Refresh data</Button>
                     <Switch
                       class="flex items-center space-x-2"

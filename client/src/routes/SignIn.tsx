@@ -388,6 +388,11 @@ const ShadRegister: Component<NavigateProps> = ({ navigate }) => {
           value={municipality()}
           onChange={(selectedValue) => {
             if (!selectedValue) return;
+            if (municipality() !== selectedValue && organization()) {
+              console.log("Resetting organization");
+              setOrganizations([]);
+              setOrganization("");
+            }
             handleInputChange("municipality", selectedValue);
             console.log("Municipality selected:", selectedValue);
           }}
@@ -477,7 +482,7 @@ const SignIn: Component = () => {
             <AlertDescription>You are already logged in as {authStore.state().name}</AlertDescription>
           </Alert>
         ) : (
-          <Tabs defaultValue="account" class="w-[400px]">
+          <Tabs defaultValue="account" class="w-2xl">
             <TabsList class="grid w-full grid-cols-2">
               <TabsTrigger value="signin">Sign in</TabsTrigger>
               <TabsTrigger value="register">Register</TabsTrigger>
