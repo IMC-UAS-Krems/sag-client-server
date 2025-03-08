@@ -23,7 +23,6 @@ import { IoAlertCircleOutline } from "solid-icons/io";
 import { eden } from "@client/api/index.ts";
 import authStore from "@store/authStore.ts";
 import Header from "@client/components/Header.tsx";
-import styles from "@styles/Signin.module.css";
 
 interface NavigateProps {
   navigate: ReturnType<typeof useNavigate>;
@@ -474,7 +473,7 @@ const SignIn: Component = () => {
 
   return (
     <Header>
-      <main class={styles["signin-main-container"]}>
+      <main class="flex content-center items-center justify-center h-full mt-6">
         {authStore.state().isAuthenticated ? (
           <Alert variant="destructive" class="max-w-2xl">
             <IoAlertCircleOutline class="w-5 h-5" />

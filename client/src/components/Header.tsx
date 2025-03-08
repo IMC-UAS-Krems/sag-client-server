@@ -57,11 +57,20 @@ const Header: Component<{ children: JSX.Element }> = (props) => {
 
   return (
     <>
-      <header class={styles["header-main-container"]}>
-        {/* TODO: This should instead be an SVG in the future */}
-        <Image.Root fallbackDelay={600} class={styles.img}>
-          <Image.Img class={styles["img-img"]} src={theme() === "light" ? logoDark : logoLight} alt="IMC Krems logo" />
-          <Image.Fallback class={styles["img-fallback"]}>Sagittarius Logo</Image.Fallback>
+      <header class="flex align-center items-center justify-between overflow-hidden p-2.5">
+        {/* TODO: This should instead be an SVG in the future with coloring based on Theme() */}
+        <Image.Root
+          fallbackDelay={600}
+          class="inline-flex items-center justify-center align-middle overflow-hidden select-none h-14"
+        >
+          <Image.Img
+            class="w-full h-full object-cover"
+            src={theme() === "light" ? logoDark : logoLight}
+            alt="IMC Krems logo"
+          />
+          <Image.Fallback class="w-full h-full flex items-center justify-center text-slate text-base font-medium leading-none">
+            Sagittarius Logo
+          </Image.Fallback>
         </Image.Root>
         <NavigationMenu class="gap-2">
           <NavigationMenuTrigger as="a" href="/home" current={location.pathname === "/home"}>

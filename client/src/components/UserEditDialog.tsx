@@ -19,6 +19,8 @@ import {
   SelectLabel,
   SelectErrorMessage,
 } from "@client/components/ui/select.tsx";
+import { Alert, AlertDescription, AlertTitle } from "@client/components/ui/alert.tsx";
+import { IoAlertCircleOutline } from "solid-icons/io";
 import { TextField, TextFieldErrorMessage, TextFieldInput, TextFieldLabel } from "@client/components/ui/textField.tsx";
 import { showToast } from "@client/components/ui/toast.tsx";
 import { Skeleton } from "@client/components/ui/skeleton.tsx";
@@ -28,8 +30,15 @@ import { handleUnauthorized } from "@client/utils/authUtils.ts";
 import { UpdateUserBody } from "@server/types.ts";
 import { UserRole } from "@utils/roles.ts";
 
-export default function UserEditDialog(userId) {
+interface UserEditDialogProps {
+  userId: string;
+  username: string;
+  fetchUsers: () => void;
+}
+
+export default function UserEditDialog(props: UserEditDialogProps) {
   const navigate = useNavigate();
+  const [open, setOpen] = createSignal(false);
 
   const [name, setName] = createSignal<string | undefined>(undefined);
   const [email, setEmail] = createSignal<string | undefined>(undefined);
@@ -45,25 +54,26 @@ export default function UserEditDialog(userId) {
   const [oldName, setOldName] = createSignal<string | undefined>(undefined);
   const [oldEmail, setOldEmail] = createSignal<string | undefined>(undefined);
   const [oldUsername, setOldUsername] = createSignal<string | undefined>(undefined);
-  // const [oldMunicipality, setOldMunicipality] = createSignal<string | undefined>(undefined);
-  // const [oldOrganization, setOldOrganization] = createSignal<string | undefined>(undefined);
-  // const [oldUserRole, setOldUserRole] = createSignal<UserRole | string | undefined>(undefined);
+  const [oldMunicipality, setOldMunicipality] = createSignal<string | undefined>(undefined);
+  const [oldOrganization, setOldOrganization] = createSignal<string | undefined>(undefined);
+  const [oldUserRole, setOldUserRole] = createSignal<UserRole | string | undefined>(undefined);
   const [userFetchError, setUserFetchErrors] = createSignal<string | null>(null);
 
   const [loading, setLoading] = createSignal(true);
   const [isMunicipalitiesLoading, setIsMunicipalitiesLoading] = createSignal(true);
+  const [municipalitiesFetchError, setMunicipalitiesFetchError] = createSignal<string | null>(null);
   const [isOrganizationsLoading, setIsOrganizationsLoading] = createSignal(false);
 
   const validateField = (
     fieldName: "username" | "password" | "name" | "email" | "municipality" | "organization" | "userRole",
     value: string | undefined,
   ): string | undefined => {
-    if (!value) return `${fieldName.charAt(0).toUpperCase() + fieldName.slice(1)} is required`;
-
-    if (fieldName === "username" && value.length < 4) return "Username must be at least 4 characters long";
-    if (fieldName === "password" && value.length < 8) return "Password must be at least 8 characters long";
-    if (fieldName === "name" && value.length < 4) return "Name must be at least 4 characters long";
-    if (fieldName === "email" && !/\S+@\S+\.\S+/.test(value)) return "Email is invalid";
+    if (value) {
+      if (fieldName === "username" && value.length < 4) return "Username must be at least 4 characters long";
+      if (fieldName === "password" && value.length < 8) return "Password must be at least 8 characters long";
+      if (fieldName === "name" && value.length < 4) return "Name must be at least 4 characters long";
+      if (fieldName === "email" && !/\S+@\S+\.\S+/.test(value)) return "Email is invalid";
+    }
 
     return undefined;
   };
@@ -78,6 +88,25 @@ export default function UserEditDialog(userId) {
       organization: validateField("organization", organization()),
       userRole: validateField("userRole", userRole()),
     });
+    if (organization() && !municipality()) {
+      setErrors({ ...errors(), municipality: "Municipality is required if you select an organization" });
+    }
+    if (municipality() && !organization()) {
+      setErrors({ ...errors(), organization: "Organization is required if you select a municipality" });
+    }
+  };
+
+  const hasChanged = () => {
+    const usernameChanged = username() && oldUsername() !== username();
+    const passwordChanged = Boolean(password());
+    const nameChanged = name() && oldName() !== name();
+    const emailChanged = email() && oldEmail() !== email();
+    const munChanged = municipality() && oldMunicipality() !== municipality();
+    const orgChanged = organization() && oldOrganization() !== organization();
+    const userRoleChanged = userRole() && oldUserRole() !== userRole();
+    return (
+      usernameChanged || passwordChanged || nameChanged || emailChanged || munChanged || orgChanged || userRoleChanged
+    );
   };
 
   const fetchUserData = async () => {
@@ -95,7 +124,7 @@ export default function UserEditDialog(userId) {
           },
         },
         $query: {
-          userId: userId,
+          userId: props.userId,
         },
       });
 
@@ -117,12 +146,9 @@ export default function UserEditDialog(userId) {
         setOldName(oldUserData.data.name);
         setOldEmail(oldUserData.data.email);
         setOldUsername(oldUserData.data.username);
-        // setOldMunicipality(oldUserData.data.municipalityName);
-        // setOldOrganization(oldUserData.data.organizationName);
-        // setOldUserRole(oldUserData.data.userRole);
-        setMunicipality(oldUserData.data.municipalityName);
-        setOrganization(oldUserData.data.organizationName);
-        setUserRole(oldUserData.data.userRole);
+        setOldMunicipality(oldUserData.data.municipalityName);
+        setOldOrganization(oldUserData.data.organizationName);
+        setOldUserRole(oldUserData.data.userRole);
       } else {
         setUserFetchErrors("User data is invalid");
       }
@@ -142,6 +168,7 @@ export default function UserEditDialog(userId) {
       }
     } catch (error) {
       console.error("Error fetching municipalities:", error);
+      setMunicipalitiesFetchError("Error fetching municipalities");
     } finally {
       setIsMunicipalitiesLoading(false);
     }
@@ -228,7 +255,7 @@ export default function UserEditDialog(userId) {
       return;
     }
 
-    const requestBody: UpdateUserBody = { userId: userId };
+    const requestBody: UpdateUserBody = { userId: props.userId };
 
     if (name()) requestBody.name = name();
     if (email()) requestBody.email = email();
@@ -264,7 +291,9 @@ export default function UserEditDialog(userId) {
         return;
       }
 
-      navigate("/users", { replace: true });
+      // navigate("/users", { replace: true });
+      props.fetchUsers();
+      setOpen(false);
       showToast({
         variant: "success",
         title: "Success",
@@ -281,138 +310,164 @@ export default function UserEditDialog(userId) {
   };
 
   return (
-    <Dialog>
+    <Dialog open={open()} onOpenChange={setOpen}>
       <DialogTrigger class="w-full text-start cursor-pointer">✏️ Edit</DialogTrigger>
       <DialogContent class="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Edit User {userId}</DialogTitle>
+          <DialogTitle>Edit User {props.username}</DialogTitle>
           <DialogDescription>You may edit attributes of the user here.</DialogDescription>
         </DialogHeader>
-        <div class="space-y-4">
-          <TextField class="space-y-1" validationState={errors().name ? "invalid" : "valid"}>
-            <TextFieldLabel>Name</TextFieldLabel>
-            <TextFieldInput
-              placeholder={oldName() || "Old name"}
-              onInput={(e) => handleInputChange("name", e.currentTarget.value)}
-            />
-            {errors().name && <TextFieldErrorMessage>{errors().name}</TextFieldErrorMessage>}
-          </TextField>
-          <TextField class="space-y-1" validationState={errors().email ? "invalid" : "valid"}>
-            <TextFieldLabel>Email</TextFieldLabel>
-            <TextFieldInput
-              placeholder={oldEmail() || "Old email"}
-              type="email"
-              onInput={(e) => handleInputChange("email", e.currentTarget.value)}
-            />
-            {errors().email && <TextFieldErrorMessage>{errors().email}</TextFieldErrorMessage>}
-          </TextField>
-          <TextField class="space-y-1" validationState={errors().username ? "invalid" : "valid"}>
-            <TextFieldLabel>Username</TextFieldLabel>
-            <TextFieldInput
-              placeholder={oldUsername() || "Old username"}
-              onInput={(e) => handleInputChange("username", e.currentTarget.value)}
-            />
-            {errors().username && <TextFieldErrorMessage>{errors().username}</TextFieldErrorMessage>}
-          </TextField>
-          <TextField class="space-y-1" validationState={errors().password ? "invalid" : "valid"}>
-            <TextFieldLabel>Password</TextFieldLabel>
-            <TextFieldInput
-              placeholder="password123"
-              type="password"
-              onInput={(e) => handleInputChange("password", e.currentTarget.value)}
-            />
-            {errors().password && <TextFieldErrorMessage>{errors().password}</TextFieldErrorMessage>}
-          </TextField>
-          <Select
-            value={municipality()}
-            onChange={(selectedValue) => {
-              if (!selectedValue) return;
-              if (municipality() !== selectedValue && organization()) {
-                console.log("Resetting organization");
-                setOrganizations([]);
-                setOrganization(undefined);
-              }
-              handleInputChange("municipality", selectedValue);
-            }}
-            options={municipalities()}
-            placeholder="Select a municipality…"
-            itemComponent={(props) => <SelectItem item={props.item}>{props.item.rawValue}</SelectItem>}
-            validationState={errors().municipality ? "invalid" : "valid"}
-          >
-            <SelectLabel>Municipality</SelectLabel>
-            <div class="mt-1">
-              {isMunicipalitiesLoading() ? (
-                <>
-                  <Skeleton height={40} radius={8} />
-                </>
-              ) : (
-                <>
-                  <SelectTrigger aria-label="Municipalities">
+        {loading() ? (
+          <Skeleton height={40} radius={8} />
+        ) : userFetchError() || municipalitiesFetchError() ? (
+          <Alert variant="destructive">
+            <IoAlertCircleOutline class="h-5 w-5" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{userFetchError() || municipalitiesFetchError()}</AlertDescription>
+            <AlertDescription>Plesase try again later, or contact us if the problem persists.</AlertDescription>
+          </Alert>
+        ) : (
+          <>
+            <div class="space-y-4">
+              <TextField class="space-y-1" validationState={errors().name ? "invalid" : "valid"}>
+                <TextFieldLabel>Name</TextFieldLabel>
+                <TextFieldInput
+                  placeholder={oldName() || "Old name"}
+                  onInput={(e) => handleInputChange("name", e.currentTarget.value)}
+                />
+                {errors().name && <TextFieldErrorMessage>{errors().name}</TextFieldErrorMessage>}
+              </TextField>
+              <TextField class="space-y-1" validationState={errors().email ? "invalid" : "valid"}>
+                <TextFieldLabel>Email</TextFieldLabel>
+                <TextFieldInput
+                  placeholder={oldEmail() || "Old email"}
+                  type="email"
+                  onInput={(e) => handleInputChange("email", e.currentTarget.value)}
+                />
+                {errors().email && <TextFieldErrorMessage>{errors().email}</TextFieldErrorMessage>}
+              </TextField>
+              <TextField class="space-y-1" validationState={errors().username ? "invalid" : "valid"}>
+                <TextFieldLabel>Username</TextFieldLabel>
+                <TextFieldInput
+                  placeholder={oldUsername() || "Old username"}
+                  onInput={(e) => handleInputChange("username", e.currentTarget.value)}
+                />
+                {errors().username && <TextFieldErrorMessage>{errors().username}</TextFieldErrorMessage>}
+              </TextField>
+              <TextField class="space-y-1" validationState={errors().password ? "invalid" : "valid"}>
+                <TextFieldLabel>Password</TextFieldLabel>
+                <TextFieldInput
+                  placeholder="password123"
+                  type="password"
+                  onInput={(e) => handleInputChange("password", e.currentTarget.value)}
+                />
+                {errors().password && <TextFieldErrorMessage>{errors().password}</TextFieldErrorMessage>}
+              </TextField>
+              <Select
+                value={municipality()}
+                onChange={(selectedValue) => {
+                  if (!selectedValue) return;
+                  if (municipality() !== selectedValue && organization()) {
+                    console.log("Resetting organization");
+                    setOrganizations([]);
+                    setOrganization(undefined);
+                  }
+                  handleInputChange("municipality", selectedValue);
+                }}
+                onOpenChange={(isOpen) => console.log("Municipality select open:", isOpen, municipality())}
+                options={municipalities()}
+                placeholder={oldMunicipality() || "Select a municipality…"}
+                itemComponent={(props) => <SelectItem item={props.item}>{props.item.rawValue}</SelectItem>}
+                validationState={errors().municipality ? "invalid" : "valid"}
+                modal={true} // NOTE: Modal is neccessary due to the nested Popover conflict with the Drawermenu
+              >
+                <SelectLabel>Municipality</SelectLabel>
+                <div class="mt-1">
+                  {isMunicipalitiesLoading() ? (
+                    <>
+                      <Skeleton height={40} radius={8} />
+                    </>
+                  ) : (
+                    <>
+                      <SelectTrigger aria-label="Municipalities">
+                        <SelectValue<string>>{(state) => state.selectedOption()}</SelectValue>
+                      </SelectTrigger>
+                      <SelectContent />
+                      {errors().municipality && <SelectErrorMessage>{errors().municipality}</SelectErrorMessage>}
+                    </>
+                  )}
+                </div>
+              </Select>
+              <Select
+                value={organization()}
+                onChange={(selectedValue) => {
+                  if (!selectedValue) return;
+                  handleInputChange("organization", selectedValue);
+                  console.log("Organization selected:", selectedValue);
+                }}
+                options={organizations()}
+                placeholder={
+                  municipality()
+                    ? !organizations().length
+                      ? "No organization found for municipality"
+                      : "Select an organization…"
+                    : oldOrganization()
+                }
+                itemComponent={(props) => <SelectItem item={props.item}>{props.item.rawValue}</SelectItem>}
+                disabled={isOrganizationsLoading() || !municipality() || !organizations().length}
+                validationState={errors().organization ? "invalid" : "valid"}
+                modal={true}
+              >
+                <SelectLabel>Organization</SelectLabel>
+                <div class="mt-1">
+                  {isOrganizationsLoading() ? (
+                    <>
+                      <Skeleton height={40} radius={8} />
+                    </>
+                  ) : (
+                    <>
+                      <SelectTrigger aria-label="Organizations">
+                        <SelectValue<string>>{(state) => state.selectedOption()}</SelectValue>
+                      </SelectTrigger>
+                      <SelectContent />
+                      {errors().organization && <SelectErrorMessage>{errors().organization}</SelectErrorMessage>}
+                    </>
+                  )}
+                </div>
+              </Select>
+              <Select
+                value={userRole()}
+                onChange={(selectedValue) => {
+                  if (!selectedValue) return;
+                  handleInputChange("userRole", selectedValue);
+                  console.log("Organization selected:", selectedValue);
+                }}
+                options={Object.values(UserRole)}
+                itemComponent={(props) => <SelectItem item={props.item}>{props.item.rawValue}</SelectItem>}
+                validationState={errors().userRole ? "invalid" : "valid"}
+                placeholder={oldUserRole() || "Select a user role…"}
+                modal={true}
+              >
+                <SelectLabel>User Role</SelectLabel>
+                <div class="mt-1">
+                  <SelectTrigger aria-label="User roles">
                     <SelectValue<string>>{(state) => state.selectedOption()}</SelectValue>
                   </SelectTrigger>
                   <SelectContent />
-                  {errors().password && <SelectErrorMessage>{errors().municipality}</SelectErrorMessage>}
-                </>
-              )}
+                  {errors().userRole && <SelectErrorMessage>{errors().userRole}</SelectErrorMessage>}
+                </div>
+              </Select>
             </div>
-          </Select>
-          <Select
-            value={organization()}
-            onChange={(selectedValue) => {
-              if (!selectedValue) return;
-              handleInputChange("organization", selectedValue);
-              console.log("Organization selected:", selectedValue);
-            }}
-            options={organizations()}
-            placeholder={!organizations().length ? "No organization found for municipality" : "Select an organization…"}
-            itemComponent={(props) => <SelectItem item={props.item}>{props.item.rawValue}</SelectItem>}
-            disabled={isOrganizationsLoading() || !municipality() || !organizations().length}
-            validationState={errors().organization ? "invalid" : "valid"}
-          >
-            <SelectLabel>Organization</SelectLabel>
-            <div class="mt-1">
-              {isOrganizationsLoading() ? (
-                <>
-                  <Skeleton height={40} radius={8} />
-                </>
-              ) : (
-                <>
-                  <SelectTrigger aria-label="Organizations">
-                    <SelectValue<string>>{(state) => state.selectedOption()}</SelectValue>
-                  </SelectTrigger>
-                  <SelectContent />
-                  {errors().password && <SelectErrorMessage>{errors().organization}</SelectErrorMessage>}
-                </>
-              )}
-            </div>
-          </Select>
-          <Select
-            value={userRole()}
-            onChange={(selectedValue) => {
-              if (!selectedValue) return;
-              handleInputChange("userRole", selectedValue);
-              console.log("Organization selected:", selectedValue);
-            }}
-            options={Object.values(UserRole)}
-            itemComponent={(props) => <SelectItem item={props.item}>{props.item.rawValue}</SelectItem>}
-            validationState={errors().userRole ? "invalid" : "valid"}
-            placeholder="Select a user role…"
-          >
-            <SelectLabel>User Role</SelectLabel>
-            <div class="mt-1">
-              <SelectTrigger aria-label="Organizations">
-                <SelectValue<string>>{(state) => state.selectedOption()}</SelectValue>
-              </SelectTrigger>
-              <SelectContent />
-              {errors().userRole && <SelectErrorMessage>{errors().userRole}</SelectErrorMessage>}
-            </div>
-          </Select>
-        </div>
-        <DialogFooter>
-          <Button onClick={submit} disabled={Object.values(errors()).some(Boolean)}>
-            Edit User
-          </Button>
-        </DialogFooter>
+            <DialogFooter>
+              <Button
+                onClick={submit}
+                disabled={Object.values(errors()).some(Boolean) || Boolean(userFetchError()) || !hasChanged()}
+              >
+                Edit User
+              </Button>
+            </DialogFooter>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   );

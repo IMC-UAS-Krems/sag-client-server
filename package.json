@@ -12,6 +12,7 @@
     "db": "docker compose up db db-setup"
   },
   "dependencies": {
+    "@ark-ui/solid": "^5.0.0",
     "@bogeychan/elysia-logger": "^0.1.1",
     "@codemirror/history": "^0.19.2",
     "@codemirror/language": "6.10.2",

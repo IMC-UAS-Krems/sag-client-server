@@ -6,15 +6,12 @@ import About from "@client/routes/About.tsx";
 import Editor from "@client/routes/Editor.tsx";
 import SignIn from "@client/routes/SignIn.tsx";
 import Users from "@client/routes/Users.tsx";
-import UsersEdit from "@client/routes/UsersEdit.tsx";
 import Unauthorized from "@client/routes/Unauthorized.tsx";
 import AuthGuard from "@client/guard/authGuard.tsx";
 import authStore from "@client/store/authStore.ts";
 import Verify from "@client/routes/Verify.tsx";
 import VerifyToken from "@client/routes/VerifyToken.tsx";
 import Organisations from "@client/routes/Organisations.tsx";
-import OrganisationsCreate from "@client/routes/OrganisationsCreate.tsx";
-import OrganisationsEdit from "@client/routes/OrganisationsEdit.tsx";
 
 const DRoutes: Component = () => {
   // Initialize auth store on app mount
@@ -49,15 +46,6 @@ const DRoutes: Component = () => {
       />
 
       <Route
-        path="/users/edit/:userId"
-        component={() => (
-          <AuthGuard role="Administrator">
-            <UsersEdit />
-          </AuthGuard>
-        )}
-      />
-
-      <Route
         path="/users"
         component={() => (
           <AuthGuard role="Administrator">
@@ -70,22 +58,6 @@ const DRoutes: Component = () => {
         component={() => (
           <AuthGuard role="Administrator">
             <Organisations />
-          </AuthGuard>
-        )}
-      />
-      <Route
-        path="/organisations/create"
-        component={() => (
-          <AuthGuard role="Administrator">
-            <OrganisationsCreate />
-          </AuthGuard>
-        )}
-      />
-      <Route
-        path="/organisations/edit/:organisationId"
-        component={() => (
-          <AuthGuard role="Administrator">
-            <OrganisationsEdit />
           </AuthGuard>
         )}
       />

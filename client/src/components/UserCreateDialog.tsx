@@ -27,8 +27,13 @@ import { eden } from "@client/api/index.ts";
 import { handleUnauthorized } from "@client/utils/authUtils.ts";
 import { UserRole } from "@utils/roles.ts";
 
-export default function UserCreateDialog() {
+interface UserCreateDialogProps {
+  fetchUsers: () => void;
+}
+
+export default function UserCreateDialog(props: UserCreateDialogProps) {
   const navigate = useNavigate();
+  const [open, setOpen] = createSignal(false);
 
   const [name, setName] = createSignal<string | undefined>(undefined);
   const [email, setEmail] = createSignal<string | undefined>(undefined);
@@ -153,7 +158,7 @@ export default function UserCreateDialog() {
     validateForm();
     if (Object.values(errors()).some(Boolean)) {
       showToast({
-        variant: "destructive",
+        variant: "error",
         title: "Error",
         description: "Please fix the errors in the form",
       });
@@ -194,7 +199,8 @@ export default function UserCreateDialog() {
         throw new Error(errorMessage);
       }
 
-      navigate("/users", { replace: true });
+      props.fetchUsers();
+      setOpen(false);
       showToast({
         variant: "success",
         title: "Success",
@@ -217,7 +223,7 @@ export default function UserCreateDialog() {
   };
 
   return (
-    <Dialog>
+    <Dialog open={open()} onOpenChange={setOpen}>
       <DialogTrigger as={Button<"button">}>Create new user</DialogTrigger>
       <DialogContent class="max-w-lg">
         <DialogHeader>

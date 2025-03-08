@@ -31,7 +31,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@client/components/ui/dropdown-menu.tsx";
-import Swal from "sweetalert2";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@client/components/ui/card.tsx";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@client/components/ui/table.tsx";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@client/components/ui/select.tsx";
@@ -45,7 +44,7 @@ import { handleUnauthorized } from "@client/utils/authUtils.ts";
 import Header from "@client/components/Header.tsx";
 import UserCreateDialog from "@client/components/UserCreateDialog.tsx";
 import UserEditDialog from "@client/components/UserEditDialog.tsx";
-import DestructiveDialog from "@client/components/DestructiveDialog.tsx";
+import QuickDialog from "@client/components/QuickDialog.tsx";
 import { UserDetails } from "@server/types.ts";
 import { panic } from "@utils/panic.ts";
 import { showToast } from "@client/components/ui/toast.tsx";
@@ -180,69 +179,56 @@ const Users: Component = () => {
   }
 
   // Function to log out user
-  async function handleLogOutUser(userId: string, userName: string) {
-    // console.log("Logging out user:", userId);
-    Swal.fire({
-      title: "Are you sure?",
-      text: `This will log out the user: ${userName}.`,
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonColor: "#3085d6",
-      cancelButtonColor: "#d33",
-      confirmButtonText: "Yes, log out!",
-    }).then(async (result) => {
-      if (result.isConfirmed) {
-        try {
-          const requestBody = {
-            userId: userId,
-          };
-          const response = await eden.admin["logout-user"].post({
-            ...requestBody,
-            $fetch: {
-              mode: "cors",
-              credentials: "include",
-              method: "POST",
-            },
-          });
-          // console.log("Response:", response);
+  async function handleLogOutUser(userId: string) {
+    try {
+      const requestBody = {
+        userId: userId,
+      };
+      const response = await eden.admin["logout-user"].post({
+        ...requestBody,
+        $fetch: {
+          mode: "cors",
+          credentials: "include",
+          method: "POST",
+        },
+      });
+      // console.log("Response:", response);
 
-          // Unauthorized check
-          if (response.status === 401 || response.status === 403) {
-            handleUnauthorized(navigate);
-            return;
-          }
-
-          if (response.status !== 200 || (response.data && response.data.error)) {
-            console.log("Failed to log out user: ", response.data ? response.data.error : "Unknown error");
-            const errorMessage = response.data ? response.data.error : "Couldn't log out the user";
-            Swal.fire({
-              title: "Error",
-              text: errorMessage,
-              icon: "error",
-            });
-            return;
-          } else {
-            showToast({
-              variant: "success",
-              title: "Success",
-              description: "User logged out successfully",
-            });
-            setData((prevUsers) => {
-              return prevUsers.map((user) =>
-                user.id === userId ? { ...user, needsToBeLoggedOut: true, loggedIn: false } : user,
-              );
-            });
-          }
-        } catch (error) {
-          console.error("Failed to log out user:", error);
-          showToast({
-            variant: "error",
-            title: "Error",
-            description: "Couldn't log out the user",
-          });
-        }
+      // Unauthorized check
+      if (response.status === 401 || response.status === 403) {
+        handleUnauthorized(navigate);
+        return;
       }
-    });
+
+      if (response.status !== 200 || (response.data && response.data.error)) {
+        console.log("Failed to log out user: ", response.data ? response.data.error : "Unknown error");
+        const errorMessage = response.data ? response.data.error : "Couldn't log out the user";
+        showToast({
+          variant: "error",
+          title: "Error",
+          description: errorMessage,
+        });
+        return;
+      } else {
+        showToast({
+          variant: "success",
+          title: "Success",
+          description: "User logged out successfully",
+        });
+        setData((prevUsers) => {
+          return prevUsers.map((user) =>
+            user.id === userId ? { ...user, needsToBeLoggedOut: true, loggedIn: false } : user,
+          );
+        });
+      }
+    } catch (error) {
+      console.error("Failed to log out user:", error);
+      showToast({
+        variant: "error",
+        title: "Error",
+        description: "Couldn't log out the user",
+      });
+    }
     setReload(!reload());
   }
 
@@ -305,24 +291,29 @@ const Users: Component = () => {
                 closeOnSelect={false}
               >
                 {/* ✏️ Edit */}
-                <UserEditDialog userId={props.row.original.id} />
+                <UserEditDialog
+                  userId={props.row.original.id}
+                  username={props.row.original.username}
+                  fetchUsers={fetchUsers}
+                />
               </DropdownMenuItem>
               <DropdownMenuItem
                 disabled={props.row.original.userRole === "Administrator" || props.row.original.deleted}
                 role="menuitem"
                 closeOnSelect={false}
               >
-                {/* TODO: This immediately closes for some reason */}
-                <DestructiveDialog
-                  deleteHandler={() => handleDeleteUser(props.row.original.id)}
+                <QuickDialog
+                  variant="destructive"
+                  handler={() => handleDeleteUser(props.row.original.id)}
                   triggerTitle="🗑️ Delete"
-                  deleteTitle="Delete User"
-                  deleteSubject={props.row.original.username}
+                  title="Delete User"
+                  description="Are you sure you want to delete user named"
+                  subject={props.row.original.username}
+                  buttonText="Delete"
                 />
               </DropdownMenuItem>
               <DropdownMenuSeparator role="separator" />
               <DropdownMenuItem
-                onSelect={() => handleLogOutUser(props.row.original.id, props.row.original.name)}
                 disabled={
                   props.row.original.userRole == "Administrator" ||
                   props.row.original.needsToBeLoggedOut ||
@@ -330,8 +321,17 @@ const Users: Component = () => {
                 }
                 role="menuitem"
                 class="w-full text-start"
+                closeOnSelect={false}
               >
-                🔒 Log out
+                <QuickDialog
+                  variant="confirm"
+                  handler={() => handleLogOutUser(props.row.original.id)}
+                  triggerTitle="🔒 Logout"
+                  title="Logout User"
+                  description="Are you sure you want to logout user named"
+                  subject={props.row.original.username}
+                  buttonText="Logout"
+                />
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -451,7 +451,7 @@ const Users: Component = () => {
               table && (
                 <>
                   <div class="w-full flex gap-4">
-                    <UserCreateDialog />
+                    <UserCreateDialog fetchUsers={fetchUsers} />
                     <Button onClick={() => setReload(!reload())}>Refresh data</Button>
                     <Switch
                       class="flex items-center space-x-2"
@@ -569,7 +569,7 @@ const Users: Component = () => {
                                         </TextField>
                                       )}
                                       {header.column.id === "loggedIn" && (
-                                        // NOTE: TS gives some errors here, because this is not expected way to use the component, but it works
+                                        // NOTE: TS gives some errors here, because this is not expected way of using the Shadcn component, but it is right for the underlying Kobalte one
                                         <Select
                                           value={(header.column.getFilterValue() as string) ?? "all"}
                                           onChange={(value) => header.column.setFilterValue(value.value)}

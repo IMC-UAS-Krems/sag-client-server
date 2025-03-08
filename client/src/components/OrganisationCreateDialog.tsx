@@ -48,9 +48,10 @@ export default function OrganisationCreateDialog(props: OrganisationCreateDialog
   ): string | undefined => {
     if (!value) return `${fieldName.charAt(0).toUpperCase() + fieldName.slice(1)} is required`;
 
-    if (fieldName === "organisationName" && value.length < 4) return "Username must be at least 4 characters long";
+    if (fieldName === "organisationName" && value.length < 4)
+      return "Organisation name must be at least 4 characters long";
     if (fieldName === "organisationDescription" && value.length < 8)
-      return "Password must be at least 8 characters long";
+      return "Organisation description must be at least 8 characters long";
 
     return undefined;
   };
@@ -168,7 +169,7 @@ export default function OrganisationCreateDialog(props: OrganisationCreateDialog
       <DialogTrigger as={Button<"button">}>Create new organisation</DialogTrigger>
       <DialogContent class="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Create new dialog</DialogTitle>
+          <DialogTitle>Create new Organisation</DialogTitle>
           <DialogDescription>
             You may create a new organisation here. Note that these organisations are verified by default.
           </DialogDescription>
@@ -215,7 +216,7 @@ export default function OrganisationCreateDialog(props: OrganisationCreateDialog
                     <SelectValue<string>>{(state) => state.selectedOption()}</SelectValue>
                   </SelectTrigger>
                   <SelectContent />
-                  {errors().password && <SelectErrorMessage>{errors().municipality}</SelectErrorMessage>}
+                  {errors().municipality && <SelectErrorMessage>{errors().municipality}</SelectErrorMessage>}
                 </>
               )}
             </div>
