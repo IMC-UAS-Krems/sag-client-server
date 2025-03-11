@@ -5,7 +5,7 @@ import { authMiddleware } from "@server/middleware";
 import { sql, Document } from "@server/sql";
 import { DocumentType } from "@prisma/client";
 import { SagError } from "@server/errors";
-import { AuthContext, AuthContextWithBody, AuthContextWithQuery } from "@server/types";
+import { AuthContext, AuthContextWithBody, AuthContextWithQuery, FileInfo } from "@server/types";
 
 const COMPILER_URL = Bun.env.COMPILER_URL || "http://localhost:8080";
 
@@ -159,6 +159,52 @@ export const api = new Elysia({ prefix: "/api" })
       detail: { tags: ["api"] },
     },
   )
+  .post(
+    "/file-info",
+    async ({ log, set, userId, body: { file_info } }: AuthContextWithBody<{ file_info: FileInfo }>) => {
+      if (!userId) {
+        set.status = 401;
+        return { error: "Unauthorized" };
+      }
+      try {
+        const response = await fetch(`${COMPILER_URL}/file-info`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            user_id: userId,
+            file_info,
+          }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || data.status === "error") {
+          log.error(data.error || data.errors);
+          set.status = response.status;
+          return data;
+        }
+
+        set.status = 200;
+        log.info("Compiler processed the tree successfully.");
+
+        return { status: "ok", compilerOutput: data };
+      } catch (error) {
+        log.error(error);
+        set.status = 500;
+        return { error: "Failed to send project tree to compiler" };
+      }
+    },
+    {
+      body: t.Object({ file_info: t.Any() }),
+      detail: {
+        tags: ["api"],
+        description: "Receive current opened file information",
+      },
+    },
+  )
+
   .get(
     "/documents",
     async ({ log, set, userId }: AuthContext): Promise<Document[] | { error: string }> => {

@@ -140,3 +140,13 @@ export interface UpdateOrganisationBody {
   verified?: boolean;
   updatedAt: Date;
 }
+
+export interface FileInfo{
+  name: string,
+  docType: "FILE",
+  projectName: string,
+  orgName: string,
+  municipalityName: string,
+  path: string,
+  fullPath: string,
+}

@@ -5,6 +5,7 @@ import { EditorView } from "@codemirror/view";
 import { CompartmentReconfigurationCallback, createCodeMirror } from "solid-codemirror";
 import { Accessor, createContext, createSignal, JSX, Setter } from "solid-js";
 import Swal from "sweetalert2";
+import { eden } from "@client/api";
 
 export interface IEditorContext {
   editorView: Accessor<EditorView>;
@@ -113,6 +114,16 @@ export function EditorProvider(props: { children: JSX.Element }): JSX.Element {
       setSelectedNode(newNode);
     } catch (error) {
       console.error("Failed to navigate to file:", newNode.name(), error);
+    }
+    
+    // when opening a new file, check if it is a file and send the file info to the server
+    if (newNode.isFile()) {
+      const file_info = newNode.gatherNodeInfo();
+      await eden.api["file-info"].post({
+        file_info,
+        $fetch: { mode: "cors", credentials: "include", method: "POST" }
+      });
+      console.log("File info:", file_info);
     }
   };
 
