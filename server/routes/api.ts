@@ -130,7 +130,7 @@ export const api = new Elysia({ prefix: "/api" })
   )
   .post(
     "/check",
-    async ({ log, set, userId, body: { code } }) => {
+    async ({ log, set, userId, body: { code, metadata } }) => {
       const compiled = await fetch(`${COMPILER_URL}/check`, {
         method: "POST",
         headers: {
@@ -139,6 +139,7 @@ export const api = new Elysia({ prefix: "/api" })
         body: JSON.stringify({
           source: code,
           user_id: userId,
+          metadata: metadata,
         }),
       });
 
@@ -156,6 +157,13 @@ export const api = new Elysia({ prefix: "/api" })
     {
       body: t.Object({
         code: t.String(),
+        metadata: t.Object({
+          municipalityName: t.String(),
+          orgName: t.String(),
+          projectName: t.String(),
+          path: t.String(),
+          filename: t.String(),
+        }),
       }),
       response: t.Union([
         t.Object({ status: t.Literal("ok") }),
@@ -163,6 +171,7 @@ export const api = new Elysia({ prefix: "/api" })
           status: t.Literal("error"),
           errors: t.Array(t.Any()),
         }),
+        t.Object({ status: t.Literal("error"), error: t.String() }),
       ]),
       detail: { tags: ["api"] },
     },
