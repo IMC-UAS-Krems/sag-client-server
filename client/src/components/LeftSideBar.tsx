@@ -8,6 +8,10 @@ import Swal from "sweetalert2";
 import { Notification, Prompt } from "@client/common";
 import styles from "@styles/LeftSideBar.module.css";
 import { RiArrowsArrowRightSLine, RiArrowsArrowDownSLine } from "solid-icons/ri";
+<<<<<<< HEAD
+=======
+import path from "path";
+>>>>>>> ceb0dbe (merged SAG-121 into SAG-116)
 
 enum SagDocumentType {
   FILE = "FILE",
@@ -38,6 +42,13 @@ type SagDocument = {
 
 interface GetChildren {
   getChildren(): TreeNode[];
+}
+
+interface ProjectSubtree {
+  name: string;
+  docType: SagDocumentType;
+  path?: string;
+  children: ProjectSubtree[];
 }
 
 type expandState = JSON & {
@@ -195,6 +206,22 @@ export class TreeNode implements GetChildren {
     return orgNode?.parent;
   }
 
+<<<<<<< HEAD
+=======
+  gatherNodeInfo(){
+    return {
+      name: this.name(),
+      docType: this.docType,
+      projectName: this.projectName,
+      orgName: this.orgName,
+      municipalityName: this.municipalityName,
+      path: this.path(),
+      fullPath: this.getPathList().join("."),
+    };
+  }
+    
+
+>>>>>>> ceb0dbe (merged SAG-121 into SAG-116)
   getPathList() {
     const path = [];
 
