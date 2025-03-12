@@ -8,10 +8,7 @@ import Swal from "sweetalert2";
 import { Notification, Prompt } from "@client/common";
 import styles from "@styles/LeftSideBar.module.css";
 import { RiArrowsArrowRightSLine, RiArrowsArrowDownSLine } from "solid-icons/ri";
-<<<<<<< HEAD
-=======
 import path from "path";
->>>>>>> ceb0dbe (merged SAG-121 into SAG-116)
 
 enum SagDocumentType {
   FILE = "FILE",
@@ -206,8 +203,6 @@ export class TreeNode implements GetChildren {
     return orgNode?.parent;
   }
 
-<<<<<<< HEAD
-=======
   gatherNodeInfo(){
     return {
       name: this.name(),
@@ -221,7 +216,6 @@ export class TreeNode implements GetChildren {
   }
     
 
->>>>>>> ceb0dbe (merged SAG-121 into SAG-116)
   getPathList() {
     const path = [];
 
