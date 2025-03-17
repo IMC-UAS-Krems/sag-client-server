@@ -19,6 +19,7 @@
     "@codemirror/lint": "^6.8.1",
     "@codemirror/state": "^6.4.1",
     "@codemirror/view": "^6.29.0",
+    "@corvu/resizable": "^0.2.4",
     "@elysiajs/cors": "^1.1.0",
     "@elysiajs/eden": "^1.1.2",
     "@elysiajs/jwt": "^1.1.0",

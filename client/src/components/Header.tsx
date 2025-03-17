@@ -6,7 +6,6 @@ import { Image } from "@kobalte/core";
 import { eden } from "@client/api/index.ts";
 import { theme } from "@store/index.ts";
 import authStore from "@store/authStore.ts";
-import styles from "@styles/Header.module.css";
 import { NavigationMenu, NavigationMenuTrigger } from "@client/components/ui/navigation-menu.tsx";
 import { showToast } from "@client/components/ui/toast.tsx";
 

@@ -126,6 +126,9 @@ export function EditorProvider(props: { children: JSX.Element }): JSX.Element {
     };
   })();
 
+  // NOTE: Styling the editor can be done either via extensions or by modifying the default CSS styles
+  // - We chose to use the default CSS styles for the simplicity of applying light/dark mode
+  // - Modifications can be found at the top of global `index.css`
   const {
     editorView,
     ref: editorRef,

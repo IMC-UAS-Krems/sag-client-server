@@ -3,6 +3,17 @@
 @plugin 'tailwindcss-animate';
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* Codemirror editor style override */
+.cm-content {
+  caret-color: var(--color-foreground) !important;
+}
+
+.cm-gutters {
+  background-color: var(--color-secondary) !important;
+  color: var(--color-primary);
+}
+
+/* Tailwind and Shadcn style variables */
 @layer base {
   :root {
     --color-background: hsl(0 0% 100%);

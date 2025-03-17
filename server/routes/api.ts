@@ -408,7 +408,7 @@ export const api = new Elysia({ prefix: "/api" })
     },
   )
   .post(
-    "/save_as_template",
+    "/save-as-template",
     async ({
       log,
       set,
@@ -429,6 +429,10 @@ export const api = new Elysia({ prefix: "/api" })
         return result;
       } catch (e) {
         if (e instanceof SagError) {
+          if (e.message.includes("already exists")) {
+            set.status = 409;
+            return e.message;
+          }
           console.log(e.message);
           set.status = 400;
           return e.message;

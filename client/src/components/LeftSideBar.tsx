@@ -3,11 +3,20 @@ import { eden } from "@client/api/index.ts";
 import { createMutable } from "solid-js/store";
 import { EditorContext } from "@client/contexts/editor.tsx";
 import { IEditorContext } from "@client/contexts/editor.tsx";
-import { ContextMenu } from "@kobalte/core/context-menu";
 import Swal from "sweetalert2";
 import { Notification, Prompt } from "@client/common.ts";
-import styles from "@styles/LeftSideBar.module.css";
 import { RiArrowsArrowRightSLine, RiArrowsArrowDownSLine } from "solid-icons/ri";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+  ContextMenuPortal,
+  // ContextMenuGroup,
+  // ContextMenuGroupLabel,
+} from "@client/components/ui/context-menu.tsx";
+import { Skeleton } from "@client/components/ui/skeleton.tsx";
+import QuickDialog from "@client/components/QuickDialog.tsx";
 
 enum SagDocumentType {
   FILE = "FILE",
@@ -221,26 +230,30 @@ export class TreeNode implements GetChildren {
         return "📄";
       case SagDocumentType.FOLDER:
         return (
-          <div class={styles["file-tree-icon-container"]}>
-            {this.isExpanded() ? <RiArrowsArrowDownSLine /> : <RiArrowsArrowRightSLine />}{" "}
+          <div class="flex items-center gap-2 text-primary">
+            {this.isExpanded() ? (
+              <RiArrowsArrowDownSLine class="fill-blue!" />
+            ) : (
+              <RiArrowsArrowRightSLine class="fill-blue!" />
+            )}{" "}
             {this.isTemplate && this.path() === "templates" ? "📚" : this.isExpanded() ? "📂" : "📁"}
           </div>
         );
       case SagDocumentType.MUNICIPALITY:
         return (
-          <div class={styles["file-tree-icon-container"]}>
+          <div class="flex items-center gap-2 text-primary">
             {this.isExpanded() ? <RiArrowsArrowDownSLine /> : <RiArrowsArrowRightSLine />} 🏠
           </div>
         );
       case SagDocumentType.ORG:
         return (
-          <div class={styles["file-tree-icon-container"]}>
+          <div class="flex items-center gap-2 text-primary">
             {this.isExpanded() ? <RiArrowsArrowDownSLine /> : <RiArrowsArrowRightSLine />} 🏢
           </div>
         );
       case SagDocumentType.PROJECT:
         return (
-          <div class={styles["file-tree-icon-container"]}>
+          <div class="flex items-center gap-2 text-primary">
             {this.isExpanded() ? <RiArrowsArrowDownSLine /> : <RiArrowsArrowRightSLine />} 🏗️
           </div>
         );
@@ -430,7 +443,7 @@ export class TreeNode implements GetChildren {
 
     if (!value || value.length <= 0) return null;
 
-    const resp = await eden.api.save_as_template.post({
+    const resp = await eden.api["save-as-template"].post({
       organizationName: this.orgName as string,
       name: value as string,
       content: content,
@@ -680,13 +693,6 @@ function FileNode(props: { node: TreeNode }) {
   const { selectedNode, navigateToFile } = useContext(EditorContext) as IEditorContext;
 
   function toggleExpanded() {
-    if (!props.node.isExpanded()) {
-      expandDiv.classList.add(styles["file-node-container-expanded"]);
-      expandDiv.classList.remove(styles["file-node-container-collapsed"]);
-    } else {
-      expandDiv.classList.remove(styles["file-node-container-expanded"]);
-      expandDiv.classList.add(styles["file-node-container-collapsed"]);
-    }
     props.node.toggleExpanded();
     if (!props.node.isExpanded()) {
       for (const child of props.node.getChildren()) {
@@ -725,15 +731,15 @@ function FileNode(props: { node: TreeNode }) {
   };
 
   return (
-    <div class={styles["file-node"]}>
+    <div class="flex flex-col">
       <Suspense>
-        <ContextMenu.Trigger
+        <ContextMenuTrigger
           disabled={
             ![SagDocumentType.FOLDER, SagDocumentType.FILE, SagDocumentType.PROJECT].includes(props.node.docType)
           }
         >
           <button
-            class={`${styles["file-node-btn"]} ${isSelected() ? styles["file-node-btn-selected"] : ""}`}
+            class={`flex b-0 bg-none cursor-pointer ${isSelected() && "font-bold"}`}
             onClick={async () => {
               if (props.node.docType === SagDocumentType.FILE) {
                 navigateToFile(props.node);
@@ -750,23 +756,24 @@ function FileNode(props: { node: TreeNode }) {
               }
             }}
           >
-            <span class={styles["file-node-btn-icon"]} style={{ "padding-left": props.node.isFile() ? "1.5rem" : "0" }}>
-              {props.node.icon()}
-            </span>
-            <span>{props.node.name()}</span>
+            <span class={`mr-2 ${props.node.isFile() && "pl-6"}`}>{props.node.icon()}</span>
+            <span class="text-primary whitespace-nowrap overflow-hidden text-ellipsis">{props.node.name()}</span>
           </button>
-        </ContextMenu.Trigger>
+        </ContextMenuTrigger>
       </Suspense>
 
       <div
         //@ts-expect-error - original message: Variable 'expandDiv' is used before being assigned
         ref={expandDiv}
-        class={styles["file-node-container"].concat(
-          " ",
-          props.node.isExpanded() ? styles["file-node-container-expanded"] : styles["file-node-container-collapsed"],
-        )}
+        class={`
+          transition-all
+          duration-500
+          overflow-hidden
+          grid
+          ${props.node.isExpanded() ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}
+        `}
       >
-        <div class={styles["file-node-list"]}>
+        <div class="ml-6 min-h-0">
           <For each={props.node.getChildren()}>{(child) => <FileNode node={child} />}</For>
         </div>
       </div>
@@ -775,10 +782,16 @@ function FileNode(props: { node: TreeNode }) {
 }
 
 function FileContextMenu(props: { children: JSXElement }) {
+  const editorContext = useContext(EditorContext);
+  if (!editorContext) {
+    return <>{props.children}</>;
+  }
   const { code, selectedNode, navigateToFile } = useContext(EditorContext) as IEditorContext;
 
   async function handleContextMenu(action: MenuOption) {
     const node = selectedNode();
+    if (!node) return;
+
     switch (action) {
       case MenuOption.AddFile: {
         const { value } = await Prompt.fire<string>({
@@ -993,96 +1006,90 @@ function FileContextMenu(props: { children: JSXElement }) {
   }
   return (
     <ContextMenu>
-      <ContextMenu.Portal>
-        <ContextMenu.Content class={styles["context-menu"]}>
-          <Suspense>
-            <ul class={styles["context-menu-ul"]}>
-              <Show
-                when={
-                  [SagDocumentType.FOLDER, SagDocumentType.FILE].includes(selectedNode()?.docType as SagDocumentType) &&
-                  !(
-                    selectedNode()?.isTemplate &&
-                    selectedNode()?.docType === SagDocumentType.FOLDER &&
-                    selectedNode()?.path() === "templates"
-                  )
-                }
+      <ContextMenuPortal>
+        <ContextMenuContent>
+          <Suspense fallback={<Skeleton height={20} class="w-full" />}>
+            <Show
+              when={
+                [SagDocumentType.FOLDER, SagDocumentType.FILE].includes(selectedNode()?.docType as SagDocumentType) &&
+                !(
+                  selectedNode()?.isTemplate &&
+                  selectedNode()?.docType === SagDocumentType.FOLDER &&
+                  selectedNode()?.path() === "templates"
+                )
+              }
+            >
+              <ContextMenuItem
+                onSelect={async () => {
+                  await handleContextMenu(MenuOption.Rename);
+                }}
               >
-                <ContextMenu.Item
-                  class={styles["context-menu-item"]}
-                  onSelect={async () => {
-                    await handleContextMenu(MenuOption.Rename);
-                  }}
-                >
-                  {MenuOption.Rename}
-                </ContextMenu.Item>
-              </Show>
-              <Show
-                when={
-                  [SagDocumentType.FOLDER, SagDocumentType.FILE].includes(selectedNode()?.docType as SagDocumentType) &&
-                  !(
-                    selectedNode()?.isTemplate &&
-                    selectedNode()?.docType === SagDocumentType.FOLDER &&
-                    selectedNode()?.path() === "templates"
-                  )
-                }
+                {MenuOption.Rename}
+              </ContextMenuItem>
+            </Show>
+            <Show
+              when={
+                [SagDocumentType.FOLDER, SagDocumentType.FILE].includes(selectedNode()?.docType as SagDocumentType) &&
+                !(
+                  selectedNode()?.isTemplate &&
+                  selectedNode()?.docType === SagDocumentType.FOLDER &&
+                  selectedNode()?.path() === "templates"
+                )
+              }
+            >
+              {/* TODO: Add delete dialog here */}
+              <ContextMenuItem
+                onSelect={async () => {
+                  await handleContextMenu(MenuOption.Delete);
+                }}
               >
-                <ContextMenu.Item
-                  class={styles["context-menu-item"]}
-                  onSelect={async () => {
-                    await handleContextMenu(MenuOption.Delete);
-                  }}
-                >
-                  {MenuOption.Delete}
-                </ContextMenu.Item>
-              </Show>
-              <Show
-                when={[SagDocumentType.FOLDER, SagDocumentType.PROJECT].includes(
+                {MenuOption.Delete}
+              </ContextMenuItem>
+            </Show>
+            <Show
+              when={[SagDocumentType.FOLDER, SagDocumentType.PROJECT].includes(
+                selectedNode()?.docType as SagDocumentType,
+              )}
+            >
+              <ContextMenuItem
+                onSelect={async () => {
+                  await handleContextMenu(MenuOption.AddFile);
+                }}
+              >
+                {MenuOption.AddFile}
+              </ContextMenuItem>
+            </Show>
+            <Show
+              when={
+                [SagDocumentType.FOLDER, SagDocumentType.PROJECT].includes(
                   selectedNode()?.docType as SagDocumentType,
-                )}
+                ) && !(selectedNode()?.isTemplate && selectedNode()?.docType === SagDocumentType.FOLDER)
+              }
+            >
+              <ContextMenuItem
+                onSelect={async () => {
+                  await handleContextMenu(MenuOption.AddFileFromTemplate);
+                }}
               >
-                <ContextMenu.Item
-                  class={styles["context-menu-item"]}
-                  onSelect={async () => {
-                    await handleContextMenu(MenuOption.AddFile);
-                  }}
-                >
-                  {MenuOption.AddFile}
-                </ContextMenu.Item>
-              </Show>
-              <Show
-                when={
-                  [SagDocumentType.FOLDER, SagDocumentType.PROJECT].includes(
-                    selectedNode()?.docType as SagDocumentType,
-                  ) && !(selectedNode()?.isTemplate && selectedNode()?.docType === SagDocumentType.FOLDER)
-                }
+                {MenuOption.AddFileFromTemplate}
+              </ContextMenuItem>
+            </Show>
+            <Show
+              when={[SagDocumentType.FOLDER, SagDocumentType.PROJECT].includes(
+                selectedNode()?.docType as SagDocumentType,
+              )}
+            >
+              <ContextMenuItem
+                onSelect={async () => {
+                  await handleContextMenu(MenuOption.AddFolder);
+                }}
               >
-                <ContextMenu.Item
-                  class={styles["context-menu-item"]}
-                  onSelect={async () => {
-                    await handleContextMenu(MenuOption.AddFileFromTemplate);
-                  }}
-                >
-                  {MenuOption.AddFileFromTemplate}
-                </ContextMenu.Item>
-              </Show>
-              <Show
-                when={[SagDocumentType.FOLDER, SagDocumentType.PROJECT].includes(
-                  selectedNode()?.docType as SagDocumentType,
-                )}
-              >
-                <ContextMenu.Item
-                  class={styles["context-menu-item"]}
-                  onSelect={async () => {
-                    await handleContextMenu(MenuOption.AddFolder);
-                  }}
-                >
-                  {MenuOption.AddFolder}
-                </ContextMenu.Item>
-              </Show>
-            </ul>
+                {MenuOption.AddFolder}
+              </ContextMenuItem>
+            </Show>
           </Suspense>
-        </ContextMenu.Content>
-      </ContextMenu.Portal>
+        </ContextMenuContent>
+      </ContextMenuPortal>
       {props.children}
     </ContextMenu>
   );
@@ -1100,11 +1107,11 @@ export function LeftSideBar() {
           credentials: "include",
         },
       })
-      .then((docs) => {
+      .then((docs: { data: SagDocument[] }) => {
         batch(() => {
           const old_state: expandState = JSON.parse(localStorage.getItem("file_tree") || DEFAULT_EXPAND_STATE);
           localStorage.removeItem("file_tree");
-          const docArray = docs.data as SagDocument[];
+          const docArray = docs.data;
           docArray.forEach((doc: SagDocument) => {
             tree.addDocument(doc, old_state);
           });
@@ -1113,18 +1120,22 @@ export function LeftSideBar() {
   });
 
   return (
-    <>
-      <FileContextMenu>
-        <div class={styles["file-tree"]}>
-          <For each={tree.getChildren()}>
-            {(child) => (
-              <div class={styles["file-tree-item"]}>
-                <FileNode node={child} />
-              </div>
-            )}
-          </For>
-        </div>
-      </FileContextMenu>
-    </>
+    <div class="flex-[1] h-full p-2.5 bg-accent/50 border-1 border-accent-foreground/20 w-0 min-w-0">
+      {/* The w-0 min-w-0 forces this container to respect flex sizing strictly */}
+      <div class="overflow-x-auto overflow-y-auto max-h-full w-full">
+        <FileContextMenu>
+          <div class="min-w-max mb-4">
+            {/* min-w-max ensures the content takes as much width as it needs */}
+            <For each={tree.getChildren()}>
+              {(child) => (
+                <div class={`${child.docType !== SagDocumentType.MUNICIPALITY && "ml-4"}`}>
+                  <FileNode node={child} />
+                </div>
+              )}
+            </For>
+          </div>
+        </FileContextMenu>
+      </div>
+    </div>
   );
 }

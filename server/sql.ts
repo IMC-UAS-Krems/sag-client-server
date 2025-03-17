@@ -1446,11 +1446,11 @@ export async function saveAsTemplate(userId: string, organizationName: string, n
   if (!user) {
     throw new SagError(`User ${userId} does not exist`);
   }
-  console.log("User is trying to author a new template:", user.email);
-  // TODO: Check if user has permissions to create a template in the organisation
+  console.log("\n\n\n\nUser is trying to author a new template:\n", user.email);
+  // Check if user has permissions to create a template in the organisation
   // - Just check that user is a member of the organisation - superuserglobal, superusermunicipality, default
   if (user.userType === UserType.SUPERUSER_MUNICIPALITY) {
-    // TODO: Check that the user's municipality has the organisation as a member
+    // Check that the user's municipality has the organisation as a member
     const isOrgInUserMunicipality = await prisma.organization.findFirst({
       where: {
         id: organization.id,
@@ -1470,17 +1470,20 @@ export async function saveAsTemplate(userId: string, organizationName: string, n
 
   // Check if a template with the same name already exists in the organisation
   const templatePath = joinPath("templates", name);
+  console.log("Template path:", templatePath);
+  console.log("Checking if template already exists...");
   const existingTemplate = await prisma.$executeRaw`
     SELECT * FROM documents
     WHERE "organizationId" = ${organization.id}
       AND path = text2ltree(${templatePath})
-      AND name = ${name}
       AND "isTemplate" = ${true}
       AND "documentType" = 'FILE'::"DocumentType"
   `;
+  console.log("Existing template:", existingTemplate);
   // console.log("Trying to create a template with path:", templatePath);
   // console.log("Existing template:", existingTemplate);
   if (existingTemplate) {
+    console.log("Existing template:", existingTemplate);
     throw new SagError(`Template "${name}" already exists in organization "${organizationName}".`);
   }
 
