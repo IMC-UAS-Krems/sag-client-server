@@ -7,7 +7,7 @@ import { DocumentType } from "@prisma/client";
 import { SagError } from "@server/errors.ts";
 import { AuthContext, AuthContextWithBody, AuthContextWithQuery } from "@server/types.ts";
 
-const COMPILER_URL = Bun.env.COMPILER_URL || "http://localhost:8080";
+const COMPILER_URL = Bun.env.COMPILER_URL || "http://localhost:8081";
 
 export const api = new Elysia({ prefix: "/api" })
   .get(
