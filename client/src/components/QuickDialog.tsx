@@ -1,4 +1,5 @@
 import { createSignal, Component } from "solid-js";
+import { Accessor } from "solid-js";
 import {
   Dialog,
   DialogContent,
@@ -22,14 +23,27 @@ interface QuickDialogProps {
   subject: string;
   disabled?: boolean;
   disabledMessage?: string;
+  modal?: boolean;
+  open?: Accessor<boolean>;
+  setOpen?: (value: boolean) => void;
 }
 
 const QuickDialog: Component<QuickDialogProps> = (props) => {
-  const [open, setOpen] = createSignal(false);
+  const [internalOpen, setInternalOpen] = createSignal(false);
+  const dialogOpen = () => (props.open !== undefined ? props.open() : internalOpen());
+  const setDialogOpen = (value: boolean) => {
+    if (props.setOpen !== undefined) {
+      props.setOpen(value);
+    } else {
+      setInternalOpen(value);
+    }
+  };
 
   return (
-    <Dialog open={open()} onOpenChange={setOpen}>
-      <DialogTrigger class={`w-full text-start cursor-pointer`}>{props.triggerTitle}</DialogTrigger>
+    <Dialog open={dialogOpen()} onOpenChange={setDialogOpen} modal={props.modal}>
+      {props.open === undefined && (
+        <DialogTrigger class={`w-full text-start cursor-pointer`}>{props.triggerTitle}</DialogTrigger>
+      )}
       <DialogContent class={`max-w-lg ${props.variant === "destructive" ? "border-destructive" : ""}`}>
         <DialogHeader>
           <DialogTitle class="flex items-center gap-2">
@@ -57,7 +71,7 @@ const QuickDialog: Component<QuickDialogProps> = (props) => {
             variant={props.variant === "destructive" ? "destructive" : "default"}
             onClick={() => {
               props.handler();
-              setOpen(false);
+              setDialogOpen(false);
             }}
           >
             {props.buttonText}

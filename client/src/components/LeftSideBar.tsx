@@ -17,8 +17,10 @@ import {
 } from "@client/components/ui/context-menu.tsx";
 import { Skeleton } from "@client/components/ui/skeleton.tsx";
 import QuickDialog from "@client/components/QuickDialog.tsx";
+import EditorContextDialog from "@client/components/EditorContextDialog.tsx";
+import { showToast } from "@client/components/ui/toast.tsx";
 
-enum SagDocumentType {
+export enum SagDocumentType {
   FILE = "FILE",
   FOLDER = "FOLDER",
   MUNICIPALITY = "MUNICIPALITY",
@@ -26,7 +28,7 @@ enum SagDocumentType {
   PROJECT = "PROJECT",
 }
 
-enum MenuOption {
+export enum MenuOption {
   Save = "Save",
   Delete = "Delete",
   Rename = "Rename",
@@ -298,7 +300,18 @@ export class TreeNode implements GetChildren {
         isTemplate: this.isTemplate,
       });
       this.addChild(newNode);
+      showToast({
+        title: "Success",
+        description: "File created successfully",
+        variant: "success",
+      });
       return newNode;
+    } else {
+      showToast({
+        title: "Error",
+        description: "Something went wrong when creating the file",
+        variant: "error",
+      });
     }
   }
 
@@ -307,16 +320,14 @@ export class TreeNode implements GetChildren {
       console.error("Cannot delete document that is not a folder or a file");
       return;
     }
-
-    console.log("Trying to delete document: ", this);
-
+    // console.log("Trying to delete document: ", this);
     const requestBody = {
       organizationName: this.orgName as string,
       municipalityName: this.municipalityName as string,
       path: this.path() as string,
       ...(this.projectName ? { projectName: this.projectName as string } : {}),
     };
-    console.log("Making call to delete with: ", requestBody);
+    // console.log("Making call to delete with: ", requestBody);
     const resp = await eden.api.document.delete({
       ...requestBody,
       $fetch: {
@@ -336,14 +347,16 @@ export class TreeNode implements GetChildren {
         this.editorContext.setCode("");
       }
 
-      Notification.fire({
-        title: "File deleted successfully",
-        icon: "success",
+      showToast({
+        title: "Success",
+        description: "File deleted successfully",
+        variant: "success",
       });
     } else {
-      Notification.fire({
-        title: "Error deleting file",
-        icon: "error",
+      showToast({
+        title: "Error",
+        description: "Couldn't delete file",
+        variant: "error",
       });
     }
   }
@@ -507,14 +520,16 @@ export class TreeNode implements GetChildren {
       if (resp.status === 200) {
         this.setName(newName);
         this.updatePath(resp.data as string);
-        Notification.fire({
-          title: "File renamed successfully",
-          icon: "success",
+        showToast({
+          title: "Success",
+          description: "File renamed successfully",
+          variant: "success",
         });
       } else {
-        Notification.fire({
-          title: "Error renaming file",
-          icon: "error",
+        showToast({
+          title: "Error",
+          description: "Couldn't rename file",
+          variant: "error",
         });
       }
     }
@@ -787,6 +802,11 @@ function FileContextMenu(props: { children: JSXElement }) {
     return <>{props.children}</>;
   }
   const { code, selectedNode, navigateToFile } = useContext(EditorContext) as IEditorContext;
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = createSignal(false);
+  const [isRenameDialogOpen, setIsRenameDialogOpen] = createSignal(false);
+  const [isNewFileDialogOpen, setIsNewFileDialogOpen] = createSignal(false);
+  const [isNewFolderDialogOpen, setIsNewFolderDialogOpen] = createSignal(false);
+  const [isAddFileFromTemplateDialogOpen, setIsAddFileFromTemplateDialogOpen] = createSignal(false);
 
   async function handleContextMenu(action: MenuOption) {
     const node = selectedNode();
@@ -794,180 +814,15 @@ function FileContextMenu(props: { children: JSXElement }) {
 
     switch (action) {
       case MenuOption.AddFile: {
-        const { value } = await Prompt.fire<string>({
-          title: "Enter file name",
-          input: "text",
-          preConfirm: async (path) => {
-            const node = selectedNode();
-            if (await node?.checkNewPath(path, true)) {
-              return path;
-            }
-            Swal.showValidationMessage("File or folder with this name already exists");
-          },
-          inputValidator: (input) => {
-            console.log(input);
-            if (!input.match("^[a-zA-Z0-9_ ]+$")) {
-              return "Input must contain only letters, numbers, underscores and spaces";
-            }
-          },
-        });
-        if (value && value.length > 0) {
-          const node = selectedNode();
-          const newNode = await node?.createDocument(value as string, SagDocumentType.FILE, node?.path() as string);
-          if (newNode && newNode instanceof TreeNode) {
-            navigateToFile(newNode);
-            node?.setIsExpanded(true);
-          }
-        }
-
+        setIsNewFileDialogOpen(true);
         break;
       }
       case MenuOption.AddFileFromTemplate: {
-        // Traverse the tree up to the org level
-        const orgNode = node?.getOrganisationNode();
-        if (!orgNode) {
-          console.error("Error finding the org node for the current node: ", node);
-          Notification.fire({
-            title: "Couldn't find the templates of the organisation",
-            icon: "error",
-          });
-          return;
-        }
-
-        // Select the child node that has `docType` folder and `isTemplate` true
-        const templateNode = orgNode?.children.find(
-          (child) => child.docType === SagDocumentType.FOLDER && child.isTemplate,
-        );
-        // console.log("Template node: ", templateNode);
-        // If no template folder is found for the organisation, show an error message
-        if (!templateNode) {
-          Notification.fire({
-            title: "No templates folder found for the organisation",
-            icon: "error",
-          });
-          return;
-        }
-
-        // Recursively get all the templates in the templates folder
-        interface Templates {
-          [key: string]: string;
-        }
-        const getTemplates = (node: TreeNode, acc: Templates): Templates => {
-          node.children.forEach((child) => {
-            if (child.docType === SagDocumentType.FILE) {
-              acc[child.path() as string] = child.name() as string;
-            } else if (child.docType === SagDocumentType.FOLDER) {
-              // Recursively call getTemplates for folder nodes
-              getTemplates(child, acc);
-            }
-          });
-          return acc;
-        };
-        const templates: Templates = getTemplates(templateNode, {});
-
-        // If there are no templates for the organisation, show an error message
-        if (Object.keys(templates).length === 0) {
-          Notification.fire({
-            title: "No templates found for the organisation",
-            icon: "error",
-          });
-          return;
-        }
-
-        // Show a select input with the possible templates of the organisation
-        const { value } = await Swal.fire<string>({
-          title: "Select a Template",
-          input: "select",
-          inputOptions: templates,
-          inputPlaceholder: "Choose a template",
-          showCancelButton: true,
-          confirmButtonText: "Select",
-          inputValidator: (value) => {
-            return new Promise((resolve) => {
-              if (value) {
-                resolve(null);
-              } else {
-                resolve("You need to select a template to proceed");
-              }
-            });
-          },
-        });
-
-        if (value) {
-          // Get the selected template based on the path and then its content
-          let selectedTemplateNode = templateNode;
-          for (let i = 1; i < value.split(".").length; i++) {
-            console.log("Selected template node: ", selectedTemplateNode.path());
-            selectedTemplateNode = selectedTemplateNode.findChild({ path: value }) as TreeNode;
-          }
-          const templateContent = await selectedTemplateNode.getContent();
-          if (!templateContent) {
-            Notification.fire({
-              title: "Error fetching template content",
-              icon: "error",
-            });
-            return;
-          }
-
-          // Create a new file with the selected template's content
-          const filenameSwal = await Prompt.fire<string>({
-            title: "Enter file name",
-            input: "text",
-            preConfirm: async (path) => {
-              const node = selectedNode();
-              if (await node?.checkNewPath(path, true)) {
-                return path;
-              }
-              Swal.showValidationMessage("File or folder with this name already exists");
-            },
-            inputValidator: (input) => {
-              console.log(input);
-              if (!input.match("^[a-zA-Z0-9_ ]+$")) {
-                return "Input must contain only letters, numbers, underscores and spaces";
-              }
-            },
-          });
-          if (filenameSwal.value && filenameSwal.value.length > 0) {
-            const node = selectedNode();
-            const newNode = await node?.createDocument(
-              filenameSwal.value as string,
-              SagDocumentType.FILE,
-              node?.path() as string,
-              templateContent,
-            );
-            console.log("Navigating to the new node: ", newNode);
-            if (newNode && newNode instanceof TreeNode) {
-              navigateToFile(newNode); // Navigate context to the file
-              node?.setIsExpanded(true); // Expand the folder above it (it should be enough as to create the file you need access to the folder)
-            }
-          }
-        }
+        setIsAddFileFromTemplateDialogOpen(true);
         break;
       }
       case MenuOption.AddFolder: {
-        const { value } = await Prompt.fire<string>({
-          title: "Enter folder name",
-          input: "text",
-          preConfirm: async (path) => {
-            const node = selectedNode();
-            if (await node?.checkNewPath(path, true)) {
-              return path;
-            }
-            Swal.showValidationMessage("File or folder with this name already exists");
-          },
-          inputValidator: (input) => {
-            console.log(input);
-            if (!input.match("^[a-zA-Z0-9_ ]+$")) {
-              return "Input must contain only letters, numbers, underscores and spaces";
-            }
-          },
-        });
-        if (value && value.length > 0) {
-          const node = selectedNode();
-          node?.createDocument(value as string, SagDocumentType.FOLDER, node?.path() as string);
-          node?.setIsExpanded(true);
-        }
-
+        setIsNewFolderDialogOpen(true);
         break;
       }
       case MenuOption.Delete: {
@@ -979,119 +834,157 @@ function FileContextMenu(props: { children: JSXElement }) {
         break;
       }
       case MenuOption.Rename: {
-        const { value } = await Prompt.fire<string>({
-          title: "Enter new name",
-          input: "text",
-          preConfirm: async (path) => {
-            const node = selectedNode();
-            if (await node?.checkNewPath(path, false)) {
-              return path;
-            }
-            Swal.showValidationMessage("File or folder with this name already exists");
-          },
-          inputValidator: (input) => {
-            console.log(input);
-            if (!input.match("^[a-zA-Z0-9_ ]+$")) {
-              return "Input must contain only letters, numbers, underscores and spaces";
-            }
-          },
-        });
-        if (value && value.length > 0) {
-          const node = selectedNode();
-          node?.renameDocument(value);
-        }
+        setIsRenameDialogOpen(true);
         break;
       }
     }
   }
   return (
-    <ContextMenu>
-      <ContextMenuPortal>
-        <ContextMenuContent>
-          <Suspense fallback={<Skeleton height={20} class="w-full" />}>
-            <Show
-              when={
-                [SagDocumentType.FOLDER, SagDocumentType.FILE].includes(selectedNode()?.docType as SagDocumentType) &&
-                !(
-                  selectedNode()?.isTemplate &&
-                  selectedNode()?.docType === SagDocumentType.FOLDER &&
-                  selectedNode()?.path() === "templates"
-                )
-              }
-            >
-              <ContextMenuItem
-                onSelect={async () => {
-                  await handleContextMenu(MenuOption.Rename);
-                }}
-              >
-                {MenuOption.Rename}
-              </ContextMenuItem>
-            </Show>
-            <Show
-              when={
-                [SagDocumentType.FOLDER, SagDocumentType.FILE].includes(selectedNode()?.docType as SagDocumentType) &&
-                !(
-                  selectedNode()?.isTemplate &&
-                  selectedNode()?.docType === SagDocumentType.FOLDER &&
-                  selectedNode()?.path() === "templates"
-                )
-              }
-            >
-              {/* TODO: Add delete dialog here */}
-              <ContextMenuItem
-                onSelect={async () => {
-                  await handleContextMenu(MenuOption.Delete);
-                }}
-              >
-                {MenuOption.Delete}
-              </ContextMenuItem>
-            </Show>
-            <Show
-              when={[SagDocumentType.FOLDER, SagDocumentType.PROJECT].includes(
-                selectedNode()?.docType as SagDocumentType,
-              )}
-            >
-              <ContextMenuItem
-                onSelect={async () => {
-                  await handleContextMenu(MenuOption.AddFile);
-                }}
-              >
-                {MenuOption.AddFile}
-              </ContextMenuItem>
-            </Show>
-            <Show
-              when={
-                [SagDocumentType.FOLDER, SagDocumentType.PROJECT].includes(
-                  selectedNode()?.docType as SagDocumentType,
-                ) && !(selectedNode()?.isTemplate && selectedNode()?.docType === SagDocumentType.FOLDER)
-              }
-            >
-              <ContextMenuItem
-                onSelect={async () => {
-                  await handleContextMenu(MenuOption.AddFileFromTemplate);
-                }}
-              >
-                {MenuOption.AddFileFromTemplate}
-              </ContextMenuItem>
-            </Show>
-            <Show
-              when={[SagDocumentType.FOLDER, SagDocumentType.PROJECT].includes(
-                selectedNode()?.docType as SagDocumentType,
-              )}
-            >
-              <ContextMenuItem
-                onSelect={async () => {
-                  await handleContextMenu(MenuOption.AddFolder);
-                }}
-              >
-                {MenuOption.AddFolder}
-              </ContextMenuItem>
-            </Show>
-          </Suspense>
-        </ContextMenuContent>
-      </ContextMenuPortal>
-      {props.children}
-    </ContextMenu>
+    <>
+      <div>
+        <ContextMenu>
+          <ContextMenuPortal>
+            <ContextMenuContent>
+              <Suspense fallback={<Skeleton height={20} class="w-full" />}>
+                <Show
+                  when={
+                    [SagDocumentType.FOLDER, SagDocumentType.FILE].includes(
+                      selectedNode()?.docType as SagDocumentType,
+                    ) &&
+                    !(
+                      selectedNode()?.isTemplate &&
+                      selectedNode()?.docType === SagDocumentType.FOLDER &&
+                      selectedNode()?.path() === "templates"
+                    )
+                  }
+                >
+                  <ContextMenuItem
+                    onSelect={async () => {
+                      await handleContextMenu(MenuOption.Rename);
+                    }}
+                  >
+                    {MenuOption.Rename}
+                  </ContextMenuItem>
+                </Show>
+                <Show
+                  when={
+                    [SagDocumentType.FOLDER, SagDocumentType.FILE].includes(
+                      selectedNode()?.docType as SagDocumentType,
+                    ) &&
+                    !(
+                      selectedNode()?.isTemplate &&
+                      selectedNode()?.docType === SagDocumentType.FOLDER &&
+                      selectedNode()?.path() === "templates"
+                    )
+                  }
+                >
+                  <ContextMenuItem onSelect={() => setIsDeleteDialogOpen(true)}>Delete</ContextMenuItem>
+                </Show>
+                <Show
+                  when={[SagDocumentType.FOLDER, SagDocumentType.PROJECT].includes(
+                    selectedNode()?.docType as SagDocumentType,
+                  )}
+                >
+                  <ContextMenuItem
+                    onSelect={async () => {
+                      await handleContextMenu(MenuOption.AddFile);
+                    }}
+                  >
+                    {MenuOption.AddFile}
+                  </ContextMenuItem>
+                </Show>
+                <Show
+                  when={
+                    [SagDocumentType.FOLDER, SagDocumentType.PROJECT].includes(
+                      selectedNode()?.docType as SagDocumentType,
+                    ) && !(selectedNode()?.isTemplate && selectedNode()?.docType === SagDocumentType.FOLDER)
+                  }
+                >
+                  <ContextMenuItem onSelect={() => handleContextMenu(MenuOption.AddFileFromTemplate)}>
+                    {MenuOption.AddFileFromTemplate}
+                  </ContextMenuItem>
+                </Show>
+                <Show
+                  when={[SagDocumentType.FOLDER, SagDocumentType.PROJECT].includes(
+                    selectedNode()?.docType as SagDocumentType,
+                  )}
+                >
+                  <ContextMenuItem
+                    onSelect={async () => {
+                      await handleContextMenu(MenuOption.AddFolder);
+                    }}
+                  >
+                    {MenuOption.AddFolder}
+                  </ContextMenuItem>
+                </Show>
+              </Suspense>
+            </ContextMenuContent>
+          </ContextMenuPortal>
+          {props.children}
+        </ContextMenu>
+      </div>
+      {/* CONTEXT MENU DIALOGS */}
+      {/* - Delete dialog */}
+      <QuickDialog
+        variant="destructive"
+        handler={() => handleContextMenu(MenuOption.Delete)}
+        triggerTitle={MenuOption.Delete}
+        buttonText="Delete"
+        title="Delete File"
+        description={"Are you sure you want to delete"}
+        subject={selectedNode()?.name() || "this file"}
+        open={isDeleteDialogOpen}
+        setOpen={setIsDeleteDialogOpen}
+        modal={true}
+      />
+      {/* - Rename dialog */}
+      <EditorContextDialog
+        variant="confirm"
+        menuOption={MenuOption.Rename}
+        buttonText="Rename"
+        title="Rename File"
+        description="Enter the new name for the file"
+        open={isRenameDialogOpen}
+        setOpen={setIsRenameDialogOpen}
+        node={selectedNode()}
+      />
+      {/* - New file dialog */}
+      <EditorContextDialog
+        variant="confirm"
+        menuOption={MenuOption.AddFile}
+        buttonText="Create File"
+        title="File Name"
+        description="Please name the new file."
+        open={isNewFileDialogOpen}
+        setOpen={setIsNewFileDialogOpen}
+        node={selectedNode()}
+        navigateToFile={navigateToFile}
+      />
+      {/* - New folder dialog */}
+      <EditorContextDialog
+        variant="confirm"
+        menuOption={MenuOption.AddFolder}
+        buttonText="Create Folder"
+        title="Folder Name"
+        description="Please name the new folder."
+        open={isNewFolderDialogOpen}
+        setOpen={setIsNewFolderDialogOpen}
+        node={selectedNode()}
+        navigateToFile={navigateToFile}
+      />
+      {/* - New file from template */}
+      <EditorContextDialog
+        variant="confirm"
+        menuOption={MenuOption.AddFileFromTemplate}
+        buttonText="Create File"
+        title="New file from template"
+        description="Please select one of your organisation's templates and give a name to the file created from it."
+        open={isAddFileFromTemplateDialogOpen}
+        setOpen={setIsAddFileFromTemplateDialogOpen}
+        node={selectedNode()}
+        navigateToFile={navigateToFile}
+      />
+    </>
   );
 }
 
