@@ -123,11 +123,20 @@ const handleOpenWindow = (url: string) => {
   window.open(url, "_blank");
 };
 
-export async function check(code: string): Promise<void> {
+interface Metadata {
+  municipalityName: string;
+  orgName: string;
+  projectName: string;
+  path: string;
+  filename: string;
+}
+
+export async function check(code: string, metadata: Metadata): Promise<void> {
   // Perform the compilation logic here
   try {
     const compileResult = await eden.api.check.post({
       code,
+      metadata,
       $fetch: {
         mode: "cors",
         credentials: "include",

@@ -115,24 +115,41 @@ export function EditorProvider(props: { children: JSX.Element }): JSX.Element {
     } catch (error) {
       console.error("Failed to navigate to file:", newNode.name(), error);
     }
-    
+
     // when opening a new file, check if it is a file and send the file info to the server
     if (newNode.isFile()) {
       const file_info = newNode.gatherNodeInfo();
       await eden.api["file-info"].post({
         file_info,
-        $fetch: { mode: "cors", credentials: "include", method: "POST" }
+        $fetch: { mode: "cors", credentials: "include", method: "POST" },
       });
       console.log("File info:", file_info);
     }
   };
+  interface Metadata {
+    municipalityName: string;
+    orgName: string;
+    projectName: string;
+    path: string;
+    filename: string;
+  }
 
   const debouncedCheck = (() => {
     let checkTimer: ReturnType<typeof setTimeout>;
     return (value: string) => {
       clearTimeout(checkTimer);
       checkTimer = setTimeout(() => {
-        check(value);
+        const currentNode = selectedNode();
+        if (!currentNode) {
+          return;
+        }
+        check(value, {
+          municipalityName: currentNode.municipalityName || "",
+          orgName: currentNode.orgName || "",
+          projectName: currentNode.projectName || "",
+          path: currentNode.path(),
+          filename: currentNode.name(),
+        } as Metadata);
       }, 500);
     };
   })();
