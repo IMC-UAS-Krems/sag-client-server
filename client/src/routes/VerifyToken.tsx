@@ -4,7 +4,9 @@ import { useNavigate, useParams } from "@solidjs/router";
 import { eden } from "@client/api/index.ts";
 import authStore from "@client/store/authStore.ts";
 import Header from "@client/components/Header.tsx";
-import styles from "@styles/Unauthorized.module.css";
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@client/components/ui/card.tsx";
+import { Button } from "@client/components/ui/button.tsx";
+import { TbLoader2 } from "solid-icons/tb";
 
 const VerifyToken: Component = () => {
   const navigate = useNavigate();
@@ -49,31 +51,31 @@ const VerifyToken: Component = () => {
 
   return (
     <Header>
-      <div class={styles["main-container"]}>
-        <div class={styles.card}>
-          <h1>Email verification</h1>
-          {loading() ? (
-            <>
-              <div class={styles.loader}></div>
-              <p>Verifying email...</p>
-            </>
-          ) : (
-            <>
-              <p>{verificationResult()}</p>
-              {verificationResult() === "You have successfully verified your email" ||
-              verificationResult()?.includes("already verified") ? (
-                <button onClick={() => navigate("/home")} class={styles["unauth-button"]}>
-                  Go back to home page
-                </button>
-              ) : (
-                <button onClick={() => navigate("/verify")} class={styles["unauth-button"]}>
-                  Get a new verification link
-                </button>
-              )}
-            </>
-          )}
-        </div>
-      </div>
+      <main class="flex content-center items-center justify-center h-full mt-20">
+        <Card>
+          <CardHeader>
+            <CardTitle>Email Verification</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loading() ? (
+              <div class="flex items-center space-x-2">
+                <TbLoader2 class="animate-spin h-6 w-6" />
+                <p>Verifying email...</p>
+              </div>
+            ) : (
+              <div class="space-y-4">
+                <CardDescription>{verificationResult()}</CardDescription>
+                {verificationResult() === "You have successfully verified your email" ||
+                verificationResult()?.includes("already verified") ? (
+                  <Button onClick={() => navigate("/home")}>Go back to home page</Button>
+                ) : (
+                  <Button onClick={() => navigate("/verify")}>Get a new verification link</Button>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </main>
     </Header>
   );
 };

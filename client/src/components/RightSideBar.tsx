@@ -1,6 +1,5 @@
 import { For } from "solid-js";
 import { errors } from "@store/index.ts";
-import styles from "@client/styles/RightSideBar.module.css";
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from "@client/components/ui/table.tsx";
 
 export function RightSideBar() {
@@ -30,7 +29,7 @@ export function RightSideBar() {
           </Table>
         </div>
       ) : (
-        <p class={styles["no-errors"]}>No errors found!</p>
+        <p class="text-center">No errors found!</p>
       )}
     </div>
   );

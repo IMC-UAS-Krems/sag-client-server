@@ -8,7 +8,6 @@ import { Button } from "@client/components/ui/button.tsx";
 import { eden } from "@client/api/index.ts";
 import Header from "@client/components/Header.tsx";
 import authStore from "@store/authStore.ts";
-import styles from "@styles/Unauthorized.module.css";
 import { Alert, AlertTitle, AlertDescription } from "@client/components/ui/alert.tsx";
 import { IoClose } from "solid-icons/io";
 import { TbLoader2 } from "solid-icons/tb";
@@ -71,7 +70,7 @@ const Verify: Component = () => {
 
   return (
     <Header>
-      <div class={styles["main-container"]}>
+      <main class="flex content-center items-center justify-center h-full mt-20">
         {verified ? (
           <Card>
             <CardHeader>
@@ -131,7 +130,7 @@ const Verify: Component = () => {
             </Card>
           </div>
         )}
-      </div>
+      </main>
     </Header>
   );
 };

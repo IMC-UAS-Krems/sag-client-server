@@ -1,6 +1,5 @@
 import { EditorView, ViewPlugin, Decoration, DecorationSet } from "@codemirror/view";
 import { RangeSetBuilder } from "@codemirror/rangeset";
-import styles from "@client/styles/Editor.module.css";
 
 const placeholderRegex = /<\s*[\w.-]+\s*>/g;
 
@@ -24,7 +23,7 @@ const placeholderHighlightPlugin = ViewPlugin.fromClass(
             start,
             end,
             Decoration.mark({
-              class: styles["placeholder-highlight"],
+              class: "text-orange-500 font-bold rounded px-1",
             }),
           );
         }
