@@ -1,6 +1,7 @@
 import { Elysia, t } from "elysia";
 
 import { prisma } from "@server/prisma.ts";
+import { Prisma } from "@prisma/client";
 import { authMiddleware } from "@server/middleware.ts";
 import { sql, Document } from "@server/sql.ts";
 import { DocumentType } from "@prisma/client";
@@ -214,16 +215,21 @@ export const api = new Elysia({ prefix: "/api" })
           isTemplate,
         );
       } catch (e) {
+        console.log("Error: ", e);
+
         if (e instanceof SagError) {
           log.error(e.message);
-          set.status = 400;
-          return e.message;
+          if (e.message.includes("permission")) {
+            set.status = 403;
+            return e.message;
+          } else if (e.message.includes("already exists")) {
+            set.status = 409;
+            return e.message;
+          }
         }
 
-        log.error(e instanceof Error ? e.message : String(e));
-        log.error("An unknown error occurred");
         set.status = 500;
-        return "An error occurred";
+        return "An unknown error occurred";
       }
 
       if (result === null) {
@@ -267,15 +273,29 @@ export const api = new Elysia({ prefix: "/api" })
         return { error: "Unauthorized" };
       }
 
-      const result = await sql.renameDocument(userId, municipalityName, organizationName, projectName, path, newName);
+      try {
+        const result = await sql.renameDocument(userId, municipalityName, organizationName, projectName, path, newName);
+        if (result === null) {
+          set.status = 400;
+          return "Could not rename document";
+        }
 
-      if (result === null) {
-        set.status = 400;
-        return "Could not rename document";
+        set.status = 200;
+        return result;
+      } catch (e) {
+        if (e instanceof SagError) {
+          if (e.message.includes("already exists")) {
+            set.status = 409;
+            return e.message;
+          }
+          console.log(e.message);
+          set.status = 400;
+          return e.message;
+        } else {
+          set.status = 500;
+          return "An error occurred";
+        }
       }
-
-      set.status = 200;
-      return result;
     },
     {
       body: t.Object({

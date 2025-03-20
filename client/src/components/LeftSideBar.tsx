@@ -307,11 +307,25 @@ export class TreeNode implements GetChildren {
       });
       return newNode;
     } else {
-      showToast({
-        title: "Error",
-        description: "Something went wrong when creating the file",
-        variant: "error",
-      });
+      if (resp.status === 409) {
+        showToast({
+          title: "Error",
+          description: "File with name already exists",
+          variant: "error",
+        });
+      } else if (resp.status === 403) {
+        showToast({
+          title: "Error",
+          description: "You do not have permission to create a file in this folder",
+          variant: "error",
+        });
+      } else {
+        showToast({
+          title: "Error",
+          description: "Something went wrong when creating the file, try again later",
+          variant: "error",
+        });
+      }
     }
   }
 
@@ -526,11 +540,19 @@ export class TreeNode implements GetChildren {
           variant: "success",
         });
       } else {
-        showToast({
-          title: "Error",
-          description: "Couldn't rename file",
-          variant: "error",
-        });
+        if (resp.status === 409) {
+          showToast({
+            title: "Error",
+            description: "File with name already exists",
+            variant: "error",
+          });
+        } else {
+          showToast({
+            title: "Error",
+            description: "Couldn't rename file, try again later",
+            variant: "error",
+          });
+        }
       }
     }
   }

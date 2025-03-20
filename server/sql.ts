@@ -1,10 +1,10 @@
 import { createId } from "@paralleldrive/cuid2";
 import { prisma } from "@server/prisma.ts";
+import { Prisma } from "@prisma/client";
 import { UserRole } from "@utils/roles.ts";
 import { UserDetails, OrganisationDetails, UpdateOrganisationBody } from "@server/types.ts";
 import { Organization, Project, User, Municipality, UserType, DocumentType } from "@prisma/client";
 import { SagError } from "./errors.ts";
-import path from "path";
 
 export type Document = {
   name: string;
@@ -706,7 +706,7 @@ export async function createDocument(
   content = content ?? "";
   console.log("Creating document with content:", content);
   console.log("New document projectName:", projectName);
-  console.log("New document is teplate:", isTemplate);
+  console.log("New document is template:", isTemplate);
 
   try {
     switch (user.userType) {
@@ -736,6 +736,7 @@ export async function createDocument(
               text2ltree(${path}), ${documentType}::"DocumentType", ${isTemplate})
             `;
         }
+        break;
       }
       case UserType.SUPERUSER_MUNICIPALITY: {
         if (projectName) {
@@ -761,6 +762,7 @@ export async function createDocument(
               text2ltree(${path}), ${documentType}::"DocumentType", ${isTemplate})
             `;
         }
+        break;
       }
       case UserType.SUPERUSER_GLOBAL: {
         if (projectName) {
@@ -793,11 +795,17 @@ export async function createDocument(
     return null;
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError) {
-      if (e.code == "P2010") {
-        throw new SagError("Can't create document, invalid permissions");
+      // console.log("\n\n\n-------\nPrisma error:", e);
+      // Check for specific error codes, e.g., P2002 for unique constraint violations
+      if (e.message.includes("already exists")) {
+        throw new SagError("A document with this unique identifier already exists.");
+      } else if (e.code === "P2010") {
+        throw new SagError("Can't create document, invalid permissions.");
+      } else {
+        throw e; // Re-throw unexpected Prisma errors
       }
     }
-    throw e;
+    throw e; // Not a Prisma-specific error, so re-throw
   }
 
   //const docType = documentType === "FOLDER" ? "FOLDER" : "FILE";
@@ -1328,106 +1336,130 @@ export async function renameDocument(
   const splitIndex = (documentPath as string).lastIndexOf(".");
   const path = splitIndex === -1 ? joinPath("", newName) : joinPath(documentPath.substring(0, splitIndex), newName);
 
+  // Check that file does not already exist
+  const pathExists = await checkPathExists(newName, municipalityName, orgName, projectName, documentPath, false);
+  if (pathExists) {
+    throw new SagError(`A document with the name "${newName}" already exists at the target location.`);
+  }
+
   let result = -1;
 
-  switch (user.userType) {
-    case UserType.DEFAULT: {
-      if (projectName) {
-        result = await prisma.$executeRaw`
-          UPDATE documents
-          SET name = ${newName}, path = text2ltree(${path})
-          FROM projects
-          INNER JOIN organisations ON organisations.id = projects."organizationId"
-          INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
-          WHERE municipalities.name = ${municipalityName} 
-            AND municipalities.id = (SELECT "municipalityId" FROM users WHERE id = ${userId})
-            AND organisations.name = ${orgName} 
-            AND organisations.id = (SELECT "organizationId" FROM users WHERE id = ${userId})
-            AND projects.name = ${projectName}
-            AND documents.path = text2ltree(${documentPath}) 
-            AND documents."projectId" = projects.id
-          `;
-      } else {
-        result = await prisma.$executeRaw`
-          UPDATE documents
-          SET name = ${newName}, path = text2ltree(${path})
-          FROM organisations
-          INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
-          WHERE municipalities.name = ${municipalityName} 
-            AND municipalities.id = (SELECT "municipalityId" FROM users WHERE id = ${userId})
-            AND organisations.name = ${orgName} 
-            AND organisations.id = (SELECT "organizationId" FROM users WHERE id = ${userId})
-            AND documents.path = text2ltree(${documentPath}) 
-            AND documents."organizationId" = organisations.id
-            AND documents."projectId" IS NULL
-            -- Check that the document is not the org level templates folder
-            AND NOT (documents."documentType" = 'FOLDER'::"DocumentType" AND documents."isTemplate" = true AND documents.path = 'templates')
-          `;
+  try {
+    switch (user.userType) {
+      case UserType.DEFAULT: {
+        if (projectName) {
+          result = await prisma.$executeRaw`
+            UPDATE documents
+            SET name = ${newName}, path = text2ltree(${path})
+            FROM projects
+            INNER JOIN organisations ON organisations.id = projects."organizationId"
+            INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
+            WHERE municipalities.name = ${municipalityName} 
+              AND municipalities.id = (SELECT "municipalityId" FROM users WHERE id = ${userId})
+              AND organisations.name = ${orgName} 
+              AND organisations.id = (SELECT "organizationId" FROM users WHERE id = ${userId})
+              AND projects.name = ${projectName}
+              AND documents.path = text2ltree(${documentPath}) 
+              AND documents."projectId" = projects.id
+            `;
+        } else {
+          result = await prisma.$executeRaw`
+            UPDATE documents
+            SET name = ${newName}, path = text2ltree(${path})
+            FROM organisations
+            INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
+            WHERE municipalities.name = ${municipalityName} 
+              AND municipalities.id = (SELECT "municipalityId" FROM users WHERE id = ${userId})
+              AND organisations.name = ${orgName} 
+              AND organisations.id = (SELECT "organizationId" FROM users WHERE id = ${userId})
+              AND documents.path = text2ltree(${documentPath}) 
+              AND documents."organizationId" = organisations.id
+              AND documents."projectId" IS NULL
+              -- Check that the document is not the org level templates folder
+              AND NOT (documents."documentType" = 'FOLDER'::"DocumentType" AND documents."isTemplate" = true AND documents.path = 'templates')
+            `;
+        }
+        break;
+      }
+      case UserType.SUPERUSER_MUNICIPALITY: {
+        if (projectName) {
+          result = await prisma.$executeRaw`
+            UPDATE documents
+            SET name = ${newName}, path = text2ltree(${path})
+            FROM projects
+            INNER JOIN organisations ON organisations.id = projects."organizationId"
+            INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
+            WHERE municipalities.name = ${municipalityName} 
+              AND municipalities.id = (SELECT "municipalityId" FROM users WHERE id = ${userId})
+              AND organisations.name = ${orgName} 
+              AND projects.name = ${projectName}
+              AND documents.path = text2ltree(${documentPath}) 
+              AND documents."projectId" = projects.id
+            `;
+        } else {
+          result = await prisma.$executeRaw`
+            UPDATE documents
+            SET name = ${newName}, path = text2ltree(${path})
+            FROM organisations
+            INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
+            WHERE municipalities.name = ${municipalityName} 
+              AND municipalities.id = (SELECT "municipalityId" FROM users WHERE id = ${userId})
+              AND organisations.name = ${orgName} 
+              AND documents.path = text2ltree(${documentPath}) 
+              AND documents."organizationId" = organisations.id
+              AND documents."projectId" IS NULL
+              -- Check that the document is not the org level templates folder
+              AND NOT (documents."documentType" = 'FOLDER'::"DocumentType" AND documents."isTemplate" = true AND documents.path = 'templates')
+            `;
+        }
+        break;
+      }
+      case UserType.SUPERUSER_GLOBAL: {
+        if (projectName) {
+          result = await prisma.$executeRaw`
+            UPDATE documents
+            SET name = ${newName}, path = text2ltree(${path})
+            FROM projects
+            INNER JOIN organisations ON organisations.id = projects."organizationId"
+            INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
+            WHERE municipalities.name = ${municipalityName} 
+              AND organisations.name = ${orgName} 
+              AND projects.name = ${projectName}
+              AND documents.path = text2ltree(${documentPath}) 
+              AND documents."projectId" = projects.id
+            `;
+        } else {
+          result = await prisma.$executeRaw`
+            UPDATE documents
+            SET name = ${newName}, path = text2ltree(${path})
+            FROM organisations
+            INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
+            WHERE municipalities.name = ${municipalityName} 
+              AND organisations.name = ${orgName} 
+              AND documents.path = text2ltree(${documentPath}) 
+              AND documents."organizationId" = organisations.id
+              AND documents."projectId" IS NULL
+              -- Check that the document is not the org level templates folder
+              AND NOT (documents."documentType" = 'FOLDER'::"DocumentType" AND documents."isTemplate" = true AND documents.path = 'templates')
+            `;
+        }
+        break;
       }
     }
-    case UserType.SUPERUSER_MUNICIPALITY: {
-      if (projectName) {
-        result = await prisma.$executeRaw`
-          UPDATE documents
-          SET name = ${newName}, path = text2ltree(${path})
-          FROM projects
-          INNER JOIN organisations ON organisations.id = projects."organizationId"
-          INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
-          WHERE municipalities.name = ${municipalityName} 
-            AND municipalities.id = (SELECT "municipalityId" FROM users WHERE id = ${userId})
-            AND organisations.name = ${orgName} 
-            AND projects.name = ${projectName}
-            AND documents.path = text2ltree(${documentPath}) 
-            AND documents."projectId" = projects.id
-          `;
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError) {
+      // Check for specific error codes, e.g., P2002 for unique constraint violations
+      if (e.message.includes("already exists")) {
+        throw new SagError("A document with this unique identifier already exists.");
+      } else if (e.code === "P2010") {
+        throw new SagError("Can't create document, invalid permissions.");
       } else {
-        result = await prisma.$executeRaw`
-          UPDATE documents
-          SET name = ${newName}, path = text2ltree(${path})
-          FROM organisations
-          INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
-          WHERE municipalities.name = ${municipalityName} 
-            AND municipalities.id = (SELECT "municipalityId" FROM users WHERE id = ${userId})
-            AND organisations.name = ${orgName} 
-            AND documents.path = text2ltree(${documentPath}) 
-            AND documents."organizationId" = organisations.id
-            AND documents."projectId" IS NULL
-            -- Check that the document is not the org level templates folder
-            AND NOT (documents."documentType" = 'FOLDER'::"DocumentType" AND documents."isTemplate" = true AND documents.path = 'templates')
-          `;
+        throw e; // Re-throw unexpected Prisma errors
       }
     }
-    case UserType.SUPERUSER_GLOBAL: {
-      if (projectName) {
-        result = await prisma.$executeRaw`
-          UPDATE documents
-          SET name = ${newName}, path = text2ltree(${path})
-          FROM projects
-          INNER JOIN organisations ON organisations.id = projects."organizationId"
-          INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
-          WHERE municipalities.name = ${municipalityName} 
-            AND organisations.name = ${orgName} 
-            AND projects.name = ${projectName}
-            AND documents.path = text2ltree(${documentPath}) 
-            AND documents."projectId" = projects.id
-          `;
-      } else {
-        result = await prisma.$executeRaw`
-          UPDATE documents
-          SET name = ${newName}, path = text2ltree(${path})
-          FROM organisations
-          INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
-          WHERE municipalities.name = ${municipalityName} 
-            AND organisations.name = ${orgName} 
-            AND documents.path = text2ltree(${documentPath}) 
-            AND documents."organizationId" = organisations.id
-            AND documents."projectId" IS NULL
-            -- Check that the document is not the org level templates folder
-            AND NOT (documents."documentType" = 'FOLDER'::"DocumentType" AND documents."isTemplate" = true AND documents.path = 'templates')
-          `;
-      }
-    }
+    throw e; // Not a Prisma-specific error, so re-throw
   }
+
   if (result === 1) {
     await updateChildPaths(municipalityName, orgName, projectName, documentPath, path);
     return path;
@@ -1441,7 +1473,6 @@ export async function saveAsTemplate(userId: string, organizationName: string, n
     throw new SagError(`Organization ${organizationName} does not exist`);
   }
 
-  // @ts-ignore
   const user: User | UserDocument | null = await selectUser(userId);
   if (!user) {
     throw new SagError(`User ${userId} does not exist`);
@@ -1548,7 +1579,7 @@ async function updateChildPaths(
       WHERE organisations.name = ${orgName} 
         AND municipalities.name = ${municipalityName}
         AND text2ltree(${documentPath}) @> documents.path 
-        AND documents.path != text2ltree(${documentPath})
+        AND documents.path != text2ltree(${"template." + documentPath})
         AND documents."projectId" IS NULL
       `;
   }
@@ -1581,6 +1612,8 @@ export async function checkPathExists(
     path = splitIndex === -1 ? joinPath("", possibleName) : joinPath(path.substring(0, splitIndex), possibleName);
   }
   let result: { path: string }[] = [];
+
+  // TODO: Properly handle the case when there is no project name either
   if (projectName) {
     result = await prisma.$queryRaw<{ path: string }[]>`
       SELECT path::text
@@ -1605,7 +1638,9 @@ export async function checkPathExists(
         AND documents."projectId" IS NULL
       `;
   }
+  console.log("Checking if path exists:", municipalityName, orgName, path);
+  console.log("Result:", result);
   return result.length > 0;
 }
 
-export * as sql from "./sql";
+export * as sql from "./sql.js";

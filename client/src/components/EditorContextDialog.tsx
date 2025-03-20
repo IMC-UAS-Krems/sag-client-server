@@ -52,6 +52,14 @@ const EditorContextDialog: Component<EditorContextDialogProps> = (props) => {
 
   const [name, setName] = createSignal<string>("");
   const [nameError, setNameError] = createSignal<string | null>(null);
+  // Reset on open
+  createEffect(() => {
+    if (props.open()) {
+      setName("");
+      setNameError(null);
+    }
+  });
+
   // Add file from template specific logic
   interface Template {
     node: TreeNode; // Node
@@ -64,11 +72,12 @@ const EditorContextDialog: Component<EditorContextDialogProps> = (props) => {
 
   // General name validation logic
   const validateName = async () => {
+    const isNew = [MenuOption.AddFile, MenuOption.AddFolder, MenuOption.AddFileFromTemplate].includes(props.menuOption);
     if (!name()) {
       setNameError(null);
     } else if (!name().match("^[a-zA-Z0-9_ ]+$")) {
       setNameError("Input must contain only letters, numbers, underscores and spaces");
-    } else if (!(await props.node?.checkNewPath(name(), false))) {
+    } else if (!(await props.node?.checkNewPath(name(), isNew))) {
       setNameError("A template with this name already exists");
     } else {
       setNameError(null);

@@ -106,7 +106,6 @@ model Document {
     documentType DocumentType @default(FILE)
     isTemplate Boolean @default(false)
 
-    @@unique([projectId, path])
     @@map("documents")
 }
 
