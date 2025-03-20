@@ -29,6 +29,7 @@ import { UpdateOrganisationBody } from "@server/types.ts";
 import { Switch, SwitchControl, SwitchLabel, SwitchThumb } from "@client/components/ui/switch.tsx";
 import { Alert, AlertDescription, AlertTitle } from "@client/components/ui/alert.tsx";
 import { IoAlertCircleOutline } from "solid-icons/io";
+import { TbLoader2 } from "solid-icons/tb";
 
 interface OrganisationEditDialogProps {
   organisationId: string;
@@ -38,6 +39,7 @@ interface OrganisationEditDialogProps {
 export default function OrganisationEditDialog(props: OrganisationEditDialogProps) {
   const navigate = useNavigate();
   const [open, setOpen] = createSignal(false);
+  const [loadingRequest, setLoadingRequest] = createSignal(false);
 
   const [organisationName, setOrganisationName] = createSignal<string | undefined>(undefined);
   const [municipalityName, setMunicipalityName] = createSignal<string | undefined>(undefined);
@@ -198,6 +200,7 @@ export default function OrganisationEditDialog(props: OrganisationEditDialogProp
       updatedAt: new Date(),
     };
 
+    setLoadingRequest(true);
     try {
       const updated = await eden.admin["update-organisation"].post({
         ...requestBody,
@@ -238,6 +241,8 @@ export default function OrganisationEditDialog(props: OrganisationEditDialogProp
         title: "Error",
         description: `Error updating organisation: ${error}`,
       });
+    } finally {
+      setLoadingRequest(false);
     }
   };
 
@@ -338,9 +343,11 @@ export default function OrganisationEditDialog(props: OrganisationEditDialogProp
               Object.values(errors()).some(Boolean) ||
               !hasChanged() ||
               Boolean(organisationFetchError()) ||
-              Boolean(municipalityFetchError())
+              Boolean(municipalityFetchError()) ||
+              loadingRequest()
             }
           >
+            {loadingRequest() && <TbLoader2 class="animate-spin" />}
             Edit Organisation
           </Button>
         </DialogFooter>

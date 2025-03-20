@@ -25,6 +25,7 @@ import { TreeNode } from "@client/components/LeftSideBar.tsx";
 import { MenuOption } from "@client/components/LeftSideBar.tsx";
 import { SagDocumentType } from "@client/components/LeftSideBar.tsx";
 import { showToast } from "@client/components/ui/toast.tsx";
+import { TbLoader2 } from "solid-icons/tb";
 
 interface EditorContextDialogProps {
   variant: "destructive" | "confirm";
@@ -40,6 +41,7 @@ interface EditorContextDialogProps {
 }
 
 const EditorContextDialog: Component<EditorContextDialogProps> = (props) => {
+  const [requestLoading, setRequestLoading] = createSignal(false);
   const [internalOpen, setInternalOpen] = createSignal(false);
   const dialogOpen = () => (props.open !== undefined ? props.open() : internalOpen());
   const setDialogOpen = (value: boolean) => {
@@ -91,6 +93,7 @@ const EditorContextDialog: Component<EditorContextDialogProps> = (props) => {
       return;
     }
 
+    setRequestLoading(true);
     switch (props.menuOption) {
       case MenuOption.Rename:
         if (!props.node) {
@@ -165,6 +168,7 @@ const EditorContextDialog: Component<EditorContextDialogProps> = (props) => {
         break;
       }
     }
+    setRequestLoading(false);
   };
 
   const getTemplatesForNode = (node: TreeNode) => {
@@ -302,13 +306,14 @@ const EditorContextDialog: Component<EditorContextDialogProps> = (props) => {
         </div>
         <DialogFooter>
           <Button
-            disabled={Boolean(nameError()) || !name()}
+            disabled={Boolean(nameError()) || !name() || requestLoading()}
             variant={props.variant === "destructive" ? "destructive" : "default"}
             onClick={() => {
               submit();
               setDialogOpen(false);
             }}
           >
+            {requestLoading() && <TbLoader2 class="animate-spin" />}
             {props.buttonText}
           </Button>
         </DialogFooter>

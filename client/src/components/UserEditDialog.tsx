@@ -29,6 +29,7 @@ import { eden } from "@client/api/index.ts";
 import { handleUnauthorized } from "@client/utils/authUtils.ts";
 import { UpdateUserBody } from "@server/types.ts";
 import { UserRole } from "@utils/roles.ts";
+import { TbLoader2 } from "solid-icons/tb";
 
 interface UserEditDialogProps {
   userId: string;
@@ -39,6 +40,7 @@ interface UserEditDialogProps {
 export default function UserEditDialog(props: UserEditDialogProps) {
   const navigate = useNavigate();
   const [open, setOpen] = createSignal(false);
+  const [loadingRequest, setLoadingRequest] = createSignal(false);
 
   const [name, setName] = createSignal<string | undefined>(undefined);
   const [email, setEmail] = createSignal<string | undefined>(undefined);
@@ -266,6 +268,7 @@ export default function UserEditDialog(props: UserEditDialogProps) {
     if (userRole()) requestBody.userRole = userRole() as UserRole;
 
     try {
+      setLoadingRequest(true);
       const updated = await eden.admin["update-user"].post({
         ...requestBody,
         $fetch: {
@@ -306,6 +309,8 @@ export default function UserEditDialog(props: UserEditDialogProps) {
         title: "Error",
         description: `Error updating user: ${error}`,
       });
+    } finally {
+      setLoadingRequest(false);
     }
   };
 
@@ -461,8 +466,14 @@ export default function UserEditDialog(props: UserEditDialogProps) {
             <DialogFooter>
               <Button
                 onClick={submit}
-                disabled={Object.values(errors()).some(Boolean) || Boolean(userFetchError()) || !hasChanged()}
+                disabled={
+                  Object.values(errors()).some(Boolean) ||
+                  Boolean(userFetchError()) ||
+                  !hasChanged() ||
+                  loadingRequest()
+                }
               >
+                {loadingRequest() && <TbLoader2 class="animate-spin" />}
                 Edit User
               </Button>
             </DialogFooter>

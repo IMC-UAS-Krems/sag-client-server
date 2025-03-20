@@ -25,6 +25,7 @@ import { Skeleton } from "@client/components/ui/skeleton.tsx";
 import { Button } from "@client/components/ui/button.tsx";
 import { eden } from "@client/api/index.ts";
 import { handleUnauthorized } from "@client/utils/authUtils.ts";
+import { TbLoader2 } from "solid-icons/tb";
 
 interface OrganisationCreateDialogProps {
   fetchOrganisations: () => void;
@@ -33,6 +34,7 @@ interface OrganisationCreateDialogProps {
 export default function OrganisationCreateDialog(props: OrganisationCreateDialogProps) {
   const navigate = useNavigate();
   const [open, setOpen] = createSignal(false);
+  const [loadingRequest, setLoadingRequest] = createSignal(false);
 
   const [organisationName, setOrganisationName] = createSignal<string | undefined>(undefined);
   const [organisationDescription, setOrganisationDescription] = createSignal<string | undefined>(undefined);
@@ -120,6 +122,7 @@ export default function OrganisationCreateDialog(props: OrganisationCreateDialog
     };
 
     try {
+      setLoadingRequest(true);
       const response = await eden.admin["create-organisation"].post({
         ...requestBody,
         $fetch: {
@@ -161,6 +164,8 @@ export default function OrganisationCreateDialog(props: OrganisationCreateDialog
         title: "Error",
         description: errorMessage,
       });
+    } finally {
+      setLoadingRequest(false);
     }
   };
 
@@ -229,9 +234,11 @@ export default function OrganisationCreateDialog(props: OrganisationCreateDialog
               Object.values(errors()).some(Boolean) ||
               !organisationName() ||
               !organisationDescription() ||
-              !municipalityName()
+              !municipalityName() ||
+              loadingRequest()
             }
           >
+            {loadingRequest() && <TbLoader2 class="animate-spin" />}
             Create Organisation
           </Button>
         </DialogFooter>

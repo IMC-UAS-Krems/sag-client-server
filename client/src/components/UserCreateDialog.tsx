@@ -26,6 +26,7 @@ import { Button } from "@client/components/ui/button.tsx";
 import { eden } from "@client/api/index.ts";
 import { handleUnauthorized } from "@client/utils/authUtils.ts";
 import { UserRole } from "@utils/roles.ts";
+import { TbLoader2 } from "solid-icons/tb";
 
 interface UserCreateDialogProps {
   fetchUsers: () => void;
@@ -34,6 +35,7 @@ interface UserCreateDialogProps {
 export default function UserCreateDialog(props: UserCreateDialogProps) {
   const navigate = useNavigate();
   const [open, setOpen] = createSignal(false);
+  const [loadingRequest, setLoadingRequest] = createSignal(false);
 
   const [name, setName] = createSignal<string | undefined>(undefined);
   const [email, setEmail] = createSignal<string | undefined>(undefined);
@@ -178,6 +180,7 @@ export default function UserCreateDialog(props: UserCreateDialogProps) {
     // console.log("Data to be submitted:", requestBody);
 
     try {
+      setLoadingRequest(true);
       const response = await eden.admin["create-user"].post({
         ...requestBody,
         $fetch: {
@@ -219,6 +222,8 @@ export default function UserCreateDialog(props: UserCreateDialogProps) {
         title: "Error",
         description: errorMessage,
       });
+    } finally {
+      setLoadingRequest(false);
     }
   };
 
@@ -360,9 +365,11 @@ export default function UserCreateDialog(props: UserCreateDialogProps) {
               !name() ||
               !municipality() ||
               !organization() ||
-              !userRole()
+              !userRole() ||
+              loadingRequest()
             }
           >
+            {loadingRequest() && <TbLoader2 class="animate-spin" />}
             Create User
           </Button>
         </DialogFooter>

@@ -29,6 +29,7 @@ interface QuickDialogProps {
 }
 
 const QuickDialog: Component<QuickDialogProps> = (props) => {
+  const [requestLoading, setRequestLoading] = createSignal(false);
   const [internalOpen, setInternalOpen] = createSignal(false);
   const dialogOpen = () => (props.open !== undefined ? props.open() : internalOpen());
   const setDialogOpen = (value: boolean) => {
@@ -67,9 +68,10 @@ const QuickDialog: Component<QuickDialogProps> = (props) => {
         </DialogHeader>
         <DialogFooter>
           <Button
-            disabled={props.disabled}
+            disabled={props.disabled || requestLoading()}
             variant={props.variant === "destructive" ? "destructive" : "default"}
             onClick={() => {
+              setRequestLoading(true);
               props.handler();
               setDialogOpen(false);
             }}

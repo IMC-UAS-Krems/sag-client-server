@@ -749,37 +749,6 @@ function FileContextMenu(props: { children: JSXElement }) {
   const [isNewFolderDialogOpen, setIsNewFolderDialogOpen] = createSignal(false);
   const [isAddFileFromTemplateDialogOpen, setIsAddFileFromTemplateDialogOpen] = createSignal(false);
 
-  async function handleContextMenu(action: MenuOption) {
-    const node = selectedNode();
-    if (!node) return;
-
-    switch (action) {
-      case MenuOption.AddFile: {
-        setIsNewFileDialogOpen(true);
-        break;
-      }
-      case MenuOption.AddFileFromTemplate: {
-        setIsAddFileFromTemplateDialogOpen(true);
-        break;
-      }
-      case MenuOption.AddFolder: {
-        setIsNewFolderDialogOpen(true);
-        break;
-      }
-      case MenuOption.Delete: {
-        node?.deleteDocument();
-        break;
-      }
-      case MenuOption.Save: {
-        node?.saveContent(code());
-        break;
-      }
-      case MenuOption.Rename: {
-        setIsRenameDialogOpen(true);
-        break;
-      }
-    }
-  }
   return (
     <>
       <div>
@@ -799,13 +768,7 @@ function FileContextMenu(props: { children: JSXElement }) {
                     )
                   }
                 >
-                  <ContextMenuItem
-                    onSelect={async () => {
-                      await handleContextMenu(MenuOption.Rename);
-                    }}
-                  >
-                    {MenuOption.Rename}
-                  </ContextMenuItem>
+                  <ContextMenuItem onSelect={() => setIsRenameDialogOpen(true)}>{MenuOption.Rename}</ContextMenuItem>
                 </Show>
                 <Show
                   when={
@@ -826,13 +789,7 @@ function FileContextMenu(props: { children: JSXElement }) {
                     selectedNode()?.docType as SagDocumentType,
                   )}
                 >
-                  <ContextMenuItem
-                    onSelect={async () => {
-                      await handleContextMenu(MenuOption.AddFile);
-                    }}
-                  >
-                    {MenuOption.AddFile}
-                  </ContextMenuItem>
+                  <ContextMenuItem onSelect={() => setIsNewFileDialogOpen(true)}>{MenuOption.AddFile}</ContextMenuItem>
                 </Show>
                 <Show
                   when={
@@ -841,7 +798,7 @@ function FileContextMenu(props: { children: JSXElement }) {
                     ) && !(selectedNode()?.isTemplate && selectedNode()?.docType === SagDocumentType.FOLDER)
                   }
                 >
-                  <ContextMenuItem onSelect={() => handleContextMenu(MenuOption.AddFileFromTemplate)}>
+                  <ContextMenuItem onSelect={() => setIsAddFileFromTemplateDialogOpen(true)}>
                     {MenuOption.AddFileFromTemplate}
                   </ContextMenuItem>
                 </Show>
@@ -850,11 +807,7 @@ function FileContextMenu(props: { children: JSXElement }) {
                     selectedNode()?.docType as SagDocumentType,
                   )}
                 >
-                  <ContextMenuItem
-                    onSelect={async () => {
-                      await handleContextMenu(MenuOption.AddFolder);
-                    }}
-                  >
+                  <ContextMenuItem onSelect={() => setIsNewFolderDialogOpen(true)}>
                     {MenuOption.AddFolder}
                   </ContextMenuItem>
                 </Show>
@@ -868,7 +821,7 @@ function FileContextMenu(props: { children: JSXElement }) {
       {/* - Delete dialog */}
       <QuickDialog
         variant="destructive"
-        handler={() => handleContextMenu(MenuOption.Delete)}
+        handler={() => selectedNode()?.deleteDocument()}
         triggerTitle={MenuOption.Delete}
         buttonText="Delete"
         title="Delete File"
@@ -878,6 +831,7 @@ function FileContextMenu(props: { children: JSXElement }) {
         setOpen={setIsDeleteDialogOpen}
         modal={true}
       />
+
       {/* - Rename dialog */}
       <EditorContextDialog
         variant="confirm"

@@ -305,15 +305,16 @@ try {
 
   // TODO: In the future this should probably be built dynamically and allow for creation of documents without projects
   for (const document of documents) {
-    await prisma.$executeRaw`INSERT INTO documents (id, name, content, "authorId", "projectId", path, "documentType")
+    await prisma.$executeRaw`INSERT INTO documents (id, name, content, "authorId", "organizationId", "projectId", path, "documentType")
         VALUES (
           ${createId()},
           ${document.name},
           ${document.content},
           (SELECT id from users WHERE users.name = ${document.authorName ? document.authorName : "default"}),
+          (SELECT id FROM organisations WHERE organisations.name = ${document.organizationName}),
           (SELECT id FROM projects WHERE projects.name = ${document.projectName} AND projects."organizationId" = (SELECT id FROM organisations WHERE organisations.name = ${document.organizationName})), 
           text2ltree(${joinPath(document.parentPath ? document.parentPath : "", document.name)}),
-          ${document.documentType ? document.documentType : 'FILE'}::"DocumentType");`;
+          ${document.documentType ? document.documentType : "FILE"}::"DocumentType");`;
   }
 
   // Creating template folders and templates for the organizations
