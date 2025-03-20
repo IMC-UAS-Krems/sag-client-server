@@ -4,14 +4,12 @@ import { linter, Diagnostic, lintGutter } from "@codemirror/lint";
 import { EditorView, lineNumbers, keymap } from "@codemirror/view";
 
 import { eden } from "@client/api/index.ts";
-import commonStyles from "@client/styles/Common.module.css";
 import { errors, setErrors, Error as CompileError } from "@store/index.ts";
 import { RightSideBar } from "../components/RightSideBar.tsx";
 import placeholderHighlightPlugin from "@client/editor_plugins/PlaceHolderHighlight.ts";
 import Header from "@client/components/Header.tsx";
 import { LeftSideBar, TreeNode } from "@client/components/LeftSideBar.tsx";
 import { EditorContext, IEditorContext } from "@client/contexts/editor.tsx";
-import { Notification } from "@client/common.ts";
 import {
   Breadcrumb,
   BreadcrumbEllipsis,
@@ -39,7 +37,6 @@ type CompileResult = {
 const [isCompiled, setIsCompiled] = createSignal(false);
 const [dashboardUrl, setDashboardUrl] = createSignal<string | null>(null);
 
-// TODO: Refactor and test this more with the compiler too
 async function compile(code: string) {
   try {
     console.log("Making compile fetch...");
@@ -91,13 +88,31 @@ async function compile(code: string) {
         });
       },
       {
-        loading: <div>Compiling...</div>,
+        loading: (
+          <div class="flex items-center gap-2">
+            <svg
+              fill="none"
+              stroke-width="2"
+              xmlns="http://www.w3.org/2000/svg"
+              class="icon icon-tabler icon-tabler-loader-2 w-6 h-6 animate-spin"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              style="overflow: visible; color: currentcolor;"
+            >
+              <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+              <path d="M12 3a9 9 0 1 0 9 9"></path>
+            </svg>
+            Compiling, this may take a while...
+          </div>
+        ),
         success: (data) => {
           console.log("Toast success handler:", data);
           const url = data.data?.url;
           return (
-            <a href={url} class={commonStyles["notification-deploy-link"]} target="_blank">
-              Dash deployed successfully to Azure
+            <a href={url} class="underline decoration-dotted" target="_blank">
+              Dash deployed successfully
               <br />
               Click here to access
             </a>
@@ -107,7 +122,7 @@ async function compile(code: string) {
           console.log("Toast error handler:", err);
           return <div>{err.message || "Compilation failed"}</div>;
         },
-        duration: 30000,
+        duration: 10000,
       },
     );
   } catch (error) {
@@ -468,7 +483,7 @@ function Editor(): JSX.Element {
                       });
                     }
                   }}
-                  disabled={!isCompiled()}
+                  disabled={!isCompiled() || !dashboardUrl()}
                 >
                   Open Dashboard
                 </Button>

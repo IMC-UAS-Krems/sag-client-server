@@ -3,8 +3,6 @@ import { eden } from "@client/api/index.ts";
 import { createMutable } from "solid-js/store";
 import { EditorContext } from "@client/contexts/editor.tsx";
 import { IEditorContext } from "@client/contexts/editor.tsx";
-import Swal from "sweetalert2";
-import { Notification, Prompt } from "@client/common.ts";
 import { RiArrowsArrowRightSLine, RiArrowsArrowDownSLine } from "solid-icons/ri";
 import {
   ContextMenu,
@@ -194,10 +192,6 @@ export class TreeNode implements GetChildren {
       const nodeParent = orgNode?.parent;
       if (!(nodeParent instanceof TreeNode)) {
         console.error("Parent node is not a TreeNode for node: ", nodeParent);
-        // Notification.fire({
-        //   title: "Error in finding templates",
-        //   icon: "error",
-        // });
         return null;
       }
       orgNode = nodeParent;
@@ -417,100 +411,19 @@ export class TreeNode implements GetChildren {
     });
     if (resp.status !== 200) {
       console.error("Error saving content");
-      Notification.fire({
-        title: "Error saving content",
-        icon: "error",
+      showToast({
+        title: "Error",
+        description: "Couldn't save file, try again later",
+        variant: "error",
       });
       return false;
     } else {
-      Notification.fire({
-        title: "File saved",
-        icon: "success",
+      showToast({
+        title: "Success",
+        description: "File saved successfully",
+        variant: "success",
       });
       return true;
-    }
-  }
-
-  async saveFileAsTemplate(content: string): Promise<TreeNode | null> {
-    // Traverse the tree to find the org node
-    const orgNode = this.getOrganisationNode();
-    // Select the child node that has `docType` folder and `isTemplate` true
-    const templateNode = orgNode?.children.find(
-      (child) => child.docType === SagDocumentType.FOLDER && child.isTemplate,
-    );
-
-    if (!templateNode) {
-      Notification.fire({
-        title: "No templates folder found for the organisation",
-        icon: "error",
-      });
-      return null;
-    }
-
-    // Now we can get the children of the template node and their names
-    const templates = templateNode.children.map((child) => child.name());
-
-    // First get the name for the template via swal prompt
-    const { value } = await Prompt.fire<string>({
-      title: "Enter template name",
-      input: "text",
-      preConfirm: async (name) => {
-        if (templates.includes(name)) {
-          Swal.showValidationMessage("A template with this name already exists");
-          return false; // Prevent the alert from closing
-        }
-      },
-      inputValidator: (input) => {
-        console.log(input);
-        if (!input.match("^[a-zA-Z0-9_ ]+$")) {
-          return "Input must contain only letters, numbers, underscores and spaces";
-        }
-      },
-    });
-
-    if (!value || value.length <= 0) return null;
-
-    const resp = await eden.api["save-as-template"].post({
-      organizationName: this.orgName as string,
-      name: value as string,
-      content: content,
-      $fetch: {
-        mode: "cors",
-        credentials: "include",
-      },
-    });
-    if (resp.status !== 201) {
-      console.error("Error saving content as template");
-      Notification.fire({
-        title: resp.data as string,
-        icon: "error",
-      });
-      return null;
-    } else {
-      Notification.fire({
-        title: "File saved as template",
-        icon: "success",
-      });
-      console.log("Response for creating the new node: ", resp.data);
-      const newNode = new TreeNode(
-        {
-          name: value as string,
-          docType: SagDocumentType.FILE,
-          path: resp.data as string,
-          projectName: undefined, // There is no project name on purpose
-          orgName: this.orgName,
-          municipalityName: this.municipalityName,
-          isExpanded: true,
-          isTemplate: true,
-          parent: templateNode,
-        },
-        this.editorContext,
-      );
-      console.log("New node created: ", newNode);
-
-      templateNode?.addChild(newNode);
-      // console.log("New node added to the org node's template folder: ", templateNode);
-      return newNode;
     }
   }
 
