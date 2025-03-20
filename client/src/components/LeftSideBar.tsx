@@ -559,15 +559,21 @@ class FileTree implements GetChildren {
           orgName: doc.orgName,
           municipalityName: doc.municipalityName,
           parent: currentNode,
-          isExpanded: this.parse_old_state(
-            old_state,
-            `${doc.municipalityName}.${doc.orgName}.${doc.projectName}.${doc.documentPath}`,
-          ),
+          isExpanded: this.parse_old_state(old_state, this.getStateKey(doc)),
           isTemplate: doc.isTemplate,
         },
         this.editorContext,
       ),
     );
+  }
+
+  getStateKey(doc: SagDocument): string {
+    const parts = [doc.municipalityName, doc.orgName];
+    if (!doc.isTemplate && doc.projectName) {
+      parts.push(doc.projectName);
+    }
+    parts.push(doc.documentPath);
+    return parts.join(".");
   }
 
   parse_old_state(old_state: expandState, path: string): boolean | undefined {
