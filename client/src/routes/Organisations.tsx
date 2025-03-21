@@ -75,9 +75,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Alert, AlertDescription, AlertTitle } from "@client/components/ui/alert.tsx";
 import { TextField, TextFieldInput } from "@client/components/ui/textField.tsx";
 import { Skeleton } from "@client/components/ui/skeleton.tsx";
-import OrganisationCreateDialog from "@client/components/OrganisationCreateDialog.tsx";
-import OrganisationEditDialog from "@client/components/OrganisationEditDialog.tsx";
-import QuickDialog from "@client/components/QuickDialog.tsx";
+import OrganisationCreateDialog from "@client/components/dialogs/OrganisationCreateDialog.tsx";
+import OrganisationEditDialog from "@client/components/dialogs/OrganisationEditDialog.tsx";
+import QuickDialog from "@client/components/dialogs/QuickDialog.tsx";
 import { eden } from "@client/api/index.ts";
 import { handleUnauthorized } from "@client/utils/authUtils.ts";
 import { OrganisationDetails } from "@server/types.ts";

@@ -14,8 +14,8 @@ import {
   // ContextMenuGroupLabel,
 } from "@client/components/ui/context-menu.tsx";
 import { Skeleton } from "@client/components/ui/skeleton.tsx";
-import QuickDialog from "@client/components/QuickDialog.tsx";
-import EditorContextDialog from "@client/components/EditorContextDialog.tsx";
+import QuickDialog from "@client/components/dialogs/QuickDialog.tsx";
+import EditorContextDialog from "@client/components/dialogs/EditorContextDialog.tsx";
 import { showToast } from "@client/components/ui/toast.tsx";
 
 export enum SagDocumentType {

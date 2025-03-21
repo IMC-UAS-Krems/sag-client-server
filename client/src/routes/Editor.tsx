@@ -27,7 +27,7 @@ import {
 } from "@client/components/ui/dropdown-menu.tsx";
 import { Button } from "@client/components/ui/button.tsx";
 import { showToast, showToastPromise } from "@client/components/ui/toast.tsx";
-import SaveAsTemplateDialog from "@client/components/SaveAsTemplateDialog.tsx";
+import SaveAsTemplateDialog from "@client/components/dialogs/SaveAsTemplateDialog.tsx";
 
 type CompileResult = {
   error: string | undefined;
