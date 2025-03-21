@@ -37,7 +37,7 @@ const Verify: Component = () => {
       if (result.status !== 200) {
         const errorMessage = (result.data as { error: string }).error || "Error sending verification email";
         showToast({
-          variant: "destructive",
+          variant: "error",
           title: "Error",
           description: errorMessage,
         });
@@ -59,7 +59,7 @@ const Verify: Component = () => {
         errorMessage = error.message;
       }
       showToast({
-        variant: "destructive",
+        variant: "error",
         title: "Error",
         description: errorMessage,
       });

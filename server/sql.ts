@@ -713,17 +713,20 @@ export async function createDocument(
       case UserType.DEFAULT: {
         if (projectName) {
           result = await prisma.$executeRaw`
-            INSERT INTO documents (id, name, content, "authorId", "projectId", path, "documentType")
+            INSERT INTO documents (id, name, content, "authorId", "organizationId", "projectId", path, "documentType")
             VALUES (${createId()}, ${name}, ${content}, ${authorId},
+              (SELECT id FROM organisations WHERE organisations.name = ${organizationName}
+                AND organisations.id =
+                  (SELECT "organizationId" FROM users WHERE id = ${authorId})),
               (SELECT id FROM projects WHERE projects.name = ${projectName}
-              AND projects."organizationId" =
-                (SELECT organisations.id FROM organisations
-                  INNER JOIN users ON users."organizationId" = organisations.id
-                  INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
-                  WHERE organisations.name = ${organizationName} 
-                    AND organisations.id = (SELECT "organizationId" FROM users WHERE id = ${authorId})
-                    AND municipalities.name = ${municipalityName} 
-                    AND municipalities.id = (SELECT "municipalityId" FROM users WHERE id = ${authorId}))),
+                AND projects."organizationId" =
+                  (SELECT organisations.id FROM organisations
+                    INNER JOIN users ON users."organizationId" = organisations.id
+                    INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
+                    WHERE organisations.name = ${organizationName} 
+                      AND organisations.id = (SELECT "organizationId" FROM users WHERE id = ${authorId})
+                      AND municipalities.name = ${municipalityName} 
+                      AND municipalities.id = (SELECT "municipalityId" FROM users WHERE id = ${authorId}))),
               text2ltree(${path}), ${documentType}::"DocumentType")
             `;
         } else {
@@ -741,15 +744,18 @@ export async function createDocument(
       case UserType.SUPERUSER_MUNICIPALITY: {
         if (projectName) {
           result = await prisma.$executeRaw`
-            INSERT INTO documents (id, name, content, "authorId", "projectId", path, "documentType")
+            INSERT INTO documents (id, name, content, "authorId", "organizationId", "projectId", path, "documentType")
             VALUES (${createId()}, ${name}, ${content}, ${authorId},
+              (SELECT id FROM organisations WHERE organisations.name = ${organizationName}
+                AND organisations."municipalityId" =
+                  (SELECT "municipalityId" FROM users WHERE id = ${authorId})),
               (SELECT id FROM projects WHERE projects.name = ${projectName}
-              AND projects."organizationId" =
-                (SELECT organisations.id FROM organisations
-                  INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
-                  WHERE organisations.name = ${organizationName}
-                    AND municipalities.name = ${municipalityName} 
-                    AND municipalities.id = (SELECT "municipalityId" FROM users WHERE id = ${authorId}))),
+                AND projects."organizationId" =
+                  (SELECT organisations.id FROM organisations
+                    INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
+                    WHERE organisations.name = ${organizationName}
+                      AND municipalities.name = ${municipalityName} 
+                      AND municipalities.id = (SELECT "municipalityId" FROM users WHERE id = ${authorId}))),
               text2ltree(${path}), ${documentType}::"DocumentType")
             `;
         } else {
@@ -767,8 +773,11 @@ export async function createDocument(
       case UserType.SUPERUSER_GLOBAL: {
         if (projectName) {
           result = await prisma.$executeRaw`
-            INSERT INTO documents (id, name, content, "authorId", "projectId", path, "documentType")
+            INSERT INTO documents (id, name, content, "authorId", "organizationId", "projectId", path, "documentType")
             VALUES (${createId()}, ${name}, ${content}, ${authorId},
+              (SELECT id FROM organisations WHERE organisations.name = ${organizationName}
+                  AND organisations."municipalityId" =
+                    (SELECT municipalities.id FROM municipalities WHERE municipalities.name = ${municipalityName})),
               (SELECT id FROM projects WHERE projects.name = ${projectName}
               AND projects."organizationId" =
                 (SELECT organisations.id FROM organisations
@@ -782,8 +791,8 @@ export async function createDocument(
             INSERT INTO documents (id, name, content, "authorId", "organizationId", path, "documentType", "isTemplate")
             VALUES (${createId()}, ${name}, ${content}, ${authorId},
               (SELECT id FROM organisations WHERE organisations.name = ${organizationName}
-              AND organisations."municipalityId" =
-                (SELECT municipalities.id FROM municipalities WHERE municipalities.name = ${municipalityName})),
+                AND organisations."municipalityId" =
+                  (SELECT municipalities.id FROM municipalities WHERE municipalities.name = ${municipalityName})),
               text2ltree(${path}), ${documentType}::"DocumentType", ${isTemplate})
             `;
         }
@@ -795,7 +804,7 @@ export async function createDocument(
     return null;
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError) {
-      // console.log("\n\n\n-------\nPrisma error:", e);
+      console.log("\n\n\n-------\nPrisma error:", e);
       // Check for specific error codes, e.g., P2002 for unique constraint violations
       if (e.message.includes("already exists")) {
         throw new SagError("A document with this unique identifier already exists.");
@@ -843,7 +852,7 @@ export async function getDocuments(userId: string): Promise<Document[]> {
           
           UNION ALL
           
-          -- Subquery 2: Documents linked directly to Organizations
+          -- Subquery 2: Template files linked to organisations
           SELECT 
             documents.name, 
             municipalities.name AS "municipalityName", 
@@ -857,6 +866,7 @@ export async function getDocuments(userId: string): Promise<Document[]> {
           INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
           INNER JOIN documents ON documents."organizationId" = organisations.id
           WHERE users.id = ${userId}
+            AND documents."isTemplate" = true
         ) AS combined_documents
         ORDER BY 
           "municipalityName", 
@@ -887,7 +897,7 @@ export async function getDocuments(userId: string): Promise<Document[]> {
           
           UNION ALL
           
-          -- Subquery 2: Documents linked directly to Organizations
+          -- Subquery 2: Template files linked to organisations
           SELECT 
             documents.name, 
             municipalities.name AS "municipalityName", 
@@ -901,6 +911,7 @@ export async function getDocuments(userId: string): Promise<Document[]> {
           INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
           INNER JOIN documents ON documents."organizationId" = organisations.id
           WHERE users.id = ${userId}
+            AND documents."isTemplate" = true
         ) AS combined_documents
         ORDER BY 
           "municipalityName", 
@@ -932,7 +943,7 @@ export async function getDocuments(userId: string): Promise<Document[]> {
           
           UNION ALL
           
-          -- Subquery 2: Documents linked directly to Organizations
+          -- Subquery 2: Template files linked to organisations
           SELECT 
             documents.name, 
             municipalities.name AS "municipalityName", 
@@ -947,6 +958,7 @@ export async function getDocuments(userId: string): Promise<Document[]> {
           INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
           INNER JOIN documents ON documents."organizationId" = organisations.id
           WHERE users.id = ${userId}
+            AND documents."isTemplate" = true
         ) AS combined_documents
         ORDER BY 
           "municipalityName", 

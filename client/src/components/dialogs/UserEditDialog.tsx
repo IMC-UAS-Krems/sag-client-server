@@ -250,7 +250,7 @@ export default function UserEditDialog(props: UserEditDialogProps) {
     validateForm();
     if (Object.values(errors()).some(Boolean)) {
       showToast({
-        variant: "destructive",
+        variant: "error",
         title: "Error",
         description: "Please fix the errors in the form",
       });

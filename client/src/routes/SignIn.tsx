@@ -77,7 +77,7 @@ const ShadLogin: Component<NavigateProps> = ({ navigate }) => {
     validateLoginForm();
     if (Object.values(loginErrors()).some(Boolean)) {
       showToast({
-        variant: "destructive",
+        variant: "error",
         title: "Error",
         description: "Please fix the errors in the form",
       });
@@ -96,7 +96,7 @@ const ShadLogin: Component<NavigateProps> = ({ navigate }) => {
 
     if (!response.data || response.error) {
       showToast({
-        variant: "destructive",
+        variant: "error",
         title: "Error",
         description: "Wrong login information",
       });
@@ -216,7 +216,7 @@ const ShadRegister: Component<NavigateProps> = ({ navigate }) => {
     validateRegisterForm();
     if (Object.values(registerErrors()).some(Boolean)) {
       showToast({
-        variant: "destructive",
+        variant: "error",
         title: "Error",
         description: "Please fix the errors in the form",
       });
@@ -290,7 +290,7 @@ const ShadRegister: Component<NavigateProps> = ({ navigate }) => {
       }
 
       showToast({
-        variant: "destructive",
+        variant: "error",
         title: "Unsuccessful registration",
         description: errorMessage,
       });

@@ -184,6 +184,7 @@ export const api = new Elysia({ prefix: "/api" })
         set.status = 401;
         return { error: "Unauthorized" };
       }
+      console.log("\n\n\n\n\nGetting documents for user: ", userId);
       const documents = sql.getDocuments(userId);
       set.status = 200;
       return documents;
@@ -191,7 +192,7 @@ export const api = new Elysia({ prefix: "/api" })
     {
       detail: {
         tags: ["api"],
-        description: "Get all documents of a user by user ID",
+        description: "Get all documents the user has access to",
       },
     },
   )

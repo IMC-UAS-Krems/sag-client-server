@@ -932,7 +932,7 @@ export function LeftSideBar() {
   });
 
   return (
-    <div class="flex-[1] h-full p-2.5 bg-accent/50 border-1 border-accent-foreground/20 w-0 min-w-0">
+    <div class="flex-[1] h-full pl-2.5 pt-2.5 pb-2.5 bg-accent/50 border-1 border-accent-foreground/20 w-0 min-w-0">
       {/* The w-0 min-w-0 forces this container to respect flex sizing strictly */}
       <div class="overflow-x-auto overflow-y-auto max-h-full w-full">
         <FileContextMenu>

@@ -36,7 +36,7 @@ const Header: Component<{ children: JSX.Element }> = (props) => {
       } else {
         console.error("Failed to log out. Server response:", response);
         showToast({
-          variant: "destructive",
+          variant: "error",
           title: "Error",
           description: "Logout failed",
         });
@@ -44,7 +44,7 @@ const Header: Component<{ children: JSX.Element }> = (props) => {
     } catch (error) {
       console.error("Failed to log out:", error);
       showToast({
-        variant: "destructive",
+        variant: "error",
         title: "Error",
         description: "Logout failed",
       });
