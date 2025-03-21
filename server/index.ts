@@ -49,19 +49,50 @@ const app = new Elysia()
       secret: Bun.env.JWT_SECRET ?? panic("JWT_SECRET environment variable not set"),
     }),
   )
-  .resolve(async ({ jwt, cookie }) => {
+  .resolve(async ({ jwt, cookie, headers }) => {
     interface Token {
       userId: string;
       userRole: string;
       email: string;
     }
-    let jwtToken: Token | null = null;
+    enum AuthType {
+      Cookie,
+      Header,
+      None,
+    }
+    // TODO: not this many confused variables maybe?
+    // NOTE: tokenStr -> verifiedToken -> jwtToken
+    let authType = AuthType.None;
+    // raw JWT token
+    let tokenStr = "";
+
     if (cookie.jwtUser && cookie.jwtToken.value !== undefined) {
-      try {
-        const verifiedToken = (await jwt.verify(cookie.jwtToken.value)) as unknown;
-        if (typeof verifiedToken === "object" && verifiedToken !== null && "userId" in verifiedToken) {
-          jwtToken = verifiedToken as Token;
-          // Here we can update the last login time of the user
+      authType = AuthType.Cookie;
+      tokenStr = cookie.jwtToken.value;
+    } else if (headers.authorization !== undefined) {
+      if (headers.authorization.match("^Bearer .+$") !== null) {
+        authType = AuthType.Header;
+        tokenStr = headers.authorization.slice(7);
+      }
+    }
+
+    if (authType === AuthType.None && tokenStr === "") {
+      console.warn("No JWT token found in cookies or Authorization header.");
+      return { userId: null };
+    }
+
+    // token after jwt.verify()
+    let verifiedToken: unknown | null = null;
+    // verifiedToken casted to `Token`
+    let jwtToken: Token | null = null;
+
+    try {
+      verifiedToken = (await jwt.verify(tokenStr)) as unknown;
+      if (typeof verifiedToken === "object" && verifiedToken !== null && "userId" in verifiedToken) {
+        jwtToken = verifiedToken as Token;
+        // Here we can update the last login time of the user
+        // NOTE: I don't think we need to update the api token each time
+        if (authType === AuthType.Cookie) {
           try {
             await updateUser(jwtToken.userId, { lastTimeActive: new Date() });
           } catch (error) {
@@ -70,11 +101,9 @@ const app = new Elysia()
         } else {
           console.warn("JWT verification failed or returned an invalid token.");
         }
-      } catch (error) {
-        console.error("Failed to verify JWT token:", error);
       }
-    } else {
-      console.warn("No JWT token found in cookies.");
+    } catch (error) {
+      console.error("Failed to verify JWT token:", error);
     }
 
     return { userId: jwtToken ? jwtToken.userId : null };

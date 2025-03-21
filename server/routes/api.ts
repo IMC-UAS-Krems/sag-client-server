@@ -86,7 +86,7 @@ export const api = new Elysia({ prefix: "/api" })
   })
   .post(
     "/compile",
-    async ({ log, set, body: { code }, userId }) => {
+    async ({ log, set, body: { code, metadata }, userId }) => {
       const compiled = await fetch(`${COMPILER_URL}/compile`, {
         method: "POST",
         headers: {
@@ -95,6 +95,7 @@ export const api = new Elysia({ prefix: "/api" })
         body: JSON.stringify({
           source: code,
           user_id: userId,
+          metadata: metadata,
         }),
       });
 
@@ -112,6 +113,13 @@ export const api = new Elysia({ prefix: "/api" })
     {
       body: t.Object({
         code: t.String(),
+        metadata: t.Object({
+          municipalityName: t.String(),
+          orgName: t.String(),
+          projectName: t.String(),
+          path: t.String(),
+          filename: t.String(),
+        }),
       }),
       response: t.Union([
         t.Object({ status: t.Literal("ok"), url: t.String() }),
@@ -123,7 +131,7 @@ export const api = new Elysia({ prefix: "/api" })
   )
   .post(
     "/check",
-    async ({ log, set, userId, body: { code } }) => {
+    async ({ log, set, userId, body: { code, metadata } }) => {
       const compiled = await fetch(`${COMPILER_URL}/check`, {
         method: "POST",
         headers: {
@@ -132,6 +140,7 @@ export const api = new Elysia({ prefix: "/api" })
         body: JSON.stringify({
           source: code,
           user_id: userId,
+          metadata: metadata,
         }),
       });
 
@@ -149,6 +158,13 @@ export const api = new Elysia({ prefix: "/api" })
     {
       body: t.Object({
         code: t.String(),
+        metadata: t.Object({
+          municipalityName: t.String(),
+          orgName: t.String(),
+          projectName: t.String(),
+          path: t.String(),
+          filename: t.String(),
+        }),
       }),
       response: t.Union([
         t.Object({ status: t.Literal("ok") }),
@@ -156,6 +172,7 @@ export const api = new Elysia({ prefix: "/api" })
           status: t.Literal("error"),
           errors: t.Array(t.Any()),
         }),
+        t.Object({ status: t.Literal("error"), error: t.String() }),
       ]),
       detail: { tags: ["api"] },
     },
@@ -372,12 +389,14 @@ export const api = new Elysia({ prefix: "/api" })
       return document[0].content;
     },
     {
-      query: t.Object({
-        projectName: t.Optional(t.String()),
-        organizationName: t.String(),
-        municipalityName: t.String(),
-        path: t.String(),
-      }),
+      // NOTE: t.Object sets body type to `json`, which conflicts with the compiler => wrong query parsing
+      // query: t.Object({
+      //   projectName: t.Optional(t.String()),
+      //   organizationName: t.String(),
+      //   municipalityName: t.String(),
+      //   path: t.String(),
+      // }),
+      type: "application/x-www-form-urlencoded",
       detail: { tags: ["api"], description: "Get document's content" },
     },
   )

@@ -49,6 +49,13 @@ interface GetChildren {
   getChildren(): TreeNode[];
 }
 
+interface ProjectSubtree {
+  name: string;
+  docType: SagDocumentType;
+  path?: string;
+  children: ProjectSubtree[];
+}
+
 type expandState = JSON & {
   [key: string]: boolean;
 };
@@ -198,6 +205,18 @@ export class TreeNode implements GetChildren {
       iterCount++;
     }
     return orgNode?.parent;
+  }
+
+  gatherNodeInfo() {
+    return {
+      name: this.name(),
+      docType: this.docType,
+      projectName: this.projectName,
+      orgName: this.orgName,
+      municipalityName: this.municipalityName,
+      path: this.path(),
+      fullPath: this.getPathList().join("."),
+    };
   }
 
   getPathList() {
@@ -350,9 +369,14 @@ export class TreeNode implements GetChildren {
       if (index !== undefined) {
         this.parent?.children.splice(index, 1);
       }
-      if (this.parent instanceof TreeNode && this.editorContext) {
-        this.editorContext.setSelectedNode(this.parent); // This could also be set to `null`, but needs extra care with the breadcrumbs
+      if (this.editorContext) {
         this.editorContext.setCode("");
+        this.editorContext.handleFileClick("");
+        if (this.parent instanceof TreeNode) {
+          this.editorContext.setSelectedNode(this.parent);
+        } else {
+          this.editorContext.setSelectedNode(null);
+        }
       }
 
       showToast({

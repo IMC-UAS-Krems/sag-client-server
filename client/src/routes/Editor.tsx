@@ -37,9 +37,33 @@ type CompileResult = {
 const [isCompiled, setIsCompiled] = createSignal(false);
 const [dashboardUrl, setDashboardUrl] = createSignal<string | null>(null);
 
-async function compile(code: string) {
+async function compile(code: string, currentFile: TreeNode | null): Promise<CompileResult | void> {
   try {
     console.log("Making compile fetch...");
+
+    interface FileMetadata {
+      municipalityName: string;
+      orgName: string;
+      projectName: string;
+      path: string;
+      filename: string;
+    }
+    if (currentFile === null) {
+      showToast({
+        title: "Error",
+        description: "No file selected",
+        variant: "error",
+      });
+      return;
+    }
+
+    const metadata: FileMetadata = {
+      municipalityName: currentFile.municipalityName,
+      orgName: currentFile.orgName as string,
+      projectName: currentFile.projectName as string,
+      path: currentFile.path() as string,
+      filename: currentFile.name() as string,
+    };
 
     // Create a manually controlled promise to ensure proper state tracking
     showToastPromise(
@@ -49,6 +73,7 @@ async function compile(code: string) {
           eden.api.compile
             .post({
               code,
+              metadata,
               $fetch: {
                 mode: "cors",
                 credentials: "include",
@@ -135,11 +160,20 @@ const handleOpenWindow = (url: string) => {
   window.open(url, "_blank");
 };
 
-export async function check(code: string): Promise<void> {
+interface Metadata {
+  municipalityName: string;
+  orgName: string;
+  projectName: string;
+  path: string;
+  filename: string;
+}
+
+export async function check(code: string, metadata: Metadata): Promise<void> {
   // Perform the compilation logic here
   try {
     const compileResult = await eden.api.check.post({
       code,
+      metadata,
       $fetch: {
         mode: "cors",
         credentials: "include",
@@ -394,7 +428,7 @@ function Editor(): JSX.Element {
                 <Button
                   {...(lastSelectedFile()?.isFile() ? {} : { disabled: true })}
                   onClick={async () => {
-                    await compile(code());
+                    await compile(code(), selectedNode());
                   }}
                 >
                   Compile

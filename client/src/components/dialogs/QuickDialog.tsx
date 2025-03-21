@@ -74,6 +74,7 @@ const QuickDialog: Component<QuickDialogProps> = (props) => {
               setRequestLoading(true);
               props.handler();
               setDialogOpen(false);
+              setRequestLoading(false);
             }}
           >
             {props.buttonText}

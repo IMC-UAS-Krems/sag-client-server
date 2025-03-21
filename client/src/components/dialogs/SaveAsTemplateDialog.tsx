@@ -128,7 +128,7 @@ export default function SaveAsTemplateDialog(props: SaveAsTemplateDialogProps) {
         );
         console.log("New node created:", newNode);
         templateNode()?.addChild(newNode);
-        templateNode()?.toggleExpanded();
+        templateNode()?.setIsExpanded(true);
         props.navigateToFile(newNode);
         setOpen(false);
       }

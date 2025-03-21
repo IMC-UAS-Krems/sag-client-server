@@ -25,6 +25,7 @@ export interface IEditorContext {
   setCode: Setter<string>;
   setSelectedNode: Setter<TreeNode | null>;
   selectedNode: Accessor<TreeNode | null>;
+  handleFileClick: (content: string | undefined) => void;
 }
 
 export const EditorContext = createContext<IEditorContext>();
@@ -127,13 +128,30 @@ export function EditorProvider(props: { children: JSX.Element }): JSX.Element {
       console.error("Failed to navigate to file:", newNode.name(), error);
     }
   };
+  interface Metadata {
+    municipalityName: string;
+    orgName: string;
+    projectName: string;
+    path: string;
+    filename: string;
+  }
 
   const debouncedCheck = (() => {
     let checkTimer: ReturnType<typeof setTimeout>;
     return (value: string) => {
       clearTimeout(checkTimer);
       checkTimer = setTimeout(() => {
-        check(value);
+        const currentNode = selectedNode();
+        if (!currentNode) {
+          return;
+        }
+        check(value, {
+          municipalityName: currentNode.municipalityName || "",
+          orgName: currentNode.orgName || "",
+          projectName: currentNode.projectName || "",
+          path: currentNode.path(),
+          filename: currentNode.name(),
+        } as Metadata);
       }, 500);
     };
   })();
@@ -155,7 +173,17 @@ export function EditorProvider(props: { children: JSX.Element }): JSX.Element {
 
   return (
     <EditorContext.Provider
-      value={{ editorView, editorRef, createExtension, code, setCode, selectedNode, setSelectedNode, navigateToFile }}
+      value={{
+        editorView,
+        editorRef,
+        createExtension,
+        code,
+        setCode,
+        selectedNode,
+        setSelectedNode,
+        navigateToFile,
+        handleFileClick,
+      }}
     >
       {props.children}
       <Dialog
