@@ -970,9 +970,11 @@ export async function getContent(
 ): Promise<{ content: string }[]> {
   // @ts-ignore
   const user: User | UserDocument = await selectUser(userId);
-  // console.log(
-  //   `Getting content at:\n Municipality: ${municipalityName}\n Org: ${orgName}\n Project: ${projectName}\n Path: ${documentPath}`,
-  // );
+
+  console.log(`\n\n\n\n\n ${userId} requested content:`);
+  console.log(
+    `Getting content at:\n Municipality: ${municipalityName}\n Org: ${orgName}\n Project: ${projectName}\n Path: ${documentPath}\n\n`,
+  );
 
   switch (user.userType) {
     case UserType.DEFAULT: {
@@ -998,8 +1000,7 @@ export async function getContent(
         return await prisma.$queryRaw<{ content: string }[]>`
           SELECT documents.content
           FROM documents
-          INNER JOIN projects ON projects.id = documents."projectId"
-          INNER JOIN organisations ON organisations.id = projects."organizationId"
+          INNER JOIN organisations ON organisations.id = documents."organizationId"
           INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
           WHERE municipalities.name = ${municipalityName}
             AND municipalities.id = (SELECT "municipalityId" FROM users WHERE id = ${userId})
@@ -1034,8 +1035,7 @@ export async function getContent(
         return await prisma.$queryRaw<{ content: string }[]>`
           SELECT documents.content
           FROM documents
-          INNER JOIN projects ON projects.id = documents."projectId"
-          INNER JOIN organisations ON organisations.id = projects."organizationId"
+          INNER JOIN organisations ON organisations.id = documents."organizationId"
           INNER JOIN municipalities ON municipalities.id = organisations."municipalityId"
           WHERE municipalities.name = ${municipalityName} 
             AND municipalities.id = (SELECT "municipalityId" FROM users WHERE id = ${userId})
