@@ -5,7 +5,7 @@ import { authMiddleware } from "@server/middleware";
 import { sql, Document } from "@server/sql";
 import { DocumentType } from "@prisma/client";
 import { SagError } from "@server/errors";
-import { AuthContext, AuthContextWithBody, AuthContextWithQuery } from "@server/types";
+import { AuthContext, AuthContextWithBody, AuthContextWithQuery, FileInfo } from "@server/types";
 
 const COMPILER_URL = Bun.env.COMPILER_URL || "http://localhost:8080";
 
@@ -85,7 +85,7 @@ export const api = new Elysia({ prefix: "/api" })
   })
   .post(
     "/compile",
-    async ({ log, set, body: { code }, userId }) => {
+    async ({ log, set, body: { code, metadata }, userId }) => {
       const compiled = await fetch(`${COMPILER_URL}/compile`, {
         method: "POST",
         headers: {
@@ -94,6 +94,7 @@ export const api = new Elysia({ prefix: "/api" })
         body: JSON.stringify({
           source: code,
           user_id: userId,
+          metadata: metadata,
         }),
       });
 
@@ -111,6 +112,13 @@ export const api = new Elysia({ prefix: "/api" })
     {
       body: t.Object({
         code: t.String(),
+        metadata: t.Object({
+          municipalityName: t.String(),
+          orgName: t.String(),
+          projectName: t.String(),
+          path: t.String(),
+          filename: t.String(),
+        }),
       }),
       response: t.Union([
         t.Object({ status: t.Literal("ok"), url: t.String() }),
@@ -122,7 +130,7 @@ export const api = new Elysia({ prefix: "/api" })
   )
   .post(
     "/check",
-    async ({ log, set, userId, body: { code } }) => {
+    async ({ log, set, userId, body: { code, metadata } }) => {
       const compiled = await fetch(`${COMPILER_URL}/check`, {
         method: "POST",
         headers: {
@@ -131,6 +139,7 @@ export const api = new Elysia({ prefix: "/api" })
         body: JSON.stringify({
           source: code,
           user_id: userId,
+          metadata: metadata,
         }),
       });
 
@@ -148,6 +157,13 @@ export const api = new Elysia({ prefix: "/api" })
     {
       body: t.Object({
         code: t.String(),
+        metadata: t.Object({
+          municipalityName: t.String(),
+          orgName: t.String(),
+          projectName: t.String(),
+          path: t.String(),
+          filename: t.String(),
+        }),
       }),
       response: t.Union([
         t.Object({ status: t.Literal("ok") }),
@@ -155,10 +171,61 @@ export const api = new Elysia({ prefix: "/api" })
           status: t.Literal("error"),
           errors: t.Array(t.Any()),
         }),
+        t.Object({ status: t.Literal("error"), error: t.String() }),
       ]),
       detail: { tags: ["api"] },
     },
   )
+  .post(
+    "/file-info",
+    async ({ log, set, userId, body: { file_info } }: AuthContextWithBody<{ file_info: FileInfo }>) => {
+      if (!userId) {
+        set.status = 401;
+        return { error: "Unauthorized" };
+      }
+      try {
+        const response = await fetch(`${COMPILER_URL}/file-info`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            user_id: userId,
+            file_info,
+          }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || data.status === "error") {
+          log.error(data.error || data.errors);
+          set.status = response.status;
+          return data;
+        }
+
+        set.status = 200;
+        log.info("Compiler processed the tree successfully.");
+
+        return { status: "ok", compilerOutput: data };
+      } catch (error) {
+        log.error(error);
+        set.status = 500;
+        return { error: "Failed to send project tree to compiler" };
+      }
+    },
+    {
+      // body: t.Object({ file_info: t.Any() }),
+      // detail: {
+      //   tags: ["api"],
+      //   description: "Receive current opened file information",
+      // },
+
+      type: "application/x-www-form-urlencoded",
+      beforeHandle: authMiddleware,
+      detail: { tags: ["api"], description: "Get document's content" },
+    },
+  )
+
   .get(
     "/documents",
     async ({ log, set, userId }: AuthContext): Promise<Document[] | { error: string }> => {
@@ -352,12 +419,14 @@ export const api = new Elysia({ prefix: "/api" })
       return document[0].content;
     },
     {
-      query: t.Object({
-        projectName: t.Optional(t.String()),
-        organizationName: t.String(),
-        municipalityName: t.String(),
-        path: t.String(),
-      }),
+      // NOTE: t.Object sets body type to `json`, which conflicts with the compiler => wrong query parsing
+      // query: t.Object({
+      //   projectName: t.Optional(t.String()),
+      //   organizationName: t.String(),
+      //   municipalityName: t.String(),
+      //   path: t.String(),
+      // }),
+      type: "application/x-www-form-urlencoded",
       detail: { tags: ["api"], description: "Get document's content" },
     },
   )

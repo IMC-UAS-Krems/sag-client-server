@@ -8,6 +8,7 @@ import Swal from "sweetalert2";
 import { Notification, Prompt } from "@client/common";
 import styles from "@styles/LeftSideBar.module.css";
 import { RiArrowsArrowRightSLine, RiArrowsArrowDownSLine } from "solid-icons/ri";
+import path from "path";
 
 enum SagDocumentType {
   FILE = "FILE",
@@ -38,6 +39,13 @@ type SagDocument = {
 
 interface GetChildren {
   getChildren(): TreeNode[];
+}
+
+interface ProjectSubtree {
+  name: string;
+  docType: SagDocumentType;
+  path?: string;
+  children: ProjectSubtree[];
 }
 
 type expandState = JSON & {
@@ -194,6 +202,19 @@ export class TreeNode implements GetChildren {
     }
     return orgNode?.parent;
   }
+
+  gatherNodeInfo(){
+    return {
+      name: this.name(),
+      docType: this.docType,
+      projectName: this.projectName,
+      orgName: this.orgName,
+      municipalityName: this.municipalityName,
+      path: this.path(),
+      fullPath: this.getPathList().join("."),
+    };
+  }
+    
 
   getPathList() {
     const path = [];
