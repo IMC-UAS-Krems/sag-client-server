@@ -10,8 +10,8 @@ import {
   ContextMenuItem,
   ContextMenuTrigger,
   ContextMenuPortal,
-  // ContextMenuGroup,
-  // ContextMenuGroupLabel,
+  ContextMenuGroup,
+  ContextMenuGroupLabel,
 } from "@client/components/ui/context-menu.tsx";
 import { Skeleton } from "@client/components/ui/skeleton.tsx";
 import QuickDialog from "@client/components/dialogs/QuickDialog.tsx";
@@ -33,6 +33,7 @@ export enum MenuOption {
   AddFile = "Add File",
   AddFileFromTemplate = "Add File From Template",
   AddFolder = "Add Folder",
+  CopyPath = "Copy Path",
 }
 
 type SagDocument = {
@@ -780,61 +781,100 @@ function FileContextMenu(props: { children: JSXElement }) {
           <ContextMenuPortal>
             <ContextMenuContent>
               <Suspense fallback={<Skeleton height={20} class="w-full" />}>
-                <Show
-                  when={
-                    [SagDocumentType.FOLDER, SagDocumentType.FILE].includes(
+                <ContextMenuGroup>
+                  <ContextMenuGroupLabel>{selectedNode()?.name() || "File options"}</ContextMenuGroupLabel>
+                  <Show
+                    when={
+                      [SagDocumentType.FOLDER, SagDocumentType.FILE].includes(
+                        selectedNode()?.docType as SagDocumentType,
+                      ) &&
+                      !(
+                        selectedNode()?.isTemplate &&
+                        selectedNode()?.docType === SagDocumentType.FOLDER &&
+                        selectedNode()?.path() === "templates"
+                      )
+                    }
+                  >
+                    <ContextMenuItem onSelect={() => setIsRenameDialogOpen(true)}>{MenuOption.Rename}</ContextMenuItem>
+                  </Show>
+                  <Show
+                    when={
+                      [SagDocumentType.FOLDER, SagDocumentType.FILE].includes(
+                        selectedNode()?.docType as SagDocumentType,
+                      ) &&
+                      !(
+                        selectedNode()?.isTemplate &&
+                        selectedNode()?.docType === SagDocumentType.FOLDER &&
+                        selectedNode()?.path() === "templates"
+                      )
+                    }
+                  >
+                    <ContextMenuItem onSelect={() => setIsDeleteDialogOpen(true)}>Delete</ContextMenuItem>
+                  </Show>
+                  <Show
+                    when={[SagDocumentType.FOLDER, SagDocumentType.PROJECT].includes(
                       selectedNode()?.docType as SagDocumentType,
-                    ) &&
-                    !(
-                      selectedNode()?.isTemplate &&
-                      selectedNode()?.docType === SagDocumentType.FOLDER &&
-                      selectedNode()?.path() === "templates"
-                    )
-                  }
-                >
-                  <ContextMenuItem onSelect={() => setIsRenameDialogOpen(true)}>{MenuOption.Rename}</ContextMenuItem>
-                </Show>
-                <Show
-                  when={
-                    [SagDocumentType.FOLDER, SagDocumentType.FILE].includes(
+                    )}
+                  >
+                    <ContextMenuItem onSelect={() => setIsNewFileDialogOpen(true)}>
+                      {MenuOption.AddFile}
+                    </ContextMenuItem>
+                  </Show>
+                  <Show
+                    when={
+                      [SagDocumentType.FOLDER, SagDocumentType.PROJECT].includes(
+                        selectedNode()?.docType as SagDocumentType,
+                      ) && !(selectedNode()?.isTemplate && selectedNode()?.docType === SagDocumentType.FOLDER)
+                    }
+                  >
+                    <ContextMenuItem onSelect={() => setIsAddFileFromTemplateDialogOpen(true)}>
+                      {MenuOption.AddFileFromTemplate}
+                    </ContextMenuItem>
+                  </Show>
+                  <Show
+                    when={[SagDocumentType.FOLDER, SagDocumentType.PROJECT].includes(
                       selectedNode()?.docType as SagDocumentType,
-                    ) &&
-                    !(
-                      selectedNode()?.isTemplate &&
-                      selectedNode()?.docType === SagDocumentType.FOLDER &&
-                      selectedNode()?.path() === "templates"
-                    )
-                  }
-                >
-                  <ContextMenuItem onSelect={() => setIsDeleteDialogOpen(true)}>Delete</ContextMenuItem>
-                </Show>
-                <Show
-                  when={[SagDocumentType.FOLDER, SagDocumentType.PROJECT].includes(
-                    selectedNode()?.docType as SagDocumentType,
-                  )}
-                >
-                  <ContextMenuItem onSelect={() => setIsNewFileDialogOpen(true)}>{MenuOption.AddFile}</ContextMenuItem>
-                </Show>
-                <Show
-                  when={
-                    [SagDocumentType.FOLDER, SagDocumentType.PROJECT].includes(
-                      selectedNode()?.docType as SagDocumentType,
-                    ) && !(selectedNode()?.isTemplate && selectedNode()?.docType === SagDocumentType.FOLDER)
-                  }
-                >
-                  <ContextMenuItem onSelect={() => setIsAddFileFromTemplateDialogOpen(true)}>
-                    {MenuOption.AddFileFromTemplate}
-                  </ContextMenuItem>
-                </Show>
-                <Show
-                  when={[SagDocumentType.FOLDER, SagDocumentType.PROJECT].includes(
-                    selectedNode()?.docType as SagDocumentType,
-                  )}
-                >
-                  <ContextMenuItem onSelect={() => setIsNewFolderDialogOpen(true)}>
-                    {MenuOption.AddFolder}
-                  </ContextMenuItem>
-                </Show>
+                    )}
+                  >
+                    <ContextMenuItem onSelect={() => setIsNewFolderDialogOpen(true)}>
+                      {MenuOption.AddFolder}
+                    </ContextMenuItem>
+                  </Show>
+                  <Show when={selectedNode()?.docType === SagDocumentType.FILE && !selectedNode()?.isTemplate}>
+                    <ContextMenuItem
+                      onSelect={() => {
+                        const path = selectedNode()?.path();
+                        if (path) {
+                          navigator.clipboard
+                            .writeText(path)
+                            .then(() => {
+                              showToast({
+                                title: "Copied",
+                                description: "Path copied to clipboard!",
+                                variant: "success",
+                              });
+                            })
+                            .catch((err) => {
+                              console.error("Failed to copy path: ", err);
+                              showToast({
+                                title: "Error",
+                                description: "Failed to copy path to clipboard",
+                                variant: "error",
+                              });
+                            });
+                        } else {
+                          showToast({
+                            title: "Error",
+                            description: "No path to copy",
+                            variant: "error",
+                          });
+                        }
+                      }}
+                    >
+                      {MenuOption.CopyPath}
+                    </ContextMenuItem>
+                  </Show>
+                </ContextMenuGroup>
               </Suspense>
             </ContextMenuContent>
           </ContextMenuPortal>
