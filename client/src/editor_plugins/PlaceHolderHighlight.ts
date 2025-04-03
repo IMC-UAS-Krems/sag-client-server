@@ -1,7 +1,8 @@
 import { EditorView, ViewPlugin, Decoration, DecorationSet } from "@codemirror/view";
 import { RangeSetBuilder } from "@codemirror/rangeset";
 
-const placeholderRegex = /<\s*[\w.-]+\s*>/g;
+// const placeholderRegex = /<\s*[\w.-]+\s*>/g;
+const placeholderRegex = /import/g;
 
 const placeholderHighlightPlugin = ViewPlugin.fromClass(
   class {
@@ -23,7 +24,7 @@ const placeholderHighlightPlugin = ViewPlugin.fromClass(
             start,
             end,
             Decoration.mark({
-              class: "text-orange-500 font-bold rounded px-1",
+              class: "text-orange-400 font-bold",
             }),
           );
         }

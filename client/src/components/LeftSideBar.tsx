@@ -50,13 +50,6 @@ interface GetChildren {
   getChildren(): TreeNode[];
 }
 
-interface ProjectSubtree {
-  name: string;
-  docType: SagDocumentType;
-  path?: string;
-  children: ProjectSubtree[];
-}
-
 type expandState = JSON & {
   [key: string]: boolean;
 };
@@ -767,7 +760,7 @@ function FileContextMenu(props: { children: JSXElement }) {
   if (!editorContext) {
     return <>{props.children}</>;
   }
-  const { code, selectedNode, navigateToFile } = useContext(EditorContext) as IEditorContext;
+  const { selectedNode, navigateToFile } = useContext(EditorContext) as IEditorContext;
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = createSignal(false);
   const [isRenameDialogOpen, setIsRenameDialogOpen] = createSignal(false);
   const [isNewFileDialogOpen, setIsNewFileDialogOpen] = createSignal(false);
