@@ -48,7 +48,7 @@ const AuthGuard = (props: AuthGuardProps) => {
   const checkIfMustLogOut = async () => {
     try {
       const response = await eden.auth["check-if-must-logout"].get({ $fetch: { credentials: "include" } });
-      console.log("Response from check-if-must-logout:", response);
+      // console.log("Response from check-if-must-logout:", response);
       if (response.data?.mustLogOut || response.status === 401) {
         mustbeLogOut = true;
         console.log("Must log out");

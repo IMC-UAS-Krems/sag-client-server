@@ -169,7 +169,7 @@ export class TreeNode implements GetChildren {
   }
 
   findChild(params: { name: string } | { path: string }) {
-    console.log("Finding child with params: ", params);
+    // console.log("Finding child with params: ", params);
     if ("name" in params) {
       return this.children.find((child) => child.name() === params.name);
     }
