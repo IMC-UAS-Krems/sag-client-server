@@ -21,6 +21,7 @@ export interface IEditorContext {
   createExtension: (extension: Extension | Accessor<Extension | undefined>) => CompartmentReconfigurationCallback;
   // handleFileClick: (content: string | undefined) => void;
   navigateToFile: (newNode: TreeNode) => void;
+  getRelativeNodeByPath: (path: string) => TreeNode | null;
   code: Accessor<string>;
   setCode: Setter<string>;
   setSelectedNode: Setter<TreeNode | null>;
@@ -128,6 +129,37 @@ export function EditorProvider(props: { children: JSX.Element }): JSX.Element {
       console.error("Failed to navigate to file:", newNode.name(), error);
     }
   };
+
+  const getRelativeNodeByPath = (path: string): TreeNode | null => {
+    // First task is to get the project node from the current path
+    console.log("Getting relative node by path:", path);
+    if (!selectedNode() || !(selectedNode() instanceof TreeNode)) {
+      console.error("Can't find relative path node: Selected node is not a valid TreeNode");
+      return null;
+    }
+
+    const currentNode = selectedNode() as TreeNode;
+    const projectNode = currentNode.getProjectNode();
+    if (!projectNode) {
+      console.error("Can't find relative path node: Project node not found");
+      return null;
+    }
+
+    let relativeNode: TreeNode | undefined = projectNode;
+    for (let i = 0; i < path.split(".").length; i++) {
+      if (!relativeNode) {
+        console.error("Can't find relative path node: Relative node not found");
+        return null;
+      }
+      relativeNode = relativeNode.findChild({ path: path });
+    }
+
+    if (relativeNode && relativeNode.path() === path) {
+      return relativeNode;
+    }
+    return null;
+  }
+
   interface Metadata {
     municipalityName: string;
     orgName: string;
@@ -182,6 +214,7 @@ export function EditorProvider(props: { children: JSX.Element }): JSX.Element {
         selectedNode,
         setSelectedNode,
         navigateToFile,
+        getRelativeNodeByPath,
         handleFileClick,
       }}
     >
