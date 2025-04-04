@@ -1,7 +1,7 @@
 import { Elysia, t } from "elysia";
 
-import { sql } from "@server/sql";
-import { authMiddleware } from "@server/middleware";
+import { sql } from "@server/sql.ts";
+import { authMiddleware } from "@server/middleware.ts";
 import {
   AuthContext,
   UserDetails,
@@ -12,8 +12,8 @@ import {
   CreateOrganisationBody,
   CreateUserBody,
   UpdateOrganisationBody,
-} from "@server/types";
-import { UserRole } from "@utils/roles";
+} from "@server/types.ts";
+import { UserRole } from "@utils/roles.ts";
 
 export const admin = new Elysia({ prefix: "/admin" })
   .onBeforeHandle(async (context) => {

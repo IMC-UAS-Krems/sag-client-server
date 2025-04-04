@@ -1,6 +1,6 @@
 import { User } from "@prisma/client";
 import { createSignal } from "solid-js";
-import { createStoredSignal } from "@utils/storageSignal";
+import { createStoredSignal } from "@utils/storageSignal.ts";
 
 export type UserState = {
   user: User | null;
@@ -24,6 +24,6 @@ export type JWTState = {
 
 export const [jwt, setJWT] = createSignal<JWTState>({ token: null });
 
-const [theme, setTheme] = createStoredSignal<string>("theme", "light");
+const [theme, setTheme] = createStoredSignal<string>("theme", "system");
 
 export { theme, setTheme };

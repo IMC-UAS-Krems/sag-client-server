@@ -1,8 +1,8 @@
 import { Elysia, t } from "elysia";
 
-import { panic } from "@utils/panic";
-import { sendVerificationEmail } from "@utils/emailVerification";
-import { UserDocument, sql } from "@server/sql";
+import { panic } from "@utils/panic.ts";
+import { sendVerificationEmail } from "@utils/emailVerification.ts";
+import { UserDocument, sql } from "@server/sql.ts";
 import {
   AuthContext,
   AuthContextWithBody,
@@ -10,7 +10,7 @@ import {
   RegisterBody,
   RegisteredUser,
   LoginBody,
-} from "@server/types";
+} from "@server/types.ts";
 
 export type ReturnUser = Omit<UserDocument, "password" | "id">;
 

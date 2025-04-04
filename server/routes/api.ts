@@ -1,13 +1,14 @@
 import { Elysia, t } from "elysia";
 
-import { prisma } from "@server/prisma";
-import { authMiddleware } from "@server/middleware";
-import { sql, Document } from "@server/sql";
+import { prisma } from "@server/prisma.ts";
+import { Prisma } from "@prisma/client";
+import { authMiddleware } from "@server/middleware.ts";
+import { sql, Document } from "@server/sql.ts";
 import { DocumentType } from "@prisma/client";
-import { SagError } from "@server/errors";
-import { AuthContext, AuthContextWithBody, AuthContextWithQuery, FileInfo } from "@server/types";
+import { SagError } from "@server/errors.ts";
+import { AuthContext, AuthContextWithBody, AuthContextWithQuery } from "@server/types.ts";
 
-const COMPILER_URL = Bun.env.COMPILER_URL || "http://localhost:8080";
+const COMPILER_URL = Bun.env.COMPILER_URL || "http://localhost:8081";
 
 export const api = new Elysia({ prefix: "/api" })
   .get(
@@ -176,56 +177,6 @@ export const api = new Elysia({ prefix: "/api" })
       detail: { tags: ["api"] },
     },
   )
-  .post(
-    "/file-info",
-    async ({ log, set, userId, body: { file_info } }: AuthContextWithBody<{ file_info: FileInfo }>) => {
-      if (!userId) {
-        set.status = 401;
-        return { error: "Unauthorized" };
-      }
-      try {
-        const response = await fetch(`${COMPILER_URL}/file-info`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            user_id: userId,
-            file_info,
-          }),
-        });
-
-        const data = await response.json();
-
-        if (!response.ok || data.status === "error") {
-          log.error(data.error || data.errors);
-          set.status = response.status;
-          return data;
-        }
-
-        set.status = 200;
-        log.info("Compiler processed the tree successfully.");
-
-        return { status: "ok", compilerOutput: data };
-      } catch (error) {
-        log.error(error);
-        set.status = 500;
-        return { error: "Failed to send project tree to compiler" };
-      }
-    },
-    {
-      // body: t.Object({ file_info: t.Any() }),
-      // detail: {
-      //   tags: ["api"],
-      //   description: "Receive current opened file information",
-      // },
-
-      type: "application/x-www-form-urlencoded",
-      beforeHandle: authMiddleware,
-      detail: { tags: ["api"], description: "Get document's content" },
-    },
-  )
-
   .get(
     "/documents",
     async ({ log, set, userId }: AuthContext): Promise<Document[] | { error: string }> => {
@@ -233,6 +184,7 @@ export const api = new Elysia({ prefix: "/api" })
         set.status = 401;
         return { error: "Unauthorized" };
       }
+      console.log("\n\n\n\n\nGetting documents for user: ", userId);
       const documents = sql.getDocuments(userId);
       set.status = 200;
       return documents;
@@ -240,7 +192,7 @@ export const api = new Elysia({ prefix: "/api" })
     {
       detail: {
         tags: ["api"],
-        description: "Get all documents of a user by user ID",
+        description: "Get all documents the user has access to",
       },
     },
   )
@@ -281,16 +233,21 @@ export const api = new Elysia({ prefix: "/api" })
           isTemplate,
         );
       } catch (e) {
+        console.log("Error: ", e);
+
         if (e instanceof SagError) {
           log.error(e.message);
-          set.status = 400;
-          return e.message;
+          if (e.message.includes("permission")) {
+            set.status = 403;
+            return e.message;
+          } else if (e.message.includes("already exists")) {
+            set.status = 409;
+            return e.message;
+          }
         }
 
-        log.error(e instanceof Error ? e.message : String(e));
-        log.error("An unknown error occurred");
         set.status = 500;
-        return "An error occurred";
+        return "An unknown error occurred";
       }
 
       if (result === null) {
@@ -334,15 +291,29 @@ export const api = new Elysia({ prefix: "/api" })
         return { error: "Unauthorized" };
       }
 
-      const result = await sql.renameDocument(userId, municipalityName, organizationName, projectName, path, newName);
+      try {
+        const result = await sql.renameDocument(userId, municipalityName, organizationName, projectName, path, newName);
+        if (result === null) {
+          set.status = 400;
+          return "Could not rename document";
+        }
 
-      if (result === null) {
-        set.status = 400;
-        return "Could not rename document";
+        set.status = 200;
+        return result;
+      } catch (e) {
+        if (e instanceof SagError) {
+          if (e.message.includes("already exists")) {
+            set.status = 409;
+            return e.message;
+          }
+          console.log(e.message);
+          set.status = 400;
+          return e.message;
+        } else {
+          set.status = 500;
+          return "An error occurred";
+        }
       }
-
-      set.status = 200;
-      return result;
     },
     {
       body: t.Object({
@@ -477,7 +448,7 @@ export const api = new Elysia({ prefix: "/api" })
     },
   )
   .post(
-    "/save_as_template",
+    "/save-as-template",
     async ({
       log,
       set,
@@ -498,6 +469,10 @@ export const api = new Elysia({ prefix: "/api" })
         return result;
       } catch (e) {
         if (e instanceof SagError) {
+          if (e.message.includes("already exists")) {
+            set.status = 409;
+            return e.message;
+          }
           console.log(e.message);
           set.status = 400;
           return e.message;

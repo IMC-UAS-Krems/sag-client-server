@@ -1,6 +1,6 @@
 import { createSignal } from "solid-js";
 
-import { eden } from "@client/api";
+import { eden } from "@client/api/index.ts";
 
 interface AuthStore {
   isAuthenticated: boolean;

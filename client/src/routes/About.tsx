@@ -1,6 +1,6 @@
 import { Component } from "solid-js";
 
-import Header from "@client/components/Header";
+import Header from "@client/components/Header.tsx";
 
 const t = (s: string) => s;
 

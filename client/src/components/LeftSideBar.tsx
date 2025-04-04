@@ -1,16 +1,24 @@
 import { For, onMount, batch, createSignal, useContext, Show, Accessor, Suspense, Setter, JSXElement } from "solid-js";
-import { eden } from "@client/api";
+import { eden } from "@client/api/index.ts";
 import { createMutable } from "solid-js/store";
-import { EditorContext } from "@client/contexts/editor";
-import { IEditorContext } from "@client/contexts/editor";
-import { ContextMenu } from "@kobalte/core/context-menu";
-import Swal from "sweetalert2";
-import { Notification, Prompt } from "@client/common";
-import styles from "@styles/LeftSideBar.module.css";
+import { EditorContext } from "@client/contexts/editor.tsx";
+import { IEditorContext } from "@client/contexts/editor.tsx";
 import { RiArrowsArrowRightSLine, RiArrowsArrowDownSLine } from "solid-icons/ri";
-import path from "path";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+  ContextMenuPortal,
+  ContextMenuGroup,
+  ContextMenuGroupLabel,
+} from "@client/components/ui/context-menu.tsx";
+import { Skeleton } from "@client/components/ui/skeleton.tsx";
+import QuickDialog from "@client/components/dialogs/QuickDialog.tsx";
+import EditorContextDialog from "@client/components/dialogs/EditorContextDialog.tsx";
+import { showToast } from "@client/components/ui/toast.tsx";
 
-enum SagDocumentType {
+export enum SagDocumentType {
   FILE = "FILE",
   FOLDER = "FOLDER",
   MUNICIPALITY = "MUNICIPALITY",
@@ -18,13 +26,14 @@ enum SagDocumentType {
   PROJECT = "PROJECT",
 }
 
-enum MenuOption {
+export enum MenuOption {
   Save = "Save",
   Delete = "Delete",
   Rename = "Rename",
   AddFile = "Add File",
   AddFileFromTemplate = "Add File From Template",
   AddFolder = "Add Folder",
+  CopyPath = "Copy Path",
 }
 
 type SagDocument = {
@@ -39,13 +48,6 @@ type SagDocument = {
 
 interface GetChildren {
   getChildren(): TreeNode[];
-}
-
-interface ProjectSubtree {
-  name: string;
-  docType: SagDocumentType;
-  path?: string;
-  children: ProjectSubtree[];
 }
 
 type expandState = JSON & {
@@ -191,10 +193,6 @@ export class TreeNode implements GetChildren {
       const nodeParent = orgNode?.parent;
       if (!(nodeParent instanceof TreeNode)) {
         console.error("Parent node is not a TreeNode for node: ", nodeParent);
-        // Notification.fire({
-        //   title: "Error in finding templates",
-        //   icon: "error",
-        // });
         return null;
       }
       orgNode = nodeParent;
@@ -203,7 +201,7 @@ export class TreeNode implements GetChildren {
     return orgNode?.parent;
   }
 
-  gatherNodeInfo(){
+  gatherNodeInfo() {
     return {
       name: this.name(),
       docType: this.docType,
@@ -214,7 +212,6 @@ export class TreeNode implements GetChildren {
       fullPath: this.getPathList().join("."),
     };
   }
-    
 
   getPathList() {
     const path = [];
@@ -242,26 +239,30 @@ export class TreeNode implements GetChildren {
         return "📄";
       case SagDocumentType.FOLDER:
         return (
-          <div class={styles["file-tree-icon-container"]}>
-            {this.isExpanded() ? <RiArrowsArrowDownSLine /> : <RiArrowsArrowRightSLine />}{" "}
+          <div class="flex items-center gap-2 text-primary">
+            {this.isExpanded() ? (
+              <RiArrowsArrowDownSLine class="fill-blue!" />
+            ) : (
+              <RiArrowsArrowRightSLine class="fill-blue!" />
+            )}{" "}
             {this.isTemplate && this.path() === "templates" ? "📚" : this.isExpanded() ? "📂" : "📁"}
           </div>
         );
       case SagDocumentType.MUNICIPALITY:
         return (
-          <div class={styles["file-tree-icon-container"]}>
+          <div class="flex items-center gap-2 text-primary">
             {this.isExpanded() ? <RiArrowsArrowDownSLine /> : <RiArrowsArrowRightSLine />} 🏠
           </div>
         );
       case SagDocumentType.ORG:
         return (
-          <div class={styles["file-tree-icon-container"]}>
+          <div class="flex items-center gap-2 text-primary">
             {this.isExpanded() ? <RiArrowsArrowDownSLine /> : <RiArrowsArrowRightSLine />} 🏢
           </div>
         );
       case SagDocumentType.PROJECT:
         return (
-          <div class={styles["file-tree-icon-container"]}>
+          <div class="flex items-center gap-2 text-primary">
             {this.isExpanded() ? <RiArrowsArrowDownSLine /> : <RiArrowsArrowRightSLine />} 🏗️
           </div>
         );
@@ -306,7 +307,32 @@ export class TreeNode implements GetChildren {
         isTemplate: this.isTemplate,
       });
       this.addChild(newNode);
+      showToast({
+        title: "Success",
+        description: "File created successfully",
+        variant: "success",
+      });
       return newNode;
+    } else {
+      if (resp.status === 409) {
+        showToast({
+          title: "Error",
+          description: "File with name already exists",
+          variant: "error",
+        });
+      } else if (resp.status === 403) {
+        showToast({
+          title: "Error",
+          description: "You do not have permission to create a file in this folder",
+          variant: "error",
+        });
+      } else {
+        showToast({
+          title: "Error",
+          description: "Something went wrong when creating the file, try again later",
+          variant: "error",
+        });
+      }
     }
   }
 
@@ -315,16 +341,14 @@ export class TreeNode implements GetChildren {
       console.error("Cannot delete document that is not a folder or a file");
       return;
     }
-
-    console.log("Trying to delete document: ", this);
-
+    // console.log("Trying to delete document: ", this);
     const requestBody = {
       organizationName: this.orgName as string,
       municipalityName: this.municipalityName as string,
       path: this.path() as string,
       ...(this.projectName ? { projectName: this.projectName as string } : {}),
     };
-    console.log("Making call to delete with: ", requestBody);
+    // console.log("Making call to delete with: ", requestBody);
     const resp = await eden.api.document.delete({
       ...requestBody,
       $fetch: {
@@ -339,19 +363,26 @@ export class TreeNode implements GetChildren {
       if (index !== undefined) {
         this.parent?.children.splice(index, 1);
       }
-      if (this.parent instanceof TreeNode && this.editorContext) {
-        this.editorContext.setSelectedNode(this.parent); // This could also be set to `null`, but needs extra care with the breadcrumbs
+      if (this.editorContext) {
         this.editorContext.setCode("");
+        this.editorContext.handleFileClick("");
+        if (this.parent instanceof TreeNode) {
+          this.editorContext.setSelectedNode(this.parent);
+        } else {
+          this.editorContext.setSelectedNode(null);
+        }
       }
 
-      Notification.fire({
-        title: "File deleted successfully",
-        icon: "success",
+      showToast({
+        title: "Success",
+        description: "File deleted successfully",
+        variant: "success",
       });
     } else {
-      Notification.fire({
-        title: "Error deleting file",
-        icon: "error",
+      showToast({
+        title: "Error",
+        description: "Couldn't delete file",
+        variant: "error",
       });
     }
   }
@@ -398,100 +429,19 @@ export class TreeNode implements GetChildren {
     });
     if (resp.status !== 200) {
       console.error("Error saving content");
-      Notification.fire({
-        title: "Error saving content",
-        icon: "error",
+      showToast({
+        title: "Error",
+        description: "Couldn't save file, try again later",
+        variant: "error",
       });
       return false;
     } else {
-      Notification.fire({
-        title: "File saved",
-        icon: "success",
+      showToast({
+        title: "Success",
+        description: "File saved successfully",
+        variant: "success",
       });
       return true;
-    }
-  }
-
-  async saveFileAsTemplate(content: string): Promise<TreeNode | null> {
-    // Traverse the tree to find the org node
-    const orgNode = this.getOrganisationNode();
-    // Select the child node that has `docType` folder and `isTemplate` true
-    const templateNode = orgNode?.children.find(
-      (child) => child.docType === SagDocumentType.FOLDER && child.isTemplate,
-    );
-
-    if (!templateNode) {
-      Notification.fire({
-        title: "No templates folder found for the organisation",
-        icon: "error",
-      });
-      return null;
-    }
-
-    // Now we can get the children of the template node and their names
-    const templates = templateNode.children.map((child) => child.name());
-
-    // First get the name for the template via swal prompt
-    const { value } = await Prompt.fire<string>({
-      title: "Enter template name",
-      input: "text",
-      preConfirm: async (name) => {
-        if (templates.includes(name)) {
-          Swal.showValidationMessage("A template with this name already exists");
-          return false; // Prevent the alert from closing
-        }
-      },
-      inputValidator: (input) => {
-        console.log(input);
-        if (!input.match("^[a-zA-Z0-9_ ]+$")) {
-          return "Input must contain only letters, numbers, underscores and spaces";
-        }
-      },
-    });
-
-    if (!value || value.length <= 0) return null;
-
-    const resp = await eden.api.save_as_template.post({
-      organizationName: this.orgName as string,
-      name: value as string,
-      content: content,
-      $fetch: {
-        mode: "cors",
-        credentials: "include",
-      },
-    });
-    if (resp.status !== 201) {
-      console.error("Error saving content as template");
-      Notification.fire({
-        title: resp.data as string,
-        icon: "error",
-      });
-      return null;
-    } else {
-      Notification.fire({
-        title: "File saved as template",
-        icon: "success",
-      });
-      console.log("Response for creating the new node: ", resp.data);
-      const newNode = new TreeNode(
-        {
-          name: value as string,
-          docType: SagDocumentType.FILE,
-          path: resp.data as string,
-          projectName: undefined, // There is no project name on purpose
-          orgName: this.orgName,
-          municipalityName: this.municipalityName,
-          isExpanded: true,
-          isTemplate: true,
-          parent: templateNode,
-        },
-        this.editorContext,
-      );
-      console.log("New node created: ", newNode);
-
-      templateNode?.addChild(newNode);
-      // console.log("New node added to the org node's template folder: ", templateNode);
-      return newNode;
     }
   }
 
@@ -515,15 +465,25 @@ export class TreeNode implements GetChildren {
       if (resp.status === 200) {
         this.setName(newName);
         this.updatePath(resp.data as string);
-        Notification.fire({
-          title: "File renamed successfully",
-          icon: "success",
+        showToast({
+          title: "Success",
+          description: "File renamed successfully",
+          variant: "success",
         });
       } else {
-        Notification.fire({
-          title: "Error renaming file",
-          icon: "error",
-        });
+        if (resp.status === 409) {
+          showToast({
+            title: "Error",
+            description: "File with name already exists",
+            variant: "error",
+          });
+        } else {
+          showToast({
+            title: "Error",
+            description: "Couldn't rename file, try again later",
+            variant: "error",
+          });
+        }
       }
     }
   }
@@ -617,15 +577,21 @@ class FileTree implements GetChildren {
           orgName: doc.orgName,
           municipalityName: doc.municipalityName,
           parent: currentNode,
-          isExpanded: this.parse_old_state(
-            old_state,
-            `${doc.municipalityName}.${doc.orgName}.${doc.projectName}.${doc.documentPath}`,
-          ),
+          isExpanded: this.parse_old_state(old_state, this.getStateKey(doc)),
           isTemplate: doc.isTemplate,
         },
         this.editorContext,
       ),
     );
+  }
+
+  getStateKey(doc: SagDocument): string {
+    const parts = [doc.municipalityName, doc.orgName];
+    if (!doc.isTemplate && doc.projectName) {
+      parts.push(doc.projectName);
+    }
+    parts.push(doc.documentPath);
+    return parts.join(".");
   }
 
   parse_old_state(old_state: expandState, path: string): boolean | undefined {
@@ -701,13 +667,6 @@ function FileNode(props: { node: TreeNode }) {
   const { selectedNode, navigateToFile } = useContext(EditorContext) as IEditorContext;
 
   function toggleExpanded() {
-    if (!props.node.isExpanded()) {
-      expandDiv.classList.add(styles["file-node-container-expanded"]);
-      expandDiv.classList.remove(styles["file-node-container-collapsed"]);
-    } else {
-      expandDiv.classList.remove(styles["file-node-container-expanded"]);
-      expandDiv.classList.add(styles["file-node-container-collapsed"]);
-    }
     props.node.toggleExpanded();
     if (!props.node.isExpanded()) {
       for (const child of props.node.getChildren()) {
@@ -746,15 +705,15 @@ function FileNode(props: { node: TreeNode }) {
   };
 
   return (
-    <div class={styles["file-node"]}>
+    <div class="flex flex-col">
       <Suspense>
-        <ContextMenu.Trigger
+        <ContextMenuTrigger
           disabled={
             ![SagDocumentType.FOLDER, SagDocumentType.FILE, SagDocumentType.PROJECT].includes(props.node.docType)
           }
         >
           <button
-            class={`${styles["file-node-btn"]} ${isSelected() ? styles["file-node-btn-selected"] : ""}`}
+            class={`flex b-0 bg-none cursor-pointer ${isSelected() && "font-bold"}`}
             onClick={async () => {
               if (props.node.docType === SagDocumentType.FILE) {
                 navigateToFile(props.node);
@@ -771,23 +730,24 @@ function FileNode(props: { node: TreeNode }) {
               }
             }}
           >
-            <span class={styles["file-node-btn-icon"]} style={{ "padding-left": props.node.isFile() ? "1.5rem" : "0" }}>
-              {props.node.icon()}
-            </span>
-            <span>{props.node.name()}</span>
+            <span class={`mr-2 ${props.node.isFile() && "pl-6"}`}>{props.node.icon()}</span>
+            <span class="text-primary whitespace-nowrap overflow-hidden text-ellipsis">{props.node.name()}</span>
           </button>
-        </ContextMenu.Trigger>
+        </ContextMenuTrigger>
       </Suspense>
 
       <div
         //@ts-expect-error - original message: Variable 'expandDiv' is used before being assigned
         ref={expandDiv}
-        class={styles["file-node-container"].concat(
-          " ",
-          props.node.isExpanded() ? styles["file-node-container-expanded"] : styles["file-node-container-collapsed"],
-        )}
+        class={`
+          transition-all
+          duration-500
+          overflow-hidden
+          grid
+          ${props.node.isExpanded() ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}
+        `}
       >
-        <div class={styles["file-node-list"]}>
+        <div class="ml-6 min-h-0">
           <For each={props.node.getChildren()}>{(child) => <FileNode node={child} />}</For>
         </div>
       </div>
@@ -796,316 +756,187 @@ function FileNode(props: { node: TreeNode }) {
 }
 
 function FileContextMenu(props: { children: JSXElement }) {
-  const { code, selectedNode, navigateToFile } = useContext(EditorContext) as IEditorContext;
-
-  async function handleContextMenu(action: MenuOption) {
-    const node = selectedNode();
-    switch (action) {
-      case MenuOption.AddFile: {
-        const { value } = await Prompt.fire<string>({
-          title: "Enter file name",
-          input: "text",
-          preConfirm: async (path) => {
-            const node = selectedNode();
-            if (await node?.checkNewPath(path, true)) {
-              return path;
-            }
-            Swal.showValidationMessage("File or folder with this name already exists");
-          },
-          inputValidator: (input) => {
-            console.log(input);
-            if (!input.match("^[a-zA-Z0-9_ ]+$")) {
-              return "Input must contain only letters, numbers, underscores and spaces";
-            }
-          },
-        });
-        if (value && value.length > 0) {
-          const node = selectedNode();
-          const newNode = await node?.createDocument(value as string, SagDocumentType.FILE, node?.path() as string);
-          if (newNode && newNode instanceof TreeNode) {
-            navigateToFile(newNode);
-            node?.setIsExpanded(true);
-          }
-        }
-
-        break;
-      }
-      case MenuOption.AddFileFromTemplate: {
-        // Traverse the tree up to the org level
-        const orgNode = node?.getOrganisationNode();
-        if (!orgNode) {
-          console.error("Error finding the org node for the current node: ", node);
-          Notification.fire({
-            title: "Couldn't find the templates of the organisation",
-            icon: "error",
-          });
-          return;
-        }
-
-        // Select the child node that has `docType` folder and `isTemplate` true
-        const templateNode = orgNode?.children.find(
-          (child) => child.docType === SagDocumentType.FOLDER && child.isTemplate,
-        );
-        // console.log("Template node: ", templateNode);
-        // If no template folder is found for the organisation, show an error message
-        if (!templateNode) {
-          Notification.fire({
-            title: "No templates folder found for the organisation",
-            icon: "error",
-          });
-          return;
-        }
-
-        // Recursively get all the templates in the templates folder
-        interface Templates {
-          [key: string]: string;
-        }
-        const getTemplates = (node: TreeNode, acc: Templates): Templates => {
-          node.children.forEach((child) => {
-            if (child.docType === SagDocumentType.FILE) {
-              acc[child.path() as string] = child.name() as string;
-            } else if (child.docType === SagDocumentType.FOLDER) {
-              // Recursively call getTemplates for folder nodes
-              getTemplates(child, acc);
-            }
-          });
-          return acc;
-        };
-        const templates: Templates = getTemplates(templateNode, {});
-
-        // If there are no templates for the organisation, show an error message
-        if (Object.keys(templates).length === 0) {
-          Notification.fire({
-            title: "No templates found for the organisation",
-            icon: "error",
-          });
-          return;
-        }
-
-        // Show a select input with the possible templates of the organisation
-        const { value } = await Swal.fire<string>({
-          title: "Select a Template",
-          input: "select",
-          inputOptions: templates,
-          inputPlaceholder: "Choose a template",
-          showCancelButton: true,
-          confirmButtonText: "Select",
-          inputValidator: (value) => {
-            return new Promise((resolve) => {
-              if (value) {
-                resolve(null);
-              } else {
-                resolve("You need to select a template to proceed");
-              }
-            });
-          },
-        });
-
-        if (value) {
-          // Get the selected template based on the path and then its content
-          let selectedTemplateNode = templateNode;
-          for (let i = 1; i < value.split(".").length; i++) {
-            console.log("Selected template node: ", selectedTemplateNode.path());
-            selectedTemplateNode = selectedTemplateNode.findChild({ path: value }) as TreeNode;
-          }
-          const templateContent = await selectedTemplateNode.getContent();
-          if (!templateContent) {
-            Notification.fire({
-              title: "Error fetching template content",
-              icon: "error",
-            });
-            return;
-          }
-
-          // Create a new file with the selected template's content
-          const filenameSwal = await Prompt.fire<string>({
-            title: "Enter file name",
-            input: "text",
-            preConfirm: async (path) => {
-              const node = selectedNode();
-              if (await node?.checkNewPath(path, true)) {
-                return path;
-              }
-              Swal.showValidationMessage("File or folder with this name already exists");
-            },
-            inputValidator: (input) => {
-              console.log(input);
-              if (!input.match("^[a-zA-Z0-9_ ]+$")) {
-                return "Input must contain only letters, numbers, underscores and spaces";
-              }
-            },
-          });
-          if (filenameSwal.value && filenameSwal.value.length > 0) {
-            const node = selectedNode();
-            const newNode = await node?.createDocument(
-              filenameSwal.value as string,
-              SagDocumentType.FILE,
-              node?.path() as string,
-              templateContent,
-            );
-            console.log("Navigating to the new node: ", newNode);
-            if (newNode && newNode instanceof TreeNode) {
-              navigateToFile(newNode); // Navigate context to the file
-              node?.setIsExpanded(true); // Expand the folder above it (it should be enough as to create the file you need access to the folder)
-            }
-          }
-        }
-        break;
-      }
-      case MenuOption.AddFolder: {
-        const { value } = await Prompt.fire<string>({
-          title: "Enter folder name",
-          input: "text",
-          preConfirm: async (path) => {
-            const node = selectedNode();
-            if (await node?.checkNewPath(path, true)) {
-              return path;
-            }
-            Swal.showValidationMessage("File or folder with this name already exists");
-          },
-          inputValidator: (input) => {
-            console.log(input);
-            if (!input.match("^[a-zA-Z0-9_ ]+$")) {
-              return "Input must contain only letters, numbers, underscores and spaces";
-            }
-          },
-        });
-        if (value && value.length > 0) {
-          const node = selectedNode();
-          node?.createDocument(value as string, SagDocumentType.FOLDER, node?.path() as string);
-          node?.setIsExpanded(true);
-        }
-
-        break;
-      }
-      case MenuOption.Delete: {
-        node?.deleteDocument();
-        break;
-      }
-      case MenuOption.Save: {
-        node?.saveContent(code());
-        break;
-      }
-      case MenuOption.Rename: {
-        const { value } = await Prompt.fire<string>({
-          title: "Enter new name",
-          input: "text",
-          preConfirm: async (path) => {
-            const node = selectedNode();
-            if (await node?.checkNewPath(path, false)) {
-              return path;
-            }
-            Swal.showValidationMessage("File or folder with this name already exists");
-          },
-          inputValidator: (input) => {
-            console.log(input);
-            if (!input.match("^[a-zA-Z0-9_ ]+$")) {
-              return "Input must contain only letters, numbers, underscores and spaces";
-            }
-          },
-        });
-        if (value && value.length > 0) {
-          const node = selectedNode();
-          node?.renameDocument(value);
-        }
-        break;
-      }
-    }
+  const editorContext = useContext(EditorContext);
+  if (!editorContext) {
+    return <>{props.children}</>;
   }
+  const { selectedNode, navigateToFile } = useContext(EditorContext) as IEditorContext;
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = createSignal(false);
+  const [isRenameDialogOpen, setIsRenameDialogOpen] = createSignal(false);
+  const [isNewFileDialogOpen, setIsNewFileDialogOpen] = createSignal(false);
+  const [isNewFolderDialogOpen, setIsNewFolderDialogOpen] = createSignal(false);
+  const [isAddFileFromTemplateDialogOpen, setIsAddFileFromTemplateDialogOpen] = createSignal(false);
+
   return (
-    <ContextMenu>
-      <ContextMenu.Portal>
-        <ContextMenu.Content class={styles["context-menu"]}>
-          <Suspense>
-            <ul class={styles["context-menu-ul"]}>
-              <Show
-                when={
-                  [SagDocumentType.FOLDER, SagDocumentType.FILE].includes(selectedNode()?.docType as SagDocumentType) &&
-                  !(
-                    selectedNode()?.isTemplate &&
-                    selectedNode()?.docType === SagDocumentType.FOLDER &&
-                    selectedNode()?.path() === "templates"
-                  )
-                }
-              >
-                <ContextMenu.Item
-                  class={styles["context-menu-item"]}
-                  onSelect={async () => {
-                    await handleContextMenu(MenuOption.Rename);
-                  }}
-                >
-                  {MenuOption.Rename}
-                </ContextMenu.Item>
-              </Show>
-              <Show
-                when={
-                  [SagDocumentType.FOLDER, SagDocumentType.FILE].includes(selectedNode()?.docType as SagDocumentType) &&
-                  !(
-                    selectedNode()?.isTemplate &&
-                    selectedNode()?.docType === SagDocumentType.FOLDER &&
-                    selectedNode()?.path() === "templates"
-                  )
-                }
-              >
-                <ContextMenu.Item
-                  class={styles["context-menu-item"]}
-                  onSelect={async () => {
-                    await handleContextMenu(MenuOption.Delete);
-                  }}
-                >
-                  {MenuOption.Delete}
-                </ContextMenu.Item>
-              </Show>
-              <Show
-                when={[SagDocumentType.FOLDER, SagDocumentType.PROJECT].includes(
-                  selectedNode()?.docType as SagDocumentType,
-                )}
-              >
-                <ContextMenu.Item
-                  class={styles["context-menu-item"]}
-                  onSelect={async () => {
-                    await handleContextMenu(MenuOption.AddFile);
-                  }}
-                >
-                  {MenuOption.AddFile}
-                </ContextMenu.Item>
-              </Show>
-              <Show
-                when={
-                  [SagDocumentType.FOLDER, SagDocumentType.PROJECT].includes(
-                    selectedNode()?.docType as SagDocumentType,
-                  ) && !(selectedNode()?.isTemplate && selectedNode()?.docType === SagDocumentType.FOLDER)
-                }
-              >
-                <ContextMenu.Item
-                  class={styles["context-menu-item"]}
-                  onSelect={async () => {
-                    await handleContextMenu(MenuOption.AddFileFromTemplate);
-                  }}
-                >
-                  {MenuOption.AddFileFromTemplate}
-                </ContextMenu.Item>
-              </Show>
-              <Show
-                when={[SagDocumentType.FOLDER, SagDocumentType.PROJECT].includes(
-                  selectedNode()?.docType as SagDocumentType,
-                )}
-              >
-                <ContextMenu.Item
-                  class={styles["context-menu-item"]}
-                  onSelect={async () => {
-                    await handleContextMenu(MenuOption.AddFolder);
-                  }}
-                >
-                  {MenuOption.AddFolder}
-                </ContextMenu.Item>
-              </Show>
-            </ul>
-          </Suspense>
-        </ContextMenu.Content>
-      </ContextMenu.Portal>
-      {props.children}
-    </ContextMenu>
+    <>
+      <div>
+        <ContextMenu>
+          <ContextMenuPortal>
+            <ContextMenuContent>
+              <Suspense fallback={<Skeleton height={20} class="w-full" />}>
+                <ContextMenuGroup>
+                  <ContextMenuGroupLabel>{selectedNode()?.name() || "File options"}</ContextMenuGroupLabel>
+                  <Show
+                    when={
+                      [SagDocumentType.FOLDER, SagDocumentType.FILE].includes(
+                        selectedNode()?.docType as SagDocumentType,
+                      ) &&
+                      !(
+                        selectedNode()?.isTemplate &&
+                        selectedNode()?.docType === SagDocumentType.FOLDER &&
+                        selectedNode()?.path() === "templates"
+                      )
+                    }
+                  >
+                    <ContextMenuItem onSelect={() => setIsRenameDialogOpen(true)}>{MenuOption.Rename}</ContextMenuItem>
+                  </Show>
+                  <Show
+                    when={
+                      [SagDocumentType.FOLDER, SagDocumentType.FILE].includes(
+                        selectedNode()?.docType as SagDocumentType,
+                      ) &&
+                      !(
+                        selectedNode()?.isTemplate &&
+                        selectedNode()?.docType === SagDocumentType.FOLDER &&
+                        selectedNode()?.path() === "templates"
+                      )
+                    }
+                  >
+                    <ContextMenuItem onSelect={() => setIsDeleteDialogOpen(true)}>Delete</ContextMenuItem>
+                  </Show>
+                  <Show
+                    when={[SagDocumentType.FOLDER, SagDocumentType.PROJECT].includes(
+                      selectedNode()?.docType as SagDocumentType,
+                    )}
+                  >
+                    <ContextMenuItem onSelect={() => setIsNewFileDialogOpen(true)}>
+                      {MenuOption.AddFile}
+                    </ContextMenuItem>
+                  </Show>
+                  <Show
+                    when={
+                      [SagDocumentType.FOLDER, SagDocumentType.PROJECT].includes(
+                        selectedNode()?.docType as SagDocumentType,
+                      ) && !(selectedNode()?.isTemplate && selectedNode()?.docType === SagDocumentType.FOLDER)
+                    }
+                  >
+                    <ContextMenuItem onSelect={() => setIsAddFileFromTemplateDialogOpen(true)}>
+                      {MenuOption.AddFileFromTemplate}
+                    </ContextMenuItem>
+                  </Show>
+                  <Show
+                    when={[SagDocumentType.FOLDER, SagDocumentType.PROJECT].includes(
+                      selectedNode()?.docType as SagDocumentType,
+                    )}
+                  >
+                    <ContextMenuItem onSelect={() => setIsNewFolderDialogOpen(true)}>
+                      {MenuOption.AddFolder}
+                    </ContextMenuItem>
+                  </Show>
+                  <Show when={selectedNode()?.docType === SagDocumentType.FILE && !selectedNode()?.isTemplate}>
+                    <ContextMenuItem
+                      onSelect={() => {
+                        const path = selectedNode()?.path();
+                        if (path) {
+                          navigator.clipboard
+                            .writeText(path)
+                            .then(() => {
+                              showToast({
+                                title: "Copied",
+                                description: "Path copied to clipboard!",
+                                variant: "success",
+                              });
+                            })
+                            .catch((err) => {
+                              console.error("Failed to copy path: ", err);
+                              showToast({
+                                title: "Error",
+                                description: "Failed to copy path to clipboard",
+                                variant: "error",
+                              });
+                            });
+                        } else {
+                          showToast({
+                            title: "Error",
+                            description: "No path to copy",
+                            variant: "error",
+                          });
+                        }
+                      }}
+                    >
+                      {MenuOption.CopyPath}
+                    </ContextMenuItem>
+                  </Show>
+                </ContextMenuGroup>
+              </Suspense>
+            </ContextMenuContent>
+          </ContextMenuPortal>
+          {props.children}
+        </ContextMenu>
+      </div>
+      {/* CONTEXT MENU DIALOGS */}
+      {/* - Delete dialog */}
+      <QuickDialog
+        variant="destructive"
+        handler={() => selectedNode()?.deleteDocument()}
+        triggerTitle={MenuOption.Delete}
+        buttonText="Delete"
+        title="Delete File"
+        description={"Are you sure you want to delete"}
+        subject={selectedNode()?.name() || "this file"}
+        open={isDeleteDialogOpen}
+        setOpen={setIsDeleteDialogOpen}
+        modal={true}
+      />
+
+      {/* - Rename dialog */}
+      <EditorContextDialog
+        variant="confirm"
+        menuOption={MenuOption.Rename}
+        buttonText="Rename"
+        title="Rename File"
+        description="Enter the new name for the file"
+        open={isRenameDialogOpen}
+        setOpen={setIsRenameDialogOpen}
+        node={selectedNode()}
+      />
+      {/* - New file dialog */}
+      <EditorContextDialog
+        variant="confirm"
+        menuOption={MenuOption.AddFile}
+        buttonText="Create File"
+        title="File Name"
+        description="Please name the new file."
+        open={isNewFileDialogOpen}
+        setOpen={setIsNewFileDialogOpen}
+        node={selectedNode()}
+        navigateToFile={navigateToFile}
+      />
+      {/* - New folder dialog */}
+      <EditorContextDialog
+        variant="confirm"
+        menuOption={MenuOption.AddFolder}
+        buttonText="Create Folder"
+        title="Folder Name"
+        description="Please name the new folder."
+        open={isNewFolderDialogOpen}
+        setOpen={setIsNewFolderDialogOpen}
+        node={selectedNode()}
+        navigateToFile={navigateToFile}
+      />
+      {/* - New file from template */}
+      <EditorContextDialog
+        variant="confirm"
+        menuOption={MenuOption.AddFileFromTemplate}
+        buttonText="Create File"
+        title="New file from template"
+        description="Please select one of your organisation's templates and give a name to the file created from it."
+        open={isAddFileFromTemplateDialogOpen}
+        setOpen={setIsAddFileFromTemplateDialogOpen}
+        node={selectedNode()}
+        navigateToFile={navigateToFile}
+      />
+    </>
   );
 }
 
@@ -1121,11 +952,11 @@ export function LeftSideBar() {
           credentials: "include",
         },
       })
-      .then((docs) => {
+      .then((docs: { data: SagDocument[] }) => {
         batch(() => {
           const old_state: expandState = JSON.parse(localStorage.getItem("file_tree") || DEFAULT_EXPAND_STATE);
           localStorage.removeItem("file_tree");
-          const docArray = docs.data as SagDocument[];
+          const docArray = docs.data;
           docArray.forEach((doc: SagDocument) => {
             tree.addDocument(doc, old_state);
           });
@@ -1134,18 +965,22 @@ export function LeftSideBar() {
   });
 
   return (
-    <>
-      <FileContextMenu>
-        <div class={styles["file-tree"]}>
-          <For each={tree.getChildren()}>
-            {(child) => (
-              <div class={styles["file-tree-item"]}>
-                <FileNode node={child} />
-              </div>
-            )}
-          </For>
-        </div>
-      </FileContextMenu>
-    </>
+    <div class="flex-[1] h-full pl-2.5 pt-2.5 pb-2.5 bg-accent/50 border-1 border-accent-foreground/20 w-0 min-w-0">
+      {/* The w-0 min-w-0 forces this container to respect flex sizing strictly */}
+      <div class="overflow-x-auto overflow-y-auto max-h-full w-full">
+        <FileContextMenu>
+          <div class="min-w-max mb-4">
+            {/* min-w-max ensures the content takes as much width as it needs */}
+            <For each={tree.getChildren()}>
+              {(child) => (
+                <div class={`${child.docType !== SagDocumentType.MUNICIPALITY && "ml-4"}`}>
+                  <FileNode node={child} />
+                </div>
+              )}
+            </For>
+          </div>
+        </FileContextMenu>
+      </div>
+    </div>
   );
 }

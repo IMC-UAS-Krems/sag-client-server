@@ -52,7 +52,7 @@ model User {
     readPrivilege  PrivilegeLevel @default(LOW_ACCESS)
 
     // Worker municipality
-    organization   Organization @relation(fields: [organizationId], references: [id])
+    organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
     organizationId String
 
     municipality   Municipality @relation(fields: [municipalityId], references: [id])
@@ -66,12 +66,12 @@ model User {
     // Meta
     registered DateTime  @default(now())
     updatedAt  DateTime? @updatedAt
-    deleted Boolean @default(false)
-    verified Boolean @default(false)
+    deleted    Boolean   @default(false)
+    verified   Boolean   @default(false)
 
     // Tracking user tokens
-    lastTimeActive DateTime @default(now())
-    needsToBeLoggedOut Boolean @default(false)
+    lastTimeActive     DateTime @default(now())
+    needsToBeLoggedOut Boolean  @default(false)
 
     @@map("users")
 }
@@ -94,8 +94,8 @@ model Document {
     projectId String?
 
     // Organization data - Optional
-    organization Organization? @relation(fields: [organizationId], references: [id])
-    organizationId String?
+    organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+    organizationId String
 
     // Path to document
     path Unsupported("ltree")
@@ -104,9 +104,8 @@ model Document {
     createdAt    DateTime     @default(now())
     updatedAt    DateTime?
     documentType DocumentType @default(FILE)
-    isTemplate Boolean @default(false)
+    isTemplate   Boolean      @default(false)
 
-    @@unique([projectId, path])
     @@map("documents")
 }
 
@@ -115,7 +114,7 @@ model Project {
 
     // Project data
     name           String
-    organization   Organization @relation(fields: [organizationId], references: [id])
+    organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
     organizationId String
 
     // Project Content
@@ -137,14 +136,14 @@ model Project {
 model Organization {
     id String @id @unique @default(cuid())
 
-    name String @unique
+    name        String @unique
     description String @default("Organisation Description")
 
     municipality   Municipality @relation(fields: [municipalityId], references: [id])
     municipalityId String
 
-    projects Project[]
-    users    User[]
+    projects  Project[]
+    users     User[]
     documents Document[]
 
     verified Boolean @default(false)

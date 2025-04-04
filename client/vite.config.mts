@@ -1,16 +1,20 @@
 import { defineConfig } from "vite";
 import solidPlugin from "vite-plugin-solid";
 import tsconfigPaths from "vite-tsconfig-paths";
+import tailwindcss from "@tailwindcss/vite";
+import path from "path";
 
 // import devtools from 'solid-devtools/vite';
 
 export default defineConfig({
   plugins: [
     /* 
-Uncomment the following line to enable solid-devtools.
-For more info see https://github.com/thetarnav/solid-devtools/tree/main/packages/extension#readme
-*/
+    Uncomment the following line to enable solid-devtools.
+    For more info see https://github.com/thetarnav/solid-devtools/tree/main/packages/extension#readme
+    */
     // devtools(),
+    // tailwindcss({ config: "./tailwind.config.js" }),
+    tailwindcss(),
     solidPlugin(),
     tsconfigPaths(),
   ],
@@ -26,5 +30,10 @@ For more info see https://github.com/thetarnav/solid-devtools/tree/main/packages
   optimizeDeps: {
     include: ["@codemirror/view"],
     exclude: ["@codemirror/state"],
+  },
+  resolve: {
+    alias: {
+      "~": path.resolve(__dirname, "./src"),
+    },
   },
 });
