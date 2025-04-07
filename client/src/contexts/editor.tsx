@@ -132,7 +132,7 @@ export function EditorProvider(props: { children: JSX.Element }): JSX.Element {
 
   const getRelativeNodeByPath = (path: string): TreeNode | null => {
     // First task is to get the project node from the current path
-    console.log("Getting relative node by path:", path);
+    // console.log("Getting relative node by path:", path);
     if (!selectedNode() || !(selectedNode() instanceof TreeNode)) {
       console.error("Can't find relative path node: Selected node is not a valid TreeNode");
       return null;
