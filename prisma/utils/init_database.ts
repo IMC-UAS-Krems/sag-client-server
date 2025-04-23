@@ -197,13 +197,15 @@ try {
   const documents = [
     {
       name: "File 1",
-      content: "text\ntext",
+      content:
+        "first:\n    type is SmartMeter\n    provider is Dataskop\n    uri is https://backend.dataskop.at/\n    config:\n        measurements:\n            1491 is Würnsdorf_Temperatur\n            1502 is Fadenbach_Temperatur\n        token is E65839fa0ba24f2bbbe8021f0a46a33ff67e388ac74741f59ca2538267b2bf4a\n        company is 12\n\nimport file-2:\n    application, SingleLine, deployment\n\nlocal:\n    uri is https://localhost.org:3000/test\n    port is 50055\n    type is Docker",
       projectName: "Project 1",
       organizationName: "Imc",
     },
     {
       name: "File 2",
-      content: "text\ntext",
+      content:
+        "application:\n    type is Web\n    dashboard is Grafana\n    layout is SinglePage\n    roles -> User, SuperUser, Admin\n    panels -> SingleLine\n\nSingleLine:\n    type is smartcomm-simpleline-panel\n    source is first\n    traces -> Würnsdorf_Temperatur\n\ndeployment:\n    environments -> local",
       projectName: "Project 1",
       organizationName: "Imc",
     },

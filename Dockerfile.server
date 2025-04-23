@@ -22,6 +22,9 @@ FROM oven/bun
 
 WORKDIR /app
 
+# Install openssl for bun
+RUN apt-get update -y && apt-get install -y openssl --no-install-recommends
+
 ENV DATABASE_URL $DATABASE_URL
 ENV JWT_SECRET $JWT_SECRET
 
