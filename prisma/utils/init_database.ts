@@ -198,7 +198,7 @@ try {
     {
       name: "File 1",
       content:
-        "first:\n    type is SmartMeter\n    provider is Dataskop\n    uri is https://backend.dataskop.at/\n    config:\n        measurements:\n            1491 is Würnsdorf_Temperatur\n            1502 is Fadenbach_Temperatur\n        token is E65839fa0ba24f2bbbe8021f0a46a33ff67e388ac74741f59ca2538267b2bf4a\n        company is 12\n\nimport file-2:\n    application, SingleLine, deployment\n\nlocal:\n    uri is https://localhost.org:3000/test\n    port is 50055\n    type is Docker",
+        "service:\n    title is Grafana dashboard\n    version is 1.0.0\n    scope is Environment\n\ndata:\n    sources -> first\nfirst:\n    type is SmartMeter\n    provider is Dataskop\n    uri is https://backend.dataskop.at/\n    config:\n        measurements:\n            1491 is Würnsdorf_Temperatur\n            1502 is Fadenbach_Temperatur\n        token is E65839fa0ba24f2bbbe8021f0a46a33ff67e388ac74741f59ca2538267b2bf4a\n        company is 12\n\nimport file-2:\n    application, SingleLine, deployment\n\nlocal:\n    uri is https://localhost.org:3000/test\n    port is 50055\n    type is Docker",
       projectName: "Project 1",
       organizationName: "Imc",
     },
