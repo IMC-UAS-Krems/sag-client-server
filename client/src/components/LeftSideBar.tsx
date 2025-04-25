@@ -169,6 +169,7 @@ export class TreeNode implements GetChildren {
   }
 
   findChild(params: { name: string } | { path: string }) {
+    // console.log("Finding child with params: ", params);
     if ("name" in params) {
       return this.children.find((child) => child.name() === params.name);
     }
@@ -199,6 +200,27 @@ export class TreeNode implements GetChildren {
       iterCount++;
     }
     return orgNode?.parent;
+  }
+
+  getProjectNode() {
+    if (!this.projectName) {
+      console.error("Node has no associated project name to navigate to")
+    }
+    // To battle possible cycles
+    let iterCount = 0;
+    const maxIter = 100;
+    let projectNode = this as TreeNode; // Init the node to the current node
+
+    while (projectNode?.parent?.docType !== SagDocumentType.PROJECT && iterCount < maxIter) {
+      const nodeParent = projectNode?.parent;
+      if (!(nodeParent instanceof TreeNode)) {
+        console.error("Parent node is not a TreeNode for node: ", nodeParent);
+        return null;
+      }
+      projectNode = nodeParent;
+      iterCount++;
+    }
+    return projectNode?.parent;
   }
 
   gatherNodeInfo() {

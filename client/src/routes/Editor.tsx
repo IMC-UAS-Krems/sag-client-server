@@ -6,7 +6,6 @@ import { EditorView, lineNumbers, keymap } from "@codemirror/view";
 import { eden } from "@client/api/index.ts";
 import { errors, setErrors, Error as CompileError } from "@store/index.ts";
 import { RightSideBar } from "../components/RightSideBar.tsx";
-import placeholderHighlightPlugin from "@client/editor_plugins/PlaceHolderHighlight.ts";
 import Header from "@client/components/Header.tsx";
 import { LeftSideBar, TreeNode } from "@client/components/LeftSideBar.tsx";
 import { EditorContext, IEditorContext } from "@client/contexts/editor.tsx";
@@ -28,6 +27,8 @@ import {
 import { Button } from "@client/components/ui/button.tsx";
 import { showToast, showToastPromise } from "@client/components/ui/toast.tsx";
 import SaveAsTemplateDialog from "@client/components/dialogs/SaveAsTemplateDialog.tsx";
+import placeholderHighlightPlugin from "@client/editor_plugins/PlaceHolderHighlight.ts";
+import importHoverTooltip from "@client/editor_plugins/ImportHoverTooltip.ts";
 
 type CompileResult = {
   error: string | undefined;
@@ -253,7 +254,7 @@ function FileTreeBreadcrumb(lastSelectedNode: TreeNode | null): JSX.Element {
 }
 
 function Editor(): JSX.Element {
-  const { editorView, editorRef, createExtension, code, selectedNode, navigateToFile } = useContext(
+  const { editorView, editorRef, createExtension, code, selectedNode, navigateToFile, getRelativeNodeByPath } = useContext(
     EditorContext,
   ) as IEditorContext;
 
@@ -292,6 +293,7 @@ function Editor(): JSX.Element {
 
   createExtension(lineNumbers);
   createExtension(placeholderHighlightPlugin);
+  createExtension(() => importHoverTooltip(getRelativeNodeByPath, navigateToFile));
 
   const lint = linter((view: EditorView) => {
     const diagnostics: Diagnostic[] = [];

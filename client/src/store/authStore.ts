@@ -26,7 +26,7 @@ const createAuthStore = () => {
   const loadAuthStateFromServer = async () => {
     try {
       const response = await eden.auth["check-if-logged-in"].get({ $fetch: { credentials: "include" } });
-      console.log("initializeAuth: Response from check-if-logged-in:", response);
+      // console.log("initializeAuth: Response from check-if-logged-in:", response);
 
       if (response.status === 401 || !response.data || !response.data.email || !response.data.userRole) {
         console.log("initializeAuth: Unauthorized or incomplete data returned, resetting auth");
@@ -43,7 +43,7 @@ const createAuthStore = () => {
       };
 
       setState(newState);
-      console.log("initializeAuth: Auth initialized", state());
+      // console.log("initializeAuth: Auth initialized", state());
     } catch (error) {
       console.error("initializeAuth: Failed to initialize authentication:", error);
       resetAuth();
